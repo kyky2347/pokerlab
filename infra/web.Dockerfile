@@ -19,7 +19,6 @@ ENV NODE_ENV=production \
     PORT=3000
 WORKDIR /workspace
 COPY --from=builder --chown=node:node /workspace/apps/web/.next/standalone ./
-COPY --from=builder --chown=node:node /workspace/apps/web/public ./apps/web/public
 COPY --from=builder --chown=node:node /workspace/apps/web/.next/static ./apps/web/.next/static
 USER node
 EXPOSE 3000
