@@ -1,0 +1,17 @@
+.DS_Store
+.env
+.env.local
+.venv/
+__pycache__/
+.pytest_cache/
+.hypothesis/
+*.pyc
+*.db
+node_modules/
+.next/
+dist/
+target/
+apps/api/pokerlab.db
+apps/web/test-results/
+apps/web/playwright-report/
+.playwright-cli/

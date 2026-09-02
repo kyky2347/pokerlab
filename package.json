@@ -1,0 +1,23 @@
+{
+  "name": "pokerlab",
+  "private": true,
+  "version": "1.0.0",
+  "packageManager": "pnpm@11.19.0",
+  "scripts": {
+    "dev": "concurrently -n api,web -c green,cyan \"pnpm dev:api\" \"pnpm dev:web\"",
+    "dev:web": "pnpm --filter web dev",
+    "dev:api": "cd apps/api && uv run uvicorn pokerlab_api.main:app --reload --port 8000",
+    "build": "pnpm --filter web build",
+    "lint": "pnpm --filter web lint",
+    "typecheck": "pnpm --filter web typecheck",
+    "test": "pnpm test:web && pnpm test:api && pnpm test:rust",
+    "test:web": "pnpm --filter web test",
+    "test:api": "cd apps/api && uv run pytest",
+    "test:rust": "cargo test --manifest-path packages/poker-core/Cargo.toml",
+    "benchmark": "cd apps/api && uv run python -m pokerlab_api.benchmarks",
+    "format:check": "pnpm --filter web format:check && cargo fmt --manifest-path packages/poker-core/Cargo.toml --check"
+  },
+  "devDependencies": {
+    "concurrently": "latest"
+  }
+}
