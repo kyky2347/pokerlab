@@ -13,8 +13,8 @@ Prerequisites / 环境要求：
 - Rust 1.88+ for the PyO3 accelerator
 
 ```bash
-git clone https://github.com/kyky2347/project-s8qftxtm.git
-cd project-s8qftxtm
+git clone https://github.com/kyky2347/pokerlab.git
+cd pokerlab
 corepack enable
 make setup
 make dev

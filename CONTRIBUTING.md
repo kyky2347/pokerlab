@@ -7,8 +7,8 @@ Thank you for helping improve PokerLab. Mathematical correctness, reproducibilit
 ## Development setup / 开发环境
 
 ```bash
-git clone https://github.com/kyky2347/project-s8qftxtm.git
-cd project-s8qftxtm
+git clone https://github.com/kyky2347/pokerlab.git
+cd pokerlab
 corepack enable
 make setup
 make dev

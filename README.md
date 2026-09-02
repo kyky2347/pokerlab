@@ -7,13 +7,13 @@
 **A bilingual, local-first research instrument for Hold’em probability, reproducible simulation, decision theory, and finite game solving.**<br>
 **一个双语、本地优先的德州扑克概率、可复现模拟、决策理论与有限博弈研究工具。**
 
-[![Quality](https://github.com/kyky2347/project-s8qftxtm/actions/workflows/ci.yml/badge.svg)](https://github.com/kyky2347/project-s8qftxtm/actions/workflows/ci.yml)
+[![Quality](https://github.com/kyky2347/pokerlab/actions/workflows/ci.yml/badge.svg)](https://github.com/kyky2347/pokerlab/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-bfa06a.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-58a982.svg)](apps/api/pyproject.toml)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-111816.svg)](apps/web/package.json)
 [![Rust 1.88](https://img.shields.io/badge/Rust-1.88-d95b52.svg)](rust-toolchain.toml)
 
-[Quick start / 快速开始](#quick-start--快速开始) · [Architecture / 架构](#architecture--架构) · [Validation / 验证](#validation--验证) · [Download ZIP](https://github.com/kyky2347/project-s8qftxtm/archive/refs/heads/main.zip)
+[Quick start / 快速开始](#quick-start--快速开始) · [Architecture / 架构](#architecture--架构) · [Validation / 验证](#validation--验证) · [Download ZIP](https://github.com/kyky2347/pokerlab/archive/refs/heads/main.zip)
 
 </div>
 
@@ -83,8 +83,8 @@ Prerequisites / 环境要求:
 - Rust 1.88+ for the accelerator; the API preserves an automatic Python fallback if the compiled extension cannot load. / Rust 用于加速器；若扩展运行时无法加载，API 会自动回退到 Python 参考实现。
 
 ```bash
-git clone https://github.com/kyky2347/project-s8qftxtm.git
-cd project-s8qftxtm
+git clone https://github.com/kyky2347/pokerlab.git
+cd pokerlab
 corepack enable
 make setup
 make dev

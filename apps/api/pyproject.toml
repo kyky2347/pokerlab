@@ -30,8 +30,8 @@ dependencies = [
 poker-core-rs = { path = "../../packages/poker-core", editable = true }
 
 [project.urls]
-Repository = "https://github.com/kyky2347/project-s8qftxtm"
-Documentation = "https://github.com/kyky2347/project-s8qftxtm#readme"
+Repository = "https://github.com/kyky2347/pokerlab"
+Documentation = "https://github.com/kyky2347/pokerlab#readme"
 
 [dependency-groups]
 dev = [
