@@ -13,10 +13,12 @@ export function CardSelector({
   selected,
   onSelect,
   label,
+  disabled = false,
 }: {
   selected: string[];
   onSelect: (card: string) => void;
   label: string;
+  disabled?: boolean;
 }) {
   return (
     <fieldset>
@@ -33,7 +35,7 @@ export function CardSelector({
                 key={card}
                 type="button"
                 onClick={() => onSelect(card)}
-                disabled={active}
+                disabled={active || disabled}
                 aria-label={`${rank}${suit.symbol}`}
                 className={cn(
                   "font-data flex aspect-[0.72] min-w-0 flex-col items-center justify-center rounded-[5px] border bg-muted text-[9px] leading-none transition hover:-translate-y-0.5 hover:border-primary focus-visible:outline-2 focus-visible:outline-ring sm:text-[10px]",

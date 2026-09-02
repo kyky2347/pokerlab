@@ -11,6 +11,9 @@ test("home and primary labs form a working journey", async ({ page }) => {
   await expect(page.getByText("Exact equity")).toBeVisible();
   await expect(page.getByText("Conditional turn explorer")).toBeVisible();
 
+  await page.getByRole("button", { name: "A♥" }).click();
+  await expect(page.getByText("No result yet.")).toBeVisible();
+
   await page.goto("/range");
   await page.getByRole("button", { name: "A5s 0 percent" }).click();
   await expect(
@@ -29,6 +32,17 @@ test("home and primary labs form a working journey", async ({ page }) => {
   await page.goto("/research");
   await expect(page.getByText("Prior and posterior density")).toBeVisible();
   await expect(page.getByText(/Posterior Beta/)).toBeVisible();
+});
+
+test("locale switch updates content and the document language", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "切换为中文" }).click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
+  await expect(
+    page.getByRole("heading", { name: /概率.*策略.*不确定性/ }),
+  ).toBeVisible();
 });
 
 test("small CFR job completes with a real strategy", async ({ page }) => {

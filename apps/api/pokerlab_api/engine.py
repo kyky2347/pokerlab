@@ -44,6 +44,10 @@ class EquityCounts:
 class PokerEngine(Protocol):
     name: str
 
+    def showdown(
+        self, hero: tuple[Card, Card], villain: tuple[Card, Card], board: tuple[Card, ...]
+    ) -> float: ...
+
     def exact_equity(
         self, hero: tuple[Card, Card], villain: tuple[Card, Card], board: tuple[Card, ...]
     ) -> dict: ...
@@ -61,7 +65,7 @@ class PokerEngine(Protocol):
 class PythonPokerEngine:
     name = "Python reference"
 
-    def _showdown(
+    def showdown(
         self, hero: tuple[Card, Card], villain: tuple[Card, Card], board: tuple[Card, ...]
     ) -> float:
         return showdown(hero, villain, board)
@@ -81,7 +85,7 @@ class PythonPokerEngine:
             )
         counts = EquityCounts()
         for runout in combinations(remaining, missing):
-            counts.add(self._showdown(hero, villain, board + runout))
+            counts.add(self.showdown(hero, villain, board + runout))
         result = counts.probabilities()
         result.update(
             {
@@ -116,7 +120,7 @@ class PythonPokerEngine:
         interval = max(1, samples // 80)
         for index in range(1, samples + 1):
             runout = tuple(rng.sample(remaining, missing))
-            outcome = self._showdown(hero, villain, board + runout)
+            outcome = self.showdown(hero, villain, board + runout)
             counts.add(outcome)
             sum_x += outcome
             sum_x2 += outcome * outcome
@@ -177,8 +181,14 @@ class RustPokerEngine(PythonPokerEngine):
         import poker_core_rs  # type: ignore[import-not-found]
 
         self._rust = poker_core_rs
+        deck = self._rust.deck()
+        if len(deck) != 52 or len(set(deck)) != 52:
+            raise ValueError("Rust evaluator returned an invalid deck")
+        rank = self._rust.evaluate_seven(["As", "Ks", "Qs", "Js", "Ts", "2d", "3c"])
+        if tuple(rank) != (8, 14):
+            raise ValueError("Rust evaluator failed its startup smoke test")
 
-    def _showdown(
+    def showdown(
         self, hero: tuple[Card, Card], villain: tuple[Card, Card], board: tuple[Card, ...]
     ) -> float:
         hero_rank = tuple(self._rust.evaluate_seven([str(card) for card in hero + board]))
@@ -193,5 +203,5 @@ class RustPokerEngine(PythonPokerEngine):
 def select_engine() -> PokerEngine:
     try:
         return RustPokerEngine()
-    except (ImportError, OSError):
+    except (ImportError, OSError, AttributeError, RuntimeError, TypeError, ValueError):
         return PythonPokerEngine()

@@ -29,6 +29,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { postJson } from "@/lib/api";
 import { useCopy } from "@/lib/store";
 import type { RangeResult, RangeStatistics } from "@/lib/types";
@@ -132,8 +133,8 @@ export default function RangeLab() {
   });
   const [active, setActive] = useState<"hero" | "villain">("hero");
   const [board, setBoard] = useState(["Ah", "7d", "5s", "3c", "2h"]);
+  const [resultKey, setResultKey] = useState<string | null>(null);
   const weights = active === "hero" ? hero : villain;
-  const setWeights = active === "hero" ? setHero : setVillain;
   const stats = useQuery({
     queryKey: ["range-stats", active, weights, board],
     queryFn: () =>
@@ -152,18 +153,42 @@ export default function RangeLab() {
         seed: 20250902,
       }),
   });
+  const currentKey = JSON.stringify({ hero, villain, board });
+  const result = resultKey === currentKey ? calculation.data : undefined;
+  function invalidateResult() {
+    setResultKey(null);
+    calculation.reset();
+  }
+  function updateWeights(next: RangeWeights) {
+    invalidateResult();
+    if (active === "hero") setHero(next);
+    else setVillain(next);
+  }
   function preset(name: string) {
-    setWeights(Object.fromEntries(presetHands[name].map((hand) => [hand, 1])));
+    updateWeights(
+      Object.fromEntries(presetHands[name].map((hand) => [hand, 1])),
+    );
   }
   function invert() {
-    setWeights(
+    updateWeights(
       Object.fromEntries(
         allHands.map((hand) => [hand, (weights[hand] ?? 0) > 0 ? 0 : 1]),
       ),
     );
   }
   function chooseBoard(card: string) {
-    if (board.length < 5) setBoard([...board, card]);
+    if (board.length < 5) {
+      invalidateResult();
+      setBoard([...board, card]);
+    }
+  }
+  function removeBoard(card: string) {
+    invalidateResult();
+    setBoard(board.filter((value) => value !== card));
+  }
+  function calculate() {
+    setResultKey(currentKey);
+    calculation.mutate();
   }
   return (
     <div>
@@ -190,39 +215,37 @@ export default function RangeLab() {
             </CardDescription>
           </CardHeader>
           <CardContent className="min-w-0">
-            <div
-              className="mb-4 flex gap-2"
-              role="tablist"
-              aria-label="Range owner"
+            <Tabs
+              value={active}
+              onValueChange={(value) => setActive(value as "hero" | "villain")}
             >
-              <Button
-                role="tab"
-                aria-selected={active === "hero"}
-                variant={active === "hero" ? "default" : "outline"}
-                onClick={() => setActive("hero")}
-              >
-                Hero range
-              </Button>
-              <Button
-                role="tab"
-                aria-selected={active === "villain"}
-                variant={active === "villain" ? "default" : "outline"}
-                onClick={() => setActive("villain")}
-              >
-                Villain range
-              </Button>
-            </div>
-            <div className="max-w-full overflow-x-auto" role="tabpanel">
-              <RangeMatrix
-                value={weights}
-                onChange={setWeights}
-                label={
-                  active === "hero"
-                    ? "Hero weighted range"
-                    : "Villain weighted range"
-                }
-              />
-            </div>
+              <TabsList className="mb-4">
+                <TabsTrigger value="hero">
+                  {zh ? "英雄范围" : "Hero range"}
+                </TabsTrigger>
+                <TabsTrigger value="villain">
+                  {zh ? "对手范围" : "Villain range"}
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="hero">
+                <div className="max-w-full overflow-x-auto">
+                  <RangeMatrix
+                    value={hero}
+                    onChange={updateWeights}
+                    label={zh ? "英雄加权范围" : "Hero weighted range"}
+                  />
+                </div>
+              </TabsContent>
+              <TabsContent value="villain">
+                <div className="max-w-full overflow-x-auto">
+                  <RangeMatrix
+                    value={villain}
+                    onChange={updateWeights}
+                    label={zh ? "对手加权范围" : "Villain weighted range"}
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
         <div className="flex flex-col gap-5">
@@ -253,7 +276,7 @@ export default function RangeLab() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setWeights({})}
+                onClick={() => updateWeights({})}
               >
                 <RotateCcw data-icon="inline-start" />
                 Clear
@@ -319,9 +342,7 @@ export default function RangeLab() {
                     key={card}
                     card={card}
                     compact
-                    onClick={() =>
-                      setBoard(board.filter((value) => value !== card))
-                    }
+                    onClick={() => removeBoard(card)}
                   />
                 ))}
               </div>
@@ -340,7 +361,7 @@ export default function RangeLab() {
               !Object.values(hero).some(Boolean) ||
               !Object.values(villain).some(Boolean)
             }
-            onClick={() => calculation.mutate()}
+            onClick={calculate}
           >
             <Calculator data-icon="inline-start" />
             {calculation.isPending ? (
@@ -351,41 +372,41 @@ export default function RangeLab() {
               "Calculate range vs range"
             )}
           </Button>
-          {calculation.error ? (
+          {calculation.error && resultKey === currentKey ? (
             <ErrorAlert message={calculation.error.message} />
           ) : null}
         </div>
       </div>
-      {calculation.data ? (
+      {result ? (
         <Card className="mt-5">
           <CardHeader>
             <CardTitle>
               {zh ? "阻断牌感知结果" : "Blocker-aware result"}
             </CardTitle>
             <CardDescription>
-              {calculation.data.method} · {calculation.data.engine}
+              {result.method} · {result.engine}
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6 sm:grid-cols-3 lg:grid-cols-6">
             <Metric
               label="Hero equity"
-              value={percent(calculation.data.hero_equity)}
+              value={percent(result.hero_equity)}
               accent="primary"
             />
             <Metric
               label="Villain equity"
-              value={percent(calculation.data.villain_equity)}
+              value={percent(result.villain_equity)}
             />
-            <Metric label="Tie" value={percent(calculation.data.tie)} />
+            <Metric label="Tie" value={percent(result.tie)} />
             <Metric
               label="Valid pairs"
-              value={calculation.data.valid_combo_pairs.toLocaleString()}
+              value={result.valid_combo_pairs.toLocaleString()}
             />
             <Metric
               label="States"
-              value={calculation.data.evaluated_states.toLocaleString()}
+              value={result.evaluated_states.toLocaleString()}
             />
-            <Metric label="Runtime" value={ms(calculation.data.runtime_ms)} />
+            <Metric label="Runtime" value={ms(result.runtime_ms)} />
           </CardContent>
         </Card>
       ) : null}

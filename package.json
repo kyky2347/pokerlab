@@ -2,6 +2,16 @@
   "name": "pokerlab",
   "private": true,
   "version": "1.0.0",
+  "description": "A bilingual, local-first laboratory for poker probability, simulation, decision theory, and finite game solving.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kyky2347/project-s8qftxtm.git"
+  },
+  "engines": {
+    "node": ">=24",
+    "pnpm": ">=11"
+  },
   "packageManager": "pnpm@11.19.0",
   "scripts": {
     "dev": "concurrently -n api,web -c green,cyan \"pnpm dev:api\" \"pnpm dev:web\"",
@@ -11,13 +21,14 @@
     "lint": "pnpm --filter web lint",
     "typecheck": "pnpm --filter web typecheck",
     "test": "pnpm test:web && pnpm test:api && pnpm test:rust",
+    "check": "pnpm lint && pnpm typecheck && pnpm format:check && pnpm test && pnpm build",
     "test:web": "pnpm --filter web test",
     "test:api": "cd apps/api && uv run pytest",
     "test:rust": "cargo test --manifest-path packages/poker-core/Cargo.toml",
     "benchmark": "cd apps/api && uv run python -m pokerlab_api.benchmarks",
-    "format:check": "pnpm --filter web format:check && cargo fmt --manifest-path packages/poker-core/Cargo.toml --check"
+    "format:check": "pnpm --filter web format:check && cd apps/api && uv run ruff format --check . && cd ../.. && cargo fmt --manifest-path packages/poker-core/Cargo.toml --check"
   },
   "devDependencies": {
-    "concurrently": "latest"
+    "concurrently": "10.0.5"
   }
 }

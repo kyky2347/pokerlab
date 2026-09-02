@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 import time
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import select, text
@@ -41,6 +43,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("pokerlab")
 settings = get_settings()
+solver_slots = threading.BoundedSemaphore(settings.pokerlab_max_concurrent_solvers)
 
 
 @asynccontextmanager
@@ -72,7 +75,9 @@ app.add_middleware(
 
 @app.middleware("http")
 async def request_context(request: Request, call_next):
-    request_id = request.headers.get("x-request-id", str(uuid4()))
+    supplied_request_id = request.headers.get("x-request-id", "").strip()
+    request_id = supplied_request_id if 0 < len(supplied_request_id) <= 128 else str(uuid4())
+    request.state.request_id = request_id
     started = time.perf_counter()
     try:
         response = await call_next(request)
@@ -111,7 +116,32 @@ async def value_error_handler(request: Request, exc: ValueError) -> JSONResponse
             "error": {
                 "code": "invalid_poker_state",
                 "message": str(exc),
-                "request_id": request.headers.get("x-request-id"),
+                "request_id": getattr(request.state, "request_id", None),
+            }
+        },
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_error_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    details = [
+        {
+            "location": ".".join(str(part) for part in error["loc"]),
+            "message": error["msg"],
+            "type": error["type"],
+        }
+        for error in exc.errors()
+    ]
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": {
+                "code": "request_validation_error",
+                "message": "Request validation failed",
+                "request_id": getattr(request.state, "request_id", None),
+                "details": details,
             }
         },
     )
@@ -185,6 +215,7 @@ def diagnostics(
         "limits": {
             "monte_carlo_samples": settings.pokerlab_max_monte_carlo,
             "solver_iterations": settings.pokerlab_max_solver_iterations,
+            "concurrent_solver_jobs": settings.pokerlab_max_concurrent_solvers,
         },
     }
 
@@ -251,6 +282,7 @@ def range_equity(
         board,
         payload.seed,
         payload.samples,
+        engine.showdown,
     )
     result["engine"] = engine.name
     experiment_id = save_experiment(
@@ -280,8 +312,6 @@ def trainer_weaknesses(db: Session = Depends(get_db)) -> dict:
 
 @app.post("/ev/calculate", tags=["decision-theory"])
 def ev_calculate(payload: EVRequest) -> dict:
-    if payload.call_size > payload.effective_stack:
-        raise ValueError("Call size cannot exceed effective stack")
     final_pot = payload.pot + payload.opponent_bet + payload.call_size
     required = payload.call_size / final_pot if final_pot else 0.0
     ev = payload.hero_equity * final_pot - payload.call_size
@@ -310,12 +340,14 @@ def create_solver_job(
         raise ValueError(
             f"Iterations exceed safety limit {settings.pokerlab_max_solver_iterations}"
         )
-    board = parse_cards(payload.board)
-    job = SolverJob(status="running", parameters=payload.model_dump())
-    db.add(job)
-    db.commit()
+    if not solver_slots.acquire(blocking=False):
+        raise HTTPException(status_code=429, detail="Solver concurrency limit reached")
     started = time.perf_counter()
+    job = SolverJob(status="running", parameters=payload.model_dump())
     try:
+        board = parse_cards(payload.board)
+        db.add(job)
+        db.commit()
         solver = RiverCFRSolver(
             board,
             payload.oop_range,
@@ -324,18 +356,23 @@ def create_solver_job(
             payload.effective_stack,
             payload.bet_small,
             payload.bet_large,
+            engine.showdown,
         )
         result = solver.solve(payload.iterations)
         result["engine"] = engine.name
         job.status = "completed"
         job.results = result
         job.runtime_ms = (time.perf_counter() - started) * 1000
-    except Exception:
+        db.commit()
+        return {"id": job.id, "status": job.status, **result}
+    except Exception as exc:
         job.status = "failed"
+        job.runtime_ms = (time.perf_counter() - started) * 1000
+        job.results = {"error_type": type(exc).__name__}
         db.commit()
         raise
-    db.commit()
-    return {"id": job.id, "status": job.status, **result}
+    finally:
+        solver_slots.release()
 
 
 @app.get("/solver/jobs/{job_id}", tags=["solver"])

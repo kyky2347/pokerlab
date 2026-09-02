@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import math
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 CardToken = Annotated[str, Field(pattern=r"^[2-9TJQKA][cdhs]$")]
 
@@ -20,7 +21,7 @@ class ErrorResponse(BaseModel):
 class FixedEquityRequest(BaseModel):
     hero: Annotated[list[CardToken], Field(min_length=2, max_length=2)]
     villain: Annotated[list[CardToken], Field(min_length=2, max_length=2)]
-    board: Annotated[list[CardToken], Field(max_length=5)] = []
+    board: Annotated[list[CardToken], Field(max_length=5)] = Field(default_factory=list)
 
     @field_validator("board")
     @classmethod
@@ -42,7 +43,7 @@ class TurnMapRequest(FixedEquityRequest):
 class RangeEquityRequest(BaseModel):
     hero_range: dict[str, float]
     villain_range: dict[str, float]
-    board: Annotated[list[CardToken], Field(max_length=5)] = []
+    board: Annotated[list[CardToken], Field(max_length=5)] = Field(default_factory=list)
     seed: int = Field(default=20250902, ge=0, le=2**63 - 1)
     samples: int = Field(default=20_000, ge=100, le=100_000)
 
@@ -53,14 +54,30 @@ class RangeEquityRequest(BaseModel):
             raise ValueError("Range cannot be empty")
         if len(value) > 169:
             raise ValueError("Range cannot exceed 169 hand classes")
-        if any(weight < 0 or weight > 1 for weight in value.values()):
+        if any(not math.isfinite(weight) or weight < 0 or weight > 1 for weight in value.values()):
             raise ValueError("Range weights must be between 0 and 1")
+        return value
+
+    @field_validator("board")
+    @classmethod
+    def valid_board_length(cls, value: list[str]) -> list[str]:
+        if len(value) not in {0, 3, 4, 5}:
+            raise ValueError("Board must contain 0, 3, 4, or 5 cards")
         return value
 
 
 class RangeStatisticsRequest(BaseModel):
     range: dict[str, float]
-    blocked: Annotated[list[CardToken], Field(max_length=9)] = []
+    blocked: Annotated[list[CardToken], Field(max_length=9)] = Field(default_factory=list)
+
+    @field_validator("range")
+    @classmethod
+    def valid_range(cls, value: dict[str, float]) -> dict[str, float]:
+        if len(value) > 169:
+            raise ValueError("Range cannot exceed 169 hand classes")
+        if any(not math.isfinite(weight) or weight < 0 or weight > 1 for weight in value.values()):
+            raise ValueError("Range weights must be between 0 and 1")
+        return value
 
 
 class TrainerQuestionRequest(BaseModel):
@@ -78,6 +95,16 @@ class EVRequest(BaseModel):
     call_size: float = Field(ge=0, le=1_000_000)
     hero_equity: float = Field(ge=0, le=1)
     effective_stack: float = Field(gt=0, le=1_000_000)
+
+    @model_validator(mode="after")
+    def legal_call_geometry(self) -> EVRequest:
+        if self.opponent_bet > self.effective_stack:
+            raise ValueError("Opponent bet cannot exceed effective stack")
+        if self.call_size > self.opponent_bet:
+            raise ValueError("Call size cannot exceed the opponent bet")
+        if self.call_size > self.effective_stack:
+            raise ValueError("Call size cannot exceed effective stack")
+        return self
 
 
 class SolverRequest(BaseModel):
@@ -97,7 +124,21 @@ class SolverRequest(BaseModel):
             raise ValueError("Solver range cannot be empty")
         if len(value) > 40:
             raise ValueError("Solver Lite accepts at most 40 hand classes per player")
+        if any(not math.isfinite(weight) or weight < 0 or weight > 1 for weight in value.values()):
+            raise ValueError("Solver range weights must be between 0 and 1")
         return value
+
+    @model_validator(mode="after")
+    def distinct_bet_sizes(self) -> SolverRequest:
+        if self.bet_small >= self.bet_large:
+            raise ValueError("Small bet must be strictly smaller than large bet")
+        small_amount = min(self.effective_stack, self.pot * self.bet_small)
+        large_amount = min(self.effective_stack, self.pot * self.bet_large)
+        if math.isclose(small_amount, large_amount):
+            raise ValueError(
+                "Effective stack collapses both bet sizes; increase stack or reduce the small bet"
+            )
+        return self
 
 
 class BayesianRequest(BaseModel):

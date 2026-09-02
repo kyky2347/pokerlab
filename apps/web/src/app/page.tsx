@@ -92,6 +92,7 @@ const modules = [
 ];
 
 function ConvergencePreview() {
+  const zh = useCopy(false, true);
   const { data, isLoading, isError } = useQuery({
     queryKey: ["home-convergence"],
     queryFn: () =>
@@ -107,7 +108,9 @@ function ConvergencePreview() {
   if (isError || !data?.convergence)
     return (
       <div className="flex h-40 items-center justify-center text-xs text-muted-foreground">
-        Start the API to load a real seeded simulation.
+        {zh
+          ? "启动 API 后即可加载真实的固定种子模拟。"
+          : "Start the API to load a real seeded simulation."}
       </div>
     );
   return (
@@ -169,17 +172,23 @@ export default function Home() {
     <div className="flex flex-col gap-12 pb-10">
       <section className="probability-grid overflow-hidden rounded-2xl border bg-card/65 p-5 shadow-[0_30px_100px_rgb(0_0_0/22%)] sm:p-8 lg:grid lg:min-h-[570px] lg:grid-cols-[0.86fr_1.14fr] lg:items-center lg:gap-10 lg:p-12">
         <div className="relative z-10 max-w-xl">
-          <Badge variant="outline">EDUCATION · SIMULATION · RESEARCH</Badge>
+          <Badge variant="outline">
+            {locale === "zh"
+              ? "教育 · 模拟 · 研究"
+              : "EDUCATION · SIMULATION · RESEARCH"}
+          </Badge>
           <h1 className="mt-7">
             <span className="block text-sm font-semibold tracking-[0.3em] text-primary">
               POKERLAB
             </span>
             <span className="font-display mt-5 block text-5xl leading-[0.92] tracking-[-0.055em] sm:text-7xl">
-              Probability.
+              {locale === "zh" ? "概率。" : "Probability."}
               <br />
-              Strategy.
+              {locale === "zh" ? "策略。" : "Strategy."}
               <br />
-              <em className="text-muted-foreground">Uncertainty.</em>
+              <em className="text-muted-foreground">
+                {locale === "zh" ? "不确定性。" : "Uncertainty."}
+              </em>
             </span>
           </h1>
           <p className="mt-7 max-w-lg text-base leading-7 text-muted-foreground">
@@ -212,7 +221,11 @@ export default function Home() {
           <Card className="relative -mt-5 ml-auto max-w-lg bg-card/90 backdrop-blur">
             <CardHeader>
               <CardTitle>Seeded Monte Carlo / 可复现蒙特卡洛</CardTitle>
-              <CardDescription>Real API output · seed 20250902</CardDescription>
+              <CardDescription>
+                {locale === "zh"
+                  ? "真实 API 输出 · 种子 20250902"
+                  : "Real API output · seed 20250902"}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ConvergencePreview />

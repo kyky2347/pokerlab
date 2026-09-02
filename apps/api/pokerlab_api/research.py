@@ -14,6 +14,12 @@ def bayesian_update(
     passive_actions: int,
     credible_level: float,
 ) -> dict:
+    if alpha <= 0 or beta <= 0:
+        raise ValueError("Beta prior parameters must be positive")
+    if aggressive_actions < 0 or passive_actions < 0:
+        raise ValueError("Observed action counts cannot be negative")
+    if not 0.5 < credible_level < 1:
+        raise ValueError("Credible level must be between 0.5 and 1")
     posterior_alpha = alpha + aggressive_actions
     posterior_beta = beta + passive_actions
     tail = (1 - credible_level) / 2
@@ -40,6 +46,8 @@ def bayesian_update(
 
 def compare_agents(episodes: int, seed: int) -> dict:
     """Compare transparent threshold policies on generated river call decisions."""
+    if episodes < 1:
+        raise ValueError("Episode count must be positive")
     started = time.perf_counter()
     rng = random.Random(seed)
     totals = {

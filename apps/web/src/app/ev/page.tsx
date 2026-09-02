@@ -143,7 +143,7 @@ export default function EVLab() {
               label={zh ? "跟注额" : "Call size"}
               value={call}
               min={0}
-              max={stack}
+              max={Math.min(stack, bet)}
               step={5}
               suffix="$"
               onChange={setCall}
@@ -166,7 +166,9 @@ export default function EVLab() {
               suffix="$"
               onChange={(value) => {
                 setStack(value);
-                if (call > value) setCall(value);
+                const nextBet = Math.min(bet, value);
+                setBet(nextBet);
+                setCall(Math.min(call, nextBet));
               }}
             />
           </CardContent>

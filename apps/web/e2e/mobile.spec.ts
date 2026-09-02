@@ -13,3 +13,32 @@ test("mobile navigation opens and the page does not overflow", async ({
   );
   expect(overflow).toBe(false);
 });
+
+test("every primary route stays within the mobile viewport", async ({
+  page,
+}) => {
+  const routes = [
+    "/",
+    "/equity",
+    "/range",
+    "/trainer",
+    "/ev",
+    "/solver",
+    "/research",
+    "/experiments",
+    "/about",
+  ];
+
+  for (const route of routes) {
+    await page.goto(route);
+    await expect(page.locator("main")).toBeVisible();
+    const dimensions = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }));
+    expect(
+      dimensions.scrollWidth,
+      `${route} overflows horizontally`,
+    ).toBeLessThanOrEqual(dimensions.clientWidth);
+  }
+});

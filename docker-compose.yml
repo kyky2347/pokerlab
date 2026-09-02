@@ -1,4 +1,34 @@
 services:
+  web:
+    build:
+      context: .
+      dockerfile: infra/web.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/api.Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://pokerlab:pokerlab_dev@postgres:5432/pokerlab
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      POKERLAB_MAX_MONTE_CARLO: ${POKERLAB_MAX_MONTE_CARLO:-500000}
+      POKERLAB_MAX_SOLVER_ITERATIONS: ${POKERLAB_MAX_SOLVER_ITERATIONS:-5000}
+      POKERLAB_MAX_CONCURRENT_SOLVERS: ${POKERLAB_MAX_CONCURRENT_SOLVERS:-2}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
   postgres:
     image: postgres:17-alpine
     environment:
@@ -14,6 +44,7 @@ services:
       retries: 10
     volumes:
       - pokerlab-postgres:/var/lib/postgresql/data
+    restart: unless-stopped
 
 volumes:
   pokerlab-postgres:

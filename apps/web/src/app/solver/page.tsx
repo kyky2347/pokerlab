@@ -73,6 +73,7 @@ function InputSlider({
   max,
   step,
   onChange,
+  disabled = false,
 }: {
   label: string;
   value: number;
@@ -80,6 +81,7 @@ function InputSlider({
   max: number;
   step: number;
   onChange: (value: number) => void;
+  disabled?: boolean;
 }) {
   return (
     <label className="flex flex-col gap-2">
@@ -95,6 +97,8 @@ function InputSlider({
         onValueChange={(values) =>
           onChange(Number(Array.isArray(values) ? values[0] : values))
         }
+        aria-label={label}
+        disabled={disabled}
       />
     </label>
   );
@@ -125,6 +129,22 @@ export default function Solver() {
         iterations,
       }),
   });
+  const smallAmount = Math.min(stack, (pot * small) / 100);
+  const largeAmount = Math.min(stack, (pot * large) / 100);
+  const hasDistinctBetSizes = smallAmount < largeAmount;
+  function resetSolverResult() {
+    solver.reset();
+  }
+  function changeSmall(value: number) {
+    resetSolverResult();
+    setSmall(value);
+    if (value >= large) setLarge(Math.min(150, value + 5));
+  }
+  function changeLarge(value: number) {
+    resetSolverResult();
+    setLarge(value);
+    if (value <= small) setSmall(Math.max(20, value - 5));
+  }
   return (
     <div>
       <PageHeader
@@ -166,7 +186,11 @@ export default function Solver() {
                 min={20}
                 max={500}
                 step={10}
-                onChange={setPot}
+                onChange={(value) => {
+                  resetSolverResult();
+                  setPot(value);
+                }}
+                disabled={solver.isPending}
               />
               <InputSlider
                 label={zh ? "有效筹码" : "Effective stack"}
@@ -174,7 +198,11 @@ export default function Solver() {
                 min={20}
                 max={500}
                 step={10}
-                onChange={setStack}
+                onChange={(value) => {
+                  resetSolverResult();
+                  setStack(value);
+                }}
+                disabled={solver.isPending}
               />
               <InputSlider
                 label={zh ? "小下注（% 底池）" : "Small bet (% pot)"}
@@ -182,7 +210,8 @@ export default function Solver() {
                 min={20}
                 max={80}
                 step={5}
-                onChange={setSmall}
+                onChange={changeSmall}
+                disabled={solver.isPending}
               />
               <InputSlider
                 label={zh ? "大下注（% 底池）" : "Large bet (% pot)"}
@@ -190,20 +219,40 @@ export default function Solver() {
                 min={60}
                 max={150}
                 step={5}
-                onChange={setLarge}
+                onChange={changeLarge}
+                disabled={solver.isPending}
               />
               <InputSlider
                 label={zh ? "迭代次数" : "Iterations"}
                 value={iterations}
                 min={100}
-                max={5000}
+                max={500}
                 step={100}
-                onChange={setIterations}
+                onChange={(value) => {
+                  resetSolverResult();
+                  setIterations(value);
+                }}
+                disabled={solver.isPending}
               />
+              {!hasDistinctBetSizes ? (
+                <Alert variant="destructive">
+                  <TriangleAlert />
+                  <AlertTitle>
+                    {zh
+                      ? "下注尺寸被筹码上限合并"
+                      : "Bet sizes collapse at this stack"}
+                  </AlertTitle>
+                  <AlertDescription>
+                    {zh
+                      ? "提高有效筹码，或降低小下注尺寸，确保博弈树中存在两个不同动作。"
+                      : "Increase the effective stack or reduce the small bet so the tree has two distinct actions."}
+                  </AlertDescription>
+                </Alert>
+              ) : null}
               <Button
                 size="lg"
                 onClick={() => solver.mutate()}
-                disabled={solver.isPending}
+                disabled={solver.isPending || !hasDistinctBetSizes}
               >
                 <Play data-icon="inline-start" />
                 {solver.isPending ? (

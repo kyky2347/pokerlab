@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from itertools import permutations
 
@@ -118,15 +119,24 @@ class RiverCFRSolver:
         effective_stack: float,
         bet_small: float,
         bet_large: float,
+        evaluator: Callable[
+            [tuple[Card, Card], tuple[Card, Card], tuple[Card, ...]], float
+        ] = showdown,
     ) -> None:
         if len(board) != 5 or len(set(board)) != 5:
             raise ValueError("River solver requires five unique board cards")
+        if pot <= 0 or effective_stack <= 0:
+            raise ValueError("Pot and effective stack must be positive")
+        if not 0 < bet_small < bet_large:
+            raise ValueError("Solver bet sizes must be positive and strictly ordered")
         self.board = board
         self.pot = pot
-        self.bet_sizes = {
-            "bet_small": min(effective_stack, pot * bet_small),
-            "bet_large": min(effective_stack, pot * bet_large),
-        }
+        self.evaluator = evaluator
+        small_amount = min(effective_stack, pot * bet_small)
+        large_amount = min(effective_stack, pot * bet_large)
+        if math.isclose(small_amount, large_amount):
+            raise ValueError("Effective stack collapses the two solver bet sizes")
+        self.bet_sizes = {"bet_small": small_amount, "bet_large": large_amount}
         oop_combos = expand_weighted_range(oop_weights, board)
         ip_combos = expand_weighted_range(ip_weights, board)
         self.deals = tuple(
@@ -178,7 +188,7 @@ class RiverCFRSolver:
     def _oop_terminal_utility(self, deal: RiverDeal, history: tuple[str, ...]) -> float:
         if history == ("check", "check"):
             stake = self.pot / 2
-            outcome = showdown(deal.oop.cards, deal.ip.cards, self.board)
+            outcome = self.evaluator(deal.oop.cards, deal.ip.cards, self.board)
             return (outcome * 2 - 1) * stake
         bet_action = next(action for action in history if action.startswith("bet"))
         bet = self.bet_sizes[bet_action]
@@ -186,7 +196,7 @@ class RiverCFRSolver:
         response = history[-1]
         if response == "fold":
             return self.pot / 2 if bettor == 0 else -self.pot / 2
-        outcome = showdown(deal.oop.cards, deal.ip.cards, self.board)
+        outcome = self.evaluator(deal.oop.cards, deal.ip.cards, self.board)
         return (outcome * 2 - 1) * (self.pot / 2 + bet)
 
     @staticmethod

@@ -74,6 +74,8 @@ def create_question(seed: int, engine: PokerEngine, db: Session) -> dict:
 
 
 def score_answer(question_id: str, answer: float, db: Session) -> dict:
+    if not 0 <= answer <= 1:
+        raise ValueError("Equity answer must be between 0 and 1")
     cached = QUESTION_CACHE.pop(question_id, None)
     if cached is None:
         raise ValueError("Question expired or was already answered")

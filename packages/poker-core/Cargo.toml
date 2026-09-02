@@ -4,6 +4,9 @@ version = "1.0.0"
 edition = "2024"
 description = "PokerLab's dependency-free card and Hold'em evaluator core"
 license = "MIT"
+repository = "https://github.com/kyky2347/project-s8qftxtm"
+keywords = ["poker", "evaluator", "probability", "pyo3"]
+categories = ["algorithms", "science"]
 
 [lib]
 name = "poker_core_rs"

@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import random
 import time
+from collections.abc import Callable
 from itertools import combinations
 
 from .domain import Card, full_deck, showdown
@@ -15,11 +16,14 @@ def calculate_range_equity(
     board: tuple[Card, ...],
     seed: int,
     samples: int,
+    evaluator: Callable[[tuple[Card, Card], tuple[Card, Card], tuple[Card, ...]], float] = showdown,
 ) -> dict:
     if len(board) not in {0, 3, 4, 5}:
         raise ValueError("Board must contain 0, 3, 4, or 5 cards")
     if len(set(board)) != len(board):
         raise ValueError("Duplicate cards are not permitted")
+    if samples < 1:
+        raise ValueError("Sample count must be positive")
     started = time.perf_counter()
     hero_combos = expand_weighted_range(hero_weights, board)
     villain_combos = expand_weighted_range(villain_weights, board)
@@ -42,7 +46,7 @@ def calculate_range_equity(
             blocked = set(board + hero.cards + villain.cards)
             deck = tuple(card for card in full_deck() if card not in blocked)
             for runout in combinations(deck, missing):
-                outcome = showdown(hero.cards, villain.cards, board + runout)
+                outcome = evaluator(hero.cards, villain.cards, board + runout)
                 total_weight += pair_weight
                 if outcome == 1:
                     win_weight += pair_weight
@@ -60,7 +64,7 @@ def calculate_range_equity(
             blocked = set(board + hero.cards + villain.cards)
             deck = tuple(card for card in full_deck() if card not in blocked)
             runout = tuple(rng.sample(deck, missing))
-            outcome = showdown(hero.cards, villain.cards, board + runout)
+            outcome = evaluator(hero.cards, villain.cards, board + runout)
             total_weight += 1
             if outcome == 1:
                 win_weight += 1

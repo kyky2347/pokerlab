@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from itertools import combinations
@@ -56,13 +57,17 @@ def expand_weighted_range(
 ) -> tuple[WeightedCombo, ...]:
     blocked_set = set(blocked)
     combos: list[WeightedCombo] = []
+    normalized_labels: set[str] = set()
     for label, raw_weight in weights.items():
         weight = float(raw_weight)
-        if not 0 <= weight <= 1:
+        if not math.isfinite(weight) or not 0 <= weight <= 1:
             raise ValueError("Range weights must be between 0 and 1")
+        normalized = normalize_hand_class(label)
+        if normalized in normalized_labels:
+            raise ValueError(f"Duplicate canonical hand class {normalized!r}")
+        normalized_labels.add(normalized)
         if weight == 0:
             continue
-        normalized = normalize_hand_class(label)
         combos.extend(
             WeightedCombo(cards, normalized, weight)
             for cards in expand_hand_class(normalized)

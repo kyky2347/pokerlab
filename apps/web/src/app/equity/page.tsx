@@ -64,6 +64,7 @@ export default function EquityLab() {
   const [zone, setZone] = useState<Zone>("board");
   const [samples, setSamples] = useState(10000);
   const [seed, setSeed] = useState(20250902);
+  const [resultKey, setResultKey] = useState<string | null>(null);
   const exact = useMutation({
     mutationFn: (value: string[]) =>
       postJson<EquityResult>("/equity/exact", { hero, villain, board: value }),
@@ -84,7 +85,19 @@ export default function EquityLab() {
   });
 
   const selected = [...hero, ...villain, ...board];
+  const currentKey = JSON.stringify({ hero, villain, board, samples, seed });
+  const isCurrent = resultKey === currentKey;
+  const exactData = isCurrent ? exact.data : undefined;
+  const monteCarloData = isCurrent ? monteCarlo.data : undefined;
+  const turnMapData = isCurrent ? turnMap.data : undefined;
+  function invalidateResults() {
+    setResultKey(null);
+    exact.reset();
+    monteCarlo.reset();
+    turnMap.reset();
+  }
   function chooseCard(card: string) {
+    invalidateResults();
     if (zone === "hero" && hero.length < 2) {
       const next = [...hero, card];
       setHero(next);
@@ -102,6 +115,9 @@ export default function EquityLab() {
       ![0, 3, 4, 5].includes(nextBoard.length)
     )
       return;
+    setResultKey(
+      JSON.stringify({ hero, villain, board: nextBoard, samples, seed }),
+    );
     exact.mutate(nextBoard);
     monteCarlo.mutate(nextBoard);
     if (nextBoard.length === 3) turnMap.mutate(nextBoard);
@@ -109,8 +125,16 @@ export default function EquityLab() {
   }
   function applyTurn(card: string) {
     const next = [...board.slice(0, 3), card];
+    invalidateResults();
     setBoard(next);
     run(next);
+  }
+  function removeCard(name: Zone, card: string) {
+    invalidateResults();
+    if (name === "hero") setHero(hero.filter((value) => value !== card));
+    else if (name === "villain")
+      setVillain(villain.filter((value) => value !== card));
+    else setBoard(board.filter((value) => value !== card));
   }
   function reset() {
     setHero([]);
@@ -120,8 +144,11 @@ export default function EquityLab() {
     exact.reset();
     monteCarlo.reset();
     turnMap.reset();
+    setResultKey(null);
   }
-  const error = exact.error ?? monteCarlo.error ?? turnMap.error;
+  const error = isCurrent
+    ? (exact.error ?? monteCarlo.error ?? turnMap.error)
+    : null;
 
   return (
     <div>
@@ -176,13 +203,7 @@ export default function EquityLab() {
                           key={card}
                           card={card}
                           compact
-                          onClick={() =>
-                            name === "hero"
-                              ? setHero(hero.filter((v) => v !== card))
-                              : name === "villain"
-                                ? setVillain(villain.filter((v) => v !== card))
-                                : setBoard(board.filter((v) => v !== card))
-                          }
+                          onClick={() => removeCard(name, card)}
                         />
                       ))}
                     </span>
@@ -228,11 +249,11 @@ export default function EquityLab() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {monteCarlo.data?.convergence ? (
+              {monteCarloData?.convergence ? (
                 <div className="h-64 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
-                      data={monteCarlo.data.convergence}
+                      data={monteCarloData.convergence}
                       margin={{ top: 8, right: 8, left: -12, bottom: 0 }}
                     >
                       <defs>
@@ -290,9 +311,9 @@ export default function EquityLab() {
                         dot={false}
                         isAnimationActive={false}
                       />
-                      {exact.data ? (
+                      {exactData ? (
                         <ReferenceLine
-                          y={exact.data.equity}
+                          y={exactData.equity}
                           stroke="var(--chart-2)"
                           strokeDasharray="5 5"
                         />
@@ -326,7 +347,10 @@ export default function EquityLab() {
                 {zh ? "样本数" : "Samples"}
                 <Select
                   value={String(samples)}
-                  onValueChange={(value) => setSamples(Number(value))}
+                  onValueChange={(value) => {
+                    invalidateResults();
+                    setSamples(Number(value));
+                  }}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
@@ -349,7 +373,10 @@ export default function EquityLab() {
                   type="number"
                   min={0}
                   value={seed}
-                  onChange={(event) => setSeed(Number(event.target.value))}
+                  onChange={(event) => {
+                    invalidateResults();
+                    setSeed(Number(event.target.value));
+                  }}
                 />
               </label>
               <Button
@@ -377,27 +404,27 @@ export default function EquityLab() {
           <Card>
             <CardHeader>
               <CardTitle>{zh ? "结果" : "Results"}</CardTitle>
-              <CardDescription>{exact.data?.engine ?? "—"}</CardDescription>
+              <CardDescription>{exactData?.engine ?? "—"}</CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-5">
-              {exact.data ? (
+              {exactData ? (
                 <>
                   <Metric
                     label="Exact equity"
-                    value={percent(exact.data.equity)}
+                    value={percent(exactData.equity)}
                     accent="primary"
-                    detail={`${exact.data.states?.toLocaleString()} states`}
+                    detail={`${exactData.states?.toLocaleString()} states`}
                   />
-                  <Metric label="Runtime" value={ms(exact.data.runtime_ms)} />
+                  <Metric label="Runtime" value={ms(exactData.runtime_ms)} />
                   <Metric
                     label="Win"
-                    value={percent(exact.data.win)}
+                    value={percent(exactData.win)}
                     accent="success"
                   />
-                  <Metric label="Tie" value={percent(exact.data.tie)} />
+                  <Metric label="Tie" value={percent(exactData.tie)} />
                   <Metric
                     label="Lose"
-                    value={percent(exact.data.lose)}
+                    value={percent(exactData.lose)}
                     accent="danger"
                   />
                 </>
@@ -408,29 +435,26 @@ export default function EquityLab() {
               )}
             </CardContent>
           </Card>
-          {monteCarlo.data ? (
+          {monteCarloData ? (
             <Card>
               <CardHeader>
                 <CardTitle>Monte Carlo</CardTitle>
-                <CardDescription>seed {monteCarlo.data.seed}</CardDescription>
+                <CardDescription>seed {monteCarloData.seed}</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-5">
                 <Metric
                   label="Estimate"
-                  value={percent(monteCarlo.data.equity)}
+                  value={percent(monteCarloData.equity)}
                 />
                 <Metric
                   label="95% CI"
-                  value={`${percent(monteCarlo.data.ci_low ?? 0, 1)}–${percent(monteCarlo.data.ci_high ?? 0, 1)}`}
+                  value={`${percent(monteCarloData.ci_low ?? 0, 1)}–${percent(monteCarloData.ci_high ?? 0, 1)}`}
                 />
                 <Metric
                   label="Std. error"
-                  value={percent(monteCarlo.data.standard_error ?? 0, 3)}
+                  value={percent(monteCarloData.standard_error ?? 0, 3)}
                 />
-                <Metric
-                  label="Runtime"
-                  value={ms(monteCarlo.data.runtime_ms)}
-                />
+                <Metric label="Runtime" value={ms(monteCarloData.runtime_ms)} />
               </CardContent>
             </Card>
           ) : null}
@@ -450,42 +474,44 @@ export default function EquityLab() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid min-w-[620px] grid-cols-13 gap-1 overflow-x-auto">
-            {suits.flatMap((suit) =>
-              ranks.map((rank) => {
-                const card = `${rank}${suit}`;
-                const value = turnMap.data?.turns.find(
-                  (row) => row.card === card,
-                );
-                const blocked = selected.includes(card);
-                return (
-                  <button
-                    key={card}
-                    type="button"
-                    disabled={!value || blocked}
-                    onClick={() => applyTurn(card)}
-                    className={cn(
-                      "font-data flex h-12 flex-col items-center justify-center rounded-md border text-[9px] transition focus-visible:outline-2 focus-visible:outline-ring",
-                      blocked
-                        ? "bg-muted opacity-20"
-                        : value
-                          ? "hover:-translate-y-0.5 hover:border-primary"
-                          : "bg-muted/30 text-muted-foreground",
-                    )}
-                    style={
-                      value
-                        ? {
-                            backgroundColor: `color-mix(in srgb, var(--felt) ${Math.round(value.equity * 85)}%, var(--card))`,
-                          }
-                        : undefined
-                    }
-                  >
-                    <span>{card}</span>
-                    <span>{value ? percent(value.equity, 1) : "—"}</span>
-                  </button>
-                );
-              }),
-            )}
+          <div className="overflow-x-auto">
+            <div className="grid min-w-[620px] grid-cols-13 gap-1">
+              {suits.flatMap((suit) =>
+                ranks.map((rank) => {
+                  const card = `${rank}${suit}`;
+                  const value = turnMapData?.turns.find(
+                    (row) => row.card === card,
+                  );
+                  const blocked = selected.includes(card);
+                  return (
+                    <button
+                      key={card}
+                      type="button"
+                      disabled={!value || blocked}
+                      onClick={() => applyTurn(card)}
+                      className={cn(
+                        "font-data flex h-12 flex-col items-center justify-center rounded-md border text-[9px] transition focus-visible:outline-2 focus-visible:outline-ring",
+                        blocked
+                          ? "bg-muted opacity-20"
+                          : value
+                            ? "hover:-translate-y-0.5 hover:border-primary"
+                            : "bg-muted/30 text-muted-foreground",
+                      )}
+                      style={
+                        value
+                          ? {
+                              backgroundColor: `color-mix(in srgb, var(--felt) ${Math.round(value.equity * 85)}%, var(--card))`,
+                            }
+                          : undefined
+                      }
+                    >
+                      <span>{card}</span>
+                      <span>{value ? percent(value.equity, 1) : "—"}</span>
+                    </button>
+                  );
+                }),
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>

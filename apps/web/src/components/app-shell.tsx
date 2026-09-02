@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -116,7 +116,7 @@ function LanguageButton() {
       variant="outline"
       size="sm"
       onClick={toggleLocale}
-      aria-label="Switch language"
+      aria-label={locale === "en" ? "切换为中文" : "Switch to English"}
     >
       <Languages data-icon="inline-start" />
       {locale === "en" ? "中文" : "EN"}
@@ -126,6 +126,10 @@ function LanguageButton() {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const locale = useLabStore((state) => state.locale);
+  useEffect(() => {
+    document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
+  }, [locale]);
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
       <aside className="fixed inset-y-0 left-0 hidden w-[248px] border-r bg-card/80 p-5 backdrop-blur-xl lg:flex lg:flex-col">

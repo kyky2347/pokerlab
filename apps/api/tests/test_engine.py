@@ -1,7 +1,9 @@
 import math
+import sys
+from types import SimpleNamespace
 
 from pokerlab_api.domain import Card
-from pokerlab_api.engine import PythonPokerEngine
+from pokerlab_api.engine import PythonPokerEngine, select_engine
 
 
 def card(token: str) -> Card:
@@ -54,3 +56,12 @@ def test_turn_map_has_every_legal_turn():
     values = PythonPokerEngine().turn_map(HERO, VILLAIN, FLOP)
     assert len(values) == 45
     assert all(0 <= row["equity"] <= 1 for row in values)
+
+
+def test_engine_selection_falls_back_when_rust_smoke_test_fails(monkeypatch):
+    broken_rust_module = SimpleNamespace(
+        deck=lambda: ["As"],
+        evaluate_seven=lambda _cards: [8, 14],
+    )
+    monkeypatch.setitem(sys.modules, "poker_core_rs", broken_rust_module)
+    assert isinstance(select_engine(), PythonPokerEngine)

@@ -2,6 +2,15 @@
 name = "pokerlab-api"
 version = "1.0.0"
 description = "PokerLab reference probability engine and FastAPI service"
+license = "MIT"
+authors = [{ name = "PokerLab contributors" }]
+keywords = ["poker", "probability", "monte-carlo", "cfr", "education"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Education",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.12",
+]
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.116",
@@ -19,6 +28,10 @@ dependencies = [
 
 [tool.uv.sources]
 poker-core-rs = { path = "../../packages/poker-core", editable = true }
+
+[project.urls]
+Repository = "https://github.com/kyky2347/project-s8qftxtm"
+Documentation = "https://github.com/kyky2347/project-s8qftxtm#readme"
 
 [dependency-groups]
 dev = [

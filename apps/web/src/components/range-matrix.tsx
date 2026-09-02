@@ -16,10 +16,12 @@ export function RangeMatrix({
   value,
   onChange,
   label,
+  disabled = false,
 }: {
   value: RangeWeights;
   onChange: (value: RangeWeights) => void;
   label: string;
+  disabled?: boolean;
 }) {
   const [selected, setSelected] = useState("AA");
   const [painting, setPainting] = useState<number | null>(null);
@@ -70,6 +72,7 @@ export function RangeMatrix({
             max={100}
             step={1}
             aria-label={`${selected} weight`}
+            disabled={disabled}
           />
         </div>
       </div>
@@ -86,6 +89,7 @@ export function RangeMatrix({
               <button
                 key={hand}
                 type="button"
+                disabled={disabled}
                 onPointerDown={() => cycle(hand)}
                 onPointerEnter={() => paint(hand)}
                 aria-label={`${hand} ${Math.round(weight * 100)} percent`}

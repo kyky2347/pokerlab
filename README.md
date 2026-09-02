@@ -1,122 +1,187 @@
 <div align="center">
 
-# POKERLAB
+# PokerLab
 
 ### Probability. Strategy. Uncertainty.
 
-**A bilingual, local-first research instrument for Hold'em probability, simulation, decision theory, and finite game solving.**  
-**一个双语、本地优先的德州扑克概率、模拟、决策理论与有限博弈研究工具。**
+**A bilingual, local-first research instrument for Hold’em probability, reproducible simulation, decision theory, and finite game solving.**<br>
+**一个双语、本地优先的德州扑克概率、可复现模拟、决策理论与有限博弈研究工具。**
 
-No real money · No live-game assistance · No fabricated statistics  
-无真钱 · 无实时牌局辅助 · 无伪造统计
+[![Quality](https://github.com/kyky2347/project-s8qftxtm/actions/workflows/ci.yml/badge.svg)](https://github.com/kyky2347/project-s8qftxtm/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-bfa06a.svg)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-58a982.svg)](apps/api/pyproject.toml)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-111816.svg)](apps/web/package.json)
+[![Rust 1.88](https://img.shields.io/badge/Rust-1.88-d95b52.svg)](rust-toolchain.toml)
+
+[Quick start / 快速开始](#quick-start--快速开始) · [Architecture / 架构](#architecture--架构) · [Validation / 验证](#validation--验证) · [Download ZIP](https://github.com/kyky2347/project-s8qftxtm/archive/refs/heads/main.zip)
 
 </div>
 
-![PokerLab home](output/playwright/home.png)
+![PokerLab overview](output/playwright/home.png)
 
-## What is inside / 功能
+## What makes PokerLab different / 为什么是 PokerLab
 
-- **Equity Lab** — exact legal-runout enumeration, independent seeded Monte Carlo, sample variance, standard error, 95% confidence intervals, real convergence paths, and a 52-card conditional turn explorer.
-- **Range Lab** — a draggable 13×13 weighted range matrix, illustrative presets, physical and weighted combo statistics, blockers, and range-vs-range equity.
-- **Guess the Equity** — legal generated scenarios, continuous quadratic scoring, session tracking, and a simple interpretable weakness-weighted sampler.
-- **EV Lab** — explicit pot conventions, break-even equity, incremental call EV, and an API-sourced decision curve.
-- **CFR Solver Lite** — a from-scratch CFR+ river abstraction, real blocker-aware showdowns, Kuhn Poker verification, mixed strategy matrices, and convergence diagnostics.
-- **Research / AI Lab** — Beta–Binomial opponent inference, Monte Carlo exports, and reproducible comparisons of transparent educational agents.
-- **Experiment ledger** — SQLite/Postgres persistence of parameters, seed, engine, runtime, and results with JSON/CSV export.
+PokerLab is designed as an inspectable research system—not a casino skin and not a collection of disconnected calculators. The browser never invents canonical poker results: every displayed equity, confidence interval, strategy, and experiment record comes from the typed API and the tested poker core.
 
-核心功能均可在没有云账号或付费服务的情况下运行。Rust 扩展不可用时会明确回退到 Python 参考实现。
+PokerLab 是一套可审查的研究系统，而不是赌场风格外壳或互不关联的小工具集合。浏览器不会自行生成“官方结果”；界面中的胜率、置信区间、策略和实验记录均来自类型化 API 与经过测试的扑克核心。
+
+- **One source of mathematical truth / 单一数学真值源** — Python reference evaluator plus a cross-checked Rust/PyO3 accelerator.
+- **Reproducible by construction / 从设计上可复现** — stochastic runs store their seed, parameters, engine, runtime, and result.
+- **Real finite solving / 真实有限求解** — CFR+ is implemented in this repository and verified against Kuhn Poker; no third-party solver is used.
+- **Honest limits / 坦诚展示边界** — the river solver’s no-raise abstraction is visible in the UI and documentation.
+- **Local-first / 本地优先** — SQLite works out of the box; PostgreSQL and Docker Compose are supported without making cloud accounts mandatory.
+- **English and Chinese / 中英双语** — the product shell, primary workflows, safety copy, and documentation are available in both languages.
+
+## Product tour / 功能导览
+
+| Instrument / 工具                    | What it does / 功能                                                                                                                                                                                          |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Equity Lab / 胜率实验室**          | Exact legal-runout enumeration, seeded Monte Carlo, variance, standard error, 95% confidence intervals, and a conditional turn map. / 精确枚举、固定种子蒙特卡洛、方差、标准误、95% 置信区间与条件转牌地图。 |
+| **Range Lab / 范围实验室**           | A weighted 13×13 range matrix, physical blockers, combo accounting, and range-vs-range equity. / 13×13 加权范围矩阵、物理阻断牌、组合统计与范围对范围胜率。                                                  |
+| **Guess the Equity / 猜胜率**        | Legal scenarios, continuous quadratic scoring, and an interpretable weakness-weighted sampler. / 合法牌局、连续二次评分与可解释的薄弱项加权出题。                                                            |
+| **EV Lab / EV 实验室**               | Explicit pot conventions, break-even equity, incremental call EV, and decision curves. / 明确的底池约定、盈亏平衡胜率、增量跟注 EV 与决策曲线。                                                              |
+| **CFR Solver Lite / CFR 轻量求解器** | A real blocker-aware CFR+ river abstraction with mixed strategies and convergence diagnostics. / 真实运行、阻断牌感知的河牌 CFR+ 抽象、混合策略与收敛诊断。                                                  |
+| **Research / AI / 研究实验室**       | Beta–Binomial inference, seeded convergence exports, and transparent agent comparisons. / Beta–Binomial 推断、固定种子收敛导出与透明代理对比。                                                               |
+| **Experiment ledger / 实验台账**     | SQLite/PostgreSQL persistence with complete JSON and CSV export. / SQLite/PostgreSQL 持久化及完整 JSON、CSV 导出。                                                                                           |
+
+<details>
+<summary><strong>Open the visual gallery / 展开界面画廊</strong></summary>
+
+### Equity and ranges / 胜率与范围
+
+![Equity Lab](output/playwright/equity-lab.png)
+
+![Range Lab](output/playwright/range-lab.png)
+
+### Training and decision theory / 训练与决策理论
+
+![Guess the Equity](output/playwright/trainer.png)
+
+![EV Lab](output/playwright/ev-lab.png)
+
+### Game theory and research / 博弈论与研究
+
+![CFR Solver Lite](output/playwright/solver.png)
+
+![Research Lab](output/playwright/research-lab.png)
+
+### Mobile Chinese interface / 移动端中文界面
+
+![PokerLab mobile Chinese](output/playwright/mobile-home-zh.png)
+
+</details>
+
+## Quick start / 快速开始
+
+### Native development / 本地开发
+
+Prerequisites / 环境要求:
+
+- Node.js 24+
+- pnpm 11+
+- Python 3.12 and [uv](https://docs.astral.sh/uv/)
+- Rust 1.88+ for the accelerator; the API preserves an automatic Python fallback if the compiled extension cannot load. / Rust 用于加速器；若扩展运行时无法加载，API 会自动回退到 Python 参考实现。
+
+```bash
+git clone https://github.com/kyky2347/project-s8qftxtm.git
+cd project-s8qftxtm
+corepack enable
+make setup
+make dev
+```
+
+Open / 打开:
+
+- Product UI / 产品界面: <http://localhost:3000>
+- API health / API 健康检查: <http://localhost:8000/health>
+- Interactive OpenAPI / 交互式 API 文档: <http://localhost:8000/docs>
+
+### One-command containers / 一条命令启动容器
+
+```bash
+docker compose up --build
+```
+
+This starts the web app, Rust-accelerated API, and PostgreSQL with health checks. Stop it with `docker compose down`; add `-v` only when you intentionally want to remove the database volume.
+
+该命令会启动 Web、Rust 加速 API 与 PostgreSQL，并执行健康检查。使用 `docker compose down` 停止；只有明确需要删除数据库卷时才追加 `-v`。
 
 ## Architecture / 架构
 
 ```mermaid
 flowchart LR
-  WEB[Next.js 16 + React 19\nTailwind + shadcn/ui] -->|typed JSON REST| API[FastAPI + Pydantic\nsafety limits + OpenAPI]
-  API --> IF{PokerEngine interface}
-  IF -->|preferred| RUST[Rust + PyO3\n7-card evaluator]
-  IF -->|automatic fallback| PY[Python reference\nexact + Monte Carlo]
-  API --> CFR[CFR+ + Kuhn fixture]
+  UI[Next.js 16 + React 19\nBilingual research UI] -->|typed JSON REST| API[FastAPI + Pydantic\nvalidation + safety limits]
+  API --> ENGINE{PokerEngine}
+  ENGINE -->|preferred| RUST[Rust + PyO3\n7-card evaluator]
+  ENGINE -->|automatic fallback| PY[Python reference\nexact + Monte Carlo]
+  API --> CFR[From-scratch CFR+\nKuhn verification]
+  API --> SCI[NumPy + SciPy\nreproducible research]
   API --> DB[(SQLAlchemy\nSQLite / PostgreSQL)]
-  API --> RESEARCH[NumPy + SciPy\nreproducible experiments]
 ```
 
-The backend is the canonical probability source. The frontend presents controls and charts but never independently declares official equity. See [architecture](docs/architecture.md) and [solver limitations](docs/solver-limitations.md).
+The API is the canonical result source. The frontend owns interaction and visualization, but never calculates canonical equity. Rust and Python evaluator outputs are cross-checked on seeded seven-card samples. See [architecture](docs/architecture.md), [mathematical notes](docs/math), and [solver limitations](docs/solver-limitations.md).
 
-## Quick start / 快速启动
+API 是结果真值源；前端负责交互与可视化，但不计算权威胜率。Rust 与 Python 评估器会在固定随机样本上交叉验证。详见[架构说明](docs/architecture.md)、[数学说明](docs/math)与[求解器边界](docs/solver-limitations.md)。
 
-Prerequisites: Node 24+, pnpm 11+, and `uv`. Rust is optional at runtime.
+## Mathematical contract / 数学契约
 
-```bash
-pnpm install
-cd apps/api && uv sync && cd ../..
-pnpm dev
-```
+- Equity / 胜率: `E = P(win) + 0.5 × P(tie)`
+- Monte Carlo / 蒙特卡洛: `Êₙ = (1/n) ΣXᵢ`, where `Xᵢ ∈ {0, 0.5, 1}`
+- Call EV / 跟注 EV: `EV(call) = e(P + B + C) − C`
+- Bayesian update / 贝叶斯更新: `Beta(α, β) → Beta(α+s, β+f)`
+- CFR+ regret matching / CFR+ 遗憾匹配: `σ(a) ∝ max(R(a), 0)`
 
-Open:
+Duplicate cards are rejected at the domain boundary. Monte Carlo samples legal runouts without replacement inside each trial. Range equity removes blocker collisions before normalization. / 重复牌会在领域边界被拒绝；蒙特卡洛在每次试验内进行无放回合法补牌采样；范围胜率会在归一化前移除阻断冲突。
 
-- Web: <http://localhost:3000>
-- API health: <http://localhost:8000/health>
-- OpenAPI: <http://localhost:8000/docs>
+## Validation / 验证
 
-Build the optional Rust accelerator:
+Run the complete local quality gate / 运行完整本地质量门禁:
 
 ```bash
-cd apps/api
-uv run maturin develop --manifest-path ../../packages/poker-core/Cargo.toml --features python
-```
-
-## Mathematical foundations / 数学基础
-
-PokerLab uses (E=P(\text{win})+\frac12P(\text{tie})). Monte Carlo outcomes are (X_i\in\{0,\frac12,1\}), with estimator (\hat E_n=n^{-1}\sum_iX_i) and standard error (s/\sqrt n). Bayesian aggression uses the conjugate update (\text{Beta}(\alpha,\beta)\to\text{Beta}(\alpha+s,\beta+f)). Call EV is (e(P+B+C)-C). CFR+ matches positive cumulative counterfactual regret at every information set.
-
-完整推导：[equity](docs/math/equity.md) · [Monte Carlo](docs/math/monte-carlo.md) · [expected value](docs/math/expected-value.md) · [Bayesian](docs/math/bayesian.md) · [CFR](docs/math/cfr.md)
-
-## Observed benchmarks / 实测基准
-
-Measured locally on macOS 26.5.2 ARM, Python 3.12.13, Python reference engine. These are observations from `pnpm benchmark`, not portable performance claims.
-
-| Workload | Observed throughput |
-|---|---:|
-| Seven-card hand evaluation | 22,317 eval/s |
-| Exact flop equity scenario (990 runouts) | 10.95 scenarios/s |
-| Monte Carlo equity | 10,561 samples/s |
-| One-class river range-vs-range scenario | 145.97 scenarios/s |
-| CFR iteration, one-class ranges | 34.10 iterations/s |
-
-Raw methodology and caveats are in [research/benchmarks.md](research/benchmarks.md).
-
-## Test and quality commands / 测试
-
-```bash
-pnpm --filter web lint
-pnpm --filter web typecheck
-pnpm --filter web test
-pnpm --filter web build
-cd apps/api && uv run ruff check . && uv run pytest
-cargo fmt --manifest-path packages/poker-core/Cargo.toml --check
-cargo test --manifest-path packages/poker-core/Cargo.toml
+make check
 pnpm --filter web test:e2e
 ```
 
-Coverage includes evaluator ordering, duplicate rejection, deck uniqueness, exact-equity invariants, player-swap symmetry, deterministic seeds, Monte Carlo tolerance, blockers, range normalization, continuous EV, Kuhn convergence, regret normalization, API flows, component interaction, desktop journeys, and mobile overflow.
+The suite covers evaluator ordering, wheel straights, duplicate rejection, exact-equity symmetry, deterministic seeds, Monte Carlo statistical tolerance, weighted blockers, canonical range aliases, Rust/Python cross-checks, EV geometry, CFR strategy normalization, Kuhn convergence, structured API errors, component behavior, desktop workflows, and mobile overflow.
 
-## Repository map / 目录
+测试覆盖牌力排序、A2345 顺子、重复牌拒绝、精确胜率对称性、固定种子、蒙特卡洛统计容差、加权阻断、范围别名、Rust/Python 交叉验证、EV 几何、CFR 策略归一化、Kuhn 收敛、结构化 API 错误、组件交互、桌面流程与移动端溢出。
+
+GitHub Actions runs formatting, linting, type checks, Python/Rust/frontend tests, production builds, desktop/mobile browser tests, and both container builds on every push and pull request.
+
+## Measured benchmark / 实测基准
+
+These are reproducible observations from `pnpm benchmark`, not universal performance claims. Recorded on macOS ARM with Python 3.12 using the Python reference path:
+
+| Workload / 工作负载                             |    Observed / 实测 |
+| ----------------------------------------------- | -----------------: |
+| Seven-card evaluation / 七张牌评估              |      22,317 eval/s |
+| Exact flop scenario, 990 runouts / 翻牌精确场景 |  10.95 scenarios/s |
+| Monte Carlo / 蒙特卡洛                          |   10,561 samples/s |
+| One-class river range equity / 单类河牌范围胜率 | 145.97 scenarios/s |
+| CFR one-class iteration / 单类 CFR 迭代         | 34.10 iterations/s |
+
+Methodology and caveats / 方法与限制: [research/benchmarks.md](research/benchmarks.md)
+
+## Repository map / 仓库结构
 
 ```text
-apps/web/                 Next.js bilingual product UI
-apps/api/                 FastAPI, reference engine, persistence, CFR, research
+apps/web/                 Next.js product UI and browser tests
+apps/api/                 FastAPI, reference engine, CFR, research, persistence
 packages/poker-core/      Rust evaluator and PyO3 extension
 docs/math/                Inspectable mathematical definitions
 research/                 Measured benchmark record
-infra/                    Production container recipes
-.github/workflows/        CI quality gates
+infra/                    Reproducible container builds
+.github/workflows/        Continuous quality gates
 ```
 
-## Limits / 限制
+## Scope and responsible use / 范围与负责任使用
 
-The solver is river-only, heads-up, fixed-board, fixed-range, and no-raise. Its regret metric is not rigorous exploitability. The adaptive trainer is a transparent reweighting heuristic, not a learned opponent model. Normal confidence intervals are approximations. SQLite is intended for local use; choose PostgreSQL for multi-process deployment.
+The solver is heads-up, river-only, fixed-board, fixed-range, and no-raise. Its displayed regret is a convergence diagnostic—not rigorous exploitability. PokerLab does not implement payments, deposits, casino integration, screen capture, real-time play advice, or automated betting.
 
-本项目是教育与研究软件，不实现支付、存款、赌场接入、屏幕抓取、实时牌局建议或自动下注。
+求解器仅覆盖单挑、河牌、固定公共牌、固定范围与无加注树；显示的遗憾值是收敛诊断，不是严格 exploitability。本项目不实现支付、存款、赌场接入、屏幕抓取、实时牌局建议或自动下注。
 
-## Optional integrations / 可选集成
+## Contributing and security / 贡献与安全
 
-Core functionality has no cloud dependency. `DATABASE_URL` can select Postgres. `SENTRY_DSN` is reserved for optional monitoring. Deployment details are in [docs/deployment.md](docs/deployment.md).
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before proposing mathematical or behavioral changes. Report vulnerabilities according to [SECURITY.md](SECURITY.md). Released under the [MIT License](LICENSE).
+
+提交数学或行为变更前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)；安全问题请按 [SECURITY.md](SECURITY.md) 报告。本项目使用 [MIT License](LICENSE)。

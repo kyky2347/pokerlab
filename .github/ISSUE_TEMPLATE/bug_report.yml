@@ -1,0 +1,41 @@
+name: Bug report / 缺陷报告
+description: Report a reproducible correctness, reliability, or interface problem.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "Thank you for providing a minimal, deterministic reproduction. / 感谢提供最小且确定性的复现步骤。"
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / 问题
+      description: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction / 复现步骤
+      description: Include cards, ranges, parameters, seed, engine, and commands when relevant.
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Commit
+      placeholder: git rev-parse --short HEAD
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment / 环境
+      description: OS, browser, Node, Python, Rust, and deployment method.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks / 确认
+      options:
+        - label: I removed private data and credentials. / 我已移除私人数据与凭据。
+          required: true
+        - label: I searched existing issues. / 我已搜索现有 Issue。
+          required: true

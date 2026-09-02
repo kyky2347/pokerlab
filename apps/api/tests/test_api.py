@@ -42,6 +42,7 @@ def test_illegal_duplicate_card_state_has_structured_error():
         )
         assert response.status_code == 422
         assert response.json()["error"]["code"] == "invalid_poker_state"
+        assert response.json()["error"]["request_id"] == response.headers["x-request-id"]
 
 
 def test_bayesian_update_and_experiment_history():
@@ -61,3 +62,42 @@ def test_bayesian_update_and_experiment_history():
         history = client.get("/experiments")
         assert history.status_code == 200
         assert len(history.json()["experiments"]) >= 1
+
+
+def test_schema_validation_errors_are_structured_and_traceable():
+    with TestClient(app) as client:
+        response = client.post(
+            "/ev/calculate",
+            headers={"x-request-id": "test-request-123"},
+            json={
+                "pot": 100,
+                "opponent_bet": 40,
+                "call_size": 50,
+                "hero_equity": 0.3,
+                "effective_stack": 200,
+            },
+        )
+        assert response.status_code == 422
+        assert response.headers["x-request-id"] == "test-request-123"
+        assert response.json()["error"]["code"] == "request_validation_error"
+        assert response.json()["error"]["request_id"] == "test-request-123"
+        assert response.json()["error"]["details"]
+
+
+def test_solver_rejects_collapsed_bet_abstraction_before_running():
+    with TestClient(app) as client:
+        response = client.post(
+            "/solver/jobs",
+            json={
+                "board": ["Ah", "Kd", "7s", "3c", "2d"],
+                "oop_range": {"AQo": 1},
+                "ip_range": {"KQo": 1},
+                "pot": 100,
+                "effective_stack": 20,
+                "bet_small": 0.5,
+                "bet_large": 1,
+                "iterations": 100,
+            },
+        )
+        assert response.status_code == 422
+        assert response.json()["error"]["code"] == "request_validation_error"

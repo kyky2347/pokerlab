@@ -1,8 +1,8 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Bot, Clipboard, Download, FlaskConical, Play } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -65,6 +65,7 @@ function Param({
   max,
   step = 1,
   onChange,
+  disabled = false,
 }: {
   label: string;
   value: number;
@@ -72,6 +73,7 @@ function Param({
   max: number;
   step?: number;
   onChange: (value: number) => void;
+  disabled?: boolean;
 }) {
   return (
     <label className="flex flex-col gap-2">
@@ -87,6 +89,8 @@ function Param({
         onValueChange={(values) =>
           onChange(Number(Array.isArray(values) ? values[0] : values))
         }
+        aria-label={label}
+        disabled={disabled}
       />
     </label>
   );
@@ -105,8 +109,10 @@ function downloadCsv(
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
+  document.body.append(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 export default function Research() {
@@ -116,14 +122,19 @@ export default function Research() {
   const [aggressive, setAggressive] = useState(4);
   const [passive, setPassive] = useState(3);
   const [episodes, setEpisodes] = useState(1000);
-  const bayes = useQuery({
-    queryKey: ["bayesian", alpha, beta, aggressive, passive],
-    queryFn: () =>
+  const initialBayesRun = useRef(false);
+  const bayes = useMutation({
+    mutationFn: (parameters: {
+      alpha: number;
+      beta: number;
+      aggressive: number;
+      passive: number;
+    }) =>
       postJson<BayesianResult>("/research/bayesian", {
-        alpha,
-        beta,
-        aggressive_actions: aggressive,
-        passive_actions: passive,
+        alpha: parameters.alpha,
+        beta: parameters.beta,
+        aggressive_actions: parameters.aggressive,
+        passive_actions: parameters.passive,
         credible_level: 0.95,
       }),
   });
@@ -141,6 +152,15 @@ export default function Research() {
     mutationFn: () =>
       postJson<AgentResult>("/research/agents", { episodes, seed: 20250902 }),
   });
+  function runBayesianUpdate() {
+    bayes.mutate({ alpha, beta, aggressive, passive });
+  }
+  useEffect(() => {
+    if (!initialBayesRun.current) {
+      initialBayesRun.current = true;
+      bayes.mutate({ alpha: 2, beta: 2, aggressive: 4, passive: 3 });
+    }
+  }, [bayes]);
   return (
     <div>
       <PageHeader
@@ -155,9 +175,13 @@ export default function Research() {
       />
       <Tabs defaultValue="bayesian">
         <TabsList className="mb-5">
-          <TabsTrigger value="bayesian">Bayesian model</TabsTrigger>
+          <TabsTrigger value="bayesian">
+            {zh ? "贝叶斯模型" : "Bayesian model"}
+          </TabsTrigger>
           <TabsTrigger value="monte">Monte Carlo</TabsTrigger>
-          <TabsTrigger value="agents">Agent comparison</TabsTrigger>
+          <TabsTrigger value="agents">
+            {zh ? "代理对比" : "Agent comparison"}
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="bayesian">
           <div className="grid gap-5 lg:grid-cols-[330px_minmax(0,1fr)]">
@@ -175,7 +199,11 @@ export default function Research() {
                   min={0.5}
                   max={20}
                   step={0.5}
-                  onChange={setAlpha}
+                  onChange={(value) => {
+                    bayes.reset();
+                    setAlpha(value);
+                  }}
+                  disabled={bayes.isPending}
                 />
                 <Param
                   label="Prior β"
@@ -183,22 +211,44 @@ export default function Research() {
                   min={0.5}
                   max={20}
                   step={0.5}
-                  onChange={setBeta}
+                  onChange={(value) => {
+                    bayes.reset();
+                    setBeta(value);
+                  }}
+                  disabled={bayes.isPending}
                 />
                 <Param
                   label={zh ? "激进行为" : "Aggressive actions"}
                   value={aggressive}
                   min={0}
                   max={50}
-                  onChange={setAggressive}
+                  onChange={(value) => {
+                    bayes.reset();
+                    setAggressive(value);
+                  }}
+                  disabled={bayes.isPending}
                 />
                 <Param
                   label={zh ? "非激进行为" : "Passive opportunities"}
                   value={passive}
                   min={0}
                   max={50}
-                  onChange={setPassive}
+                  onChange={(value) => {
+                    bayes.reset();
+                    setPassive(value);
+                  }}
+                  disabled={bayes.isPending}
                 />
+                <Button onClick={runBayesianUpdate} disabled={bayes.isPending}>
+                  <Play data-icon="inline-start" />
+                  {bayes.isPending
+                    ? zh
+                      ? "更新中"
+                      : "Updating"
+                    : zh
+                      ? "更新后验"
+                      : "Update posterior"}
+                </Button>
                 {bayes.data ? (
                   <div className="flex gap-2">
                     <Button
@@ -212,7 +262,7 @@ export default function Research() {
                       }
                     >
                       <Clipboard data-icon="inline-start" />
-                      Copy JSON
+                      {zh ? "复制 JSON" : "Copy JSON"}
                     </Button>
                     <Button
                       variant="outline"
@@ -519,7 +569,11 @@ export default function Research() {
               <CardContent className="flex flex-col gap-4">
                 <Select
                   value={String(episodes)}
-                  onValueChange={(value) => setEpisodes(Number(value))}
+                  disabled={agents.isPending}
+                  onValueChange={(value) => {
+                    agents.reset();
+                    setEpisodes(Number(value));
+                  }}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
@@ -528,7 +582,7 @@ export default function Research() {
                     <SelectGroup>
                       {[100, 1000, 10000].map((value) => (
                         <SelectItem key={value} value={String(value)}>
-                          {value.toLocaleString()} episodes
+                          {value.toLocaleString()} {zh ? "局" : "episodes"}
                         </SelectItem>
                       ))}
                     </SelectGroup>
@@ -564,7 +618,7 @@ export default function Research() {
                     }
                   >
                     <Download data-icon="inline-start" />
-                    Download CSV
+                    {zh ? "下载 CSV" : "Download CSV"}
                   </Button>
                 ) : null}
               </CardContent>

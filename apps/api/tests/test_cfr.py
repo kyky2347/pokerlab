@@ -1,5 +1,7 @@
 import math
 
+import pytest
+
 from pokerlab_api.cfr import InformationSet, RiverCFRSolver, verify_kuhn
 from pokerlab_api.domain import Card
 
@@ -29,3 +31,26 @@ def test_river_solver_produces_normalized_real_strategies():
     for hand in result["strategy"].values():
         assert math.isclose(sum(hand["actions"].values()), 1, abs_tol=1e-8)
     assert result["convergence"][-1]["average_regret"] >= 0
+
+
+def test_river_solver_rejects_reversed_or_stack_collapsed_bet_sizes():
+    board = tuple(Card.parse(token) for token in ("Ah", "Kd", "7s", "3c", "2d"))
+    with pytest.raises(ValueError, match="strictly ordered"):
+        RiverCFRSolver(board, {"AQo": 1}, {"KQo": 1}, 100, 100, 1, 0.5)
+    with pytest.raises(ValueError, match="collapses"):
+        RiverCFRSolver(board, {"AQo": 1}, {"KQo": 1}, 100, 20, 0.5, 1)
+
+
+def test_river_solver_uses_injected_terminal_evaluator():
+    board = tuple(Card.parse(token) for token in ("Ah", "Kd", "7s", "3c", "2d"))
+    solver = RiverCFRSolver(
+        board,
+        {"AQo": 1},
+        {"KQo": 1},
+        100,
+        100,
+        0.5,
+        1,
+        evaluator=lambda _oop, _ip, _board: 1.0,
+    )
+    assert solver._oop_terminal_utility(solver.deals[0], ("check", "check")) == 50
