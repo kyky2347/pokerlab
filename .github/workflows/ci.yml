@@ -31,6 +31,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.88.0
         with:
           components: rustfmt
+      - run: sh -n ./pokerlab && ./pokerlab help >/dev/null
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: cd apps/api && uv sync --frozen
       - run: pnpm --filter web lint

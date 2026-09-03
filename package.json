@@ -14,6 +14,9 @@
   },
   "packageManager": "pnpm@11.19.0",
   "scripts": {
+    "system:start": "./pokerlab",
+    "system:stop": "./pokerlab stop",
+    "system:status": "./pokerlab status",
     "dev": "concurrently -n api,web -c green,cyan \"pnpm dev:api\" \"pnpm dev:web\"",
     "dev:web": "pnpm --filter web dev",
     "dev:api": "cd apps/api && uv run uvicorn pokerlab_api.main:app --reload --port 8000",

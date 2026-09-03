@@ -1,0 +1,211 @@
+#!/usr/bin/env sh
+
+set -eu
+
+ROOT_DIR=$(cd "$(dirname "$0")" && pwd -P)
+RUNTIME_ENV="$ROOT_DIR/.pokerlab.env"
+WEB_URL="${POKERLAB_WEB_URL:-http://localhost:3000}"
+API_HEALTH_URL="${POKERLAB_API_HEALTH_URL:-http://localhost:8000/health}"
+START_TIMEOUT="${POKERLAB_START_TIMEOUT:-300}"
+
+if [ -t 1 ]; then
+  GREEN='\033[0;32m'
+  GOLD='\033[0;33m'
+  RED='\033[0;31m'
+  RESET='\033[0m'
+else
+  GREEN=''
+  GOLD=''
+  RED=''
+  RESET=''
+fi
+
+info() {
+  printf '%b%s%b\n' "$GREEN" "$1" "$RESET"
+}
+
+warn() {
+  printf '%b%s%b\n' "$GOLD" "$1" "$RESET" >&2
+}
+
+fail() {
+  printf '%b%s%b\n' "$RED" "$1" "$RESET" >&2
+  exit 1
+}
+
+usage() {
+  cat <<'EOF'
+PokerLab system launcher / PokerLab 系统启动器
+
+Usage / 用法:
+  ./pokerlab                Start everything and open the app / 启动全部服务并打开应用
+  ./pokerlab start          Same as above / 同上
+  ./pokerlab start --no-open
+                            Start without opening a browser / 启动但不打开浏览器
+  ./pokerlab stop           Stop services and preserve data / 停止服务并保留数据
+  ./pokerlab restart        Restart everything and open the app / 重启全部服务并打开应用
+  ./pokerlab status         Show service health / 查看服务健康状态
+  ./pokerlab logs [service] Follow logs (web, api, or postgres) / 查看日志
+  ./pokerlab doctor         Check local requirements / 检查本地环境
+  ./pokerlab open           Open the running app / 打开已运行的应用
+  ./pokerlab help           Show this help / 显示帮助
+
+Requires Docker Desktop or Docker Engine with Compose v2.
+需要 Docker Desktop，或带有 Compose v2 的 Docker Engine。
+EOF
+}
+
+require_docker_cli() {
+  command -v docker >/dev/null 2>&1 || fail "Docker is not installed. Install Docker Desktop first. / 未安装 Docker，请先安装 Docker Desktop。"
+  docker compose version >/dev/null 2>&1 || fail "Docker Compose v2 is unavailable. / Docker Compose v2 不可用。"
+}
+
+require_docker_daemon() {
+  require_docker_cli
+  docker info >/dev/null 2>&1 || fail "Docker is not running. Start Docker Desktop and try again. / Docker 未运行，请启动 Docker Desktop 后重试。"
+}
+
+random_secret() {
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex 32
+    return
+  fi
+
+  if [ -r /dev/urandom ]; then
+    LC_ALL=C od -An -N 32 -tx1 /dev/urandom | tr -d ' \n'
+    return
+  fi
+
+  fail "Unable to generate a secure local database password. / 无法生成安全的本地数据库密码。"
+}
+
+ensure_runtime_env() {
+  if [ -f "$RUNTIME_ENV" ]; then
+    chmod 600 "$RUNTIME_ENV" 2>/dev/null || true
+    return
+  fi
+
+  secret=$(random_secret)
+  old_umask=$(umask)
+  umask 077
+  {
+    printf '%s\n' '# Generated locally by ./pokerlab. Never commit this file.'
+    printf '%s\n' '# 由 ./pokerlab 在本地生成，切勿提交此文件。'
+    printf '%s\n' 'COMPOSE_PROJECT_NAME=pokerlab'
+    printf '%s\n' 'POSTGRES_DB=pokerlab'
+    printf '%s\n' 'POSTGRES_USER=pokerlab'
+    printf 'POSTGRES_PASSWORD=%s\n' "$secret"
+    printf '%s\n' 'NEXT_PUBLIC_API_URL=http://localhost:8000'
+    printf '%s\n' 'CORS_ORIGINS=http://localhost:3000'
+    printf '%s\n' 'POKERLAB_MAX_MONTE_CARLO=500000'
+    printf '%s\n' 'POKERLAB_MAX_SOLVER_ITERATIONS=5000'
+    printf '%s\n' 'POKERLAB_MAX_CONCURRENT_SOLVERS=2'
+  } >"$RUNTIME_ENV"
+  umask "$old_umask"
+  info "Created a private local runtime configuration. / 已创建仅本机可读的运行配置。"
+}
+
+compose() {
+  docker compose --project-directory "$ROOT_DIR" --env-file "$RUNTIME_ENV" "$@"
+}
+
+open_app() {
+  if command -v open >/dev/null 2>&1; then
+    open "$WEB_URL" >/dev/null 2>&1 || true
+  elif command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "$WEB_URL" >/dev/null 2>&1 || true
+  elif command -v cmd.exe >/dev/null 2>&1; then
+    cmd.exe /C start "$WEB_URL" >/dev/null 2>&1 || true
+  else
+    warn "Open $WEB_URL in your browser. / 请在浏览器打开 $WEB_URL。"
+    return
+  fi
+  info "Opened $WEB_URL / 已打开 $WEB_URL"
+}
+
+verify_endpoints() {
+  if ! command -v curl >/dev/null 2>&1; then
+    return
+  fi
+
+  curl --fail --silent --show-error --max-time 10 "$WEB_URL" >/dev/null || fail "Web health check failed. Run ./pokerlab logs web. / Web 健康检查失败，请运行 ./pokerlab logs web。"
+  curl --fail --silent --show-error --max-time 10 "$API_HEALTH_URL" >/dev/null || fail "API health check failed. Run ./pokerlab logs api. / API 健康检查失败，请运行 ./pokerlab logs api。"
+}
+
+start_system() {
+  no_open=false
+  if [ "${1:-}" = "--no-open" ]; then
+    no_open=true
+    shift
+  fi
+  [ "$#" -eq 0 ] || fail "Unknown start option: $1 / 未知启动参数：$1"
+
+  require_docker_daemon
+  ensure_runtime_env
+  info "Building and starting PokerLab... / 正在构建并启动 PokerLab……"
+  if ! compose up --build --detach --wait --wait-timeout "$START_TIMEOUT"; then
+    warn "Startup failed. Recent service status follows. / 启动失败，以下为当前服务状态。"
+    compose ps >&2 || true
+    fail "Run ./pokerlab logs for details. / 请运行 ./pokerlab logs 查看详情。"
+  fi
+  verify_endpoints
+  compose ps
+  info "PokerLab is ready. / PokerLab 已就绪。"
+  info "Product / 产品界面: $WEB_URL"
+  info "API docs / API 文档: http://localhost:8000/docs"
+
+  if [ "$no_open" = false ]; then
+    open_app
+  fi
+}
+
+stop_system() {
+  require_docker_daemon
+  ensure_runtime_env
+  compose down
+  info "PokerLab stopped; database data was preserved. / PokerLab 已停止，数据库数据已保留。"
+}
+
+status_system() {
+  require_docker_daemon
+  ensure_runtime_env
+  compose ps
+}
+
+logs_system() {
+  require_docker_daemon
+  ensure_runtime_env
+  case "${1:-}" in
+    '') compose logs --follow --tail 200 ;;
+    web|api|postgres) compose logs --follow --tail 200 "$1" ;;
+    *) fail "Unknown service: $1. Use web, api, or postgres. / 未知服务：$1，请使用 web、api 或 postgres。" ;;
+  esac
+}
+
+doctor() {
+  require_docker_cli
+  info "Docker CLI and Compose v2 are available. / Docker CLI 与 Compose v2 可用。"
+  if docker info >/dev/null 2>&1; then
+    info "Docker engine is running. / Docker 引擎正在运行。"
+  else
+    fail "Docker engine is not running. / Docker 引擎未运行。"
+  fi
+}
+
+cd "$ROOT_DIR"
+command_name="${1:-start}"
+if [ "$#" -gt 0 ]; then
+  shift
+fi
+
+case "$command_name" in
+  start) start_system "$@" ;;
+  stop) [ "$#" -eq 0 ] || fail "The stop command takes no arguments. / stop 命令不接受参数。"; stop_system ;;
+  restart) stop_system; start_system "$@" ;;
+  status) [ "$#" -eq 0 ] || fail "The status command takes no arguments. / status 命令不接受参数。"; status_system ;;
+  logs) [ "$#" -le 1 ] || fail "Use at most one service name. / 最多指定一个服务名。"; logs_system "${1:-}" ;;
+  doctor) [ "$#" -eq 0 ] || fail "The doctor command takes no arguments. / doctor 命令不接受参数。"; doctor ;;
+  open) [ "$#" -eq 0 ] || fail "The open command takes no arguments. / open 命令不接受参数。"; open_app ;;
+  help|-h|--help) usage ;;
+  *) usage >&2; fail "Unknown command: $command_name / 未知命令：$command_name" ;;
+esac

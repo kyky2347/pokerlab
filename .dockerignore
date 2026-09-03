@@ -5,6 +5,7 @@
 .env
 .env.*
 !.env.example
+.pokerlab.env
 **/.next
 **/.pytest_cache
 **/.ruff_cache

@@ -2,6 +2,14 @@
 
 All notable changes are documented here. / 所有重要变更记录于此。
 
+## Unreleased / 尚未发布
+
+- Added the bilingual `./pokerlab` launcher for one-command build, startup, health verification, browser opening, status, logs, and safe shutdown.
+- Replaced the checked-in Compose password with a locally generated random credential and removed the unnecessary host PostgreSQL port.
+
+- 新增双语 `./pokerlab` 启动器，以一条命令完成构建、启动、健康检查、浏览器打开、状态查询、日志与安全停止。
+- 移除 Compose 中写死的数据库口令，改为本地随机生成，并取消不必要的 PostgreSQL 宿主机端口暴露。
+
 ## 1.0.0 — 2026-09-02
 
 - Released the bilingual Next.js research interface and typed FastAPI service.

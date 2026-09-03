@@ -26,29 +26,33 @@ Web 界面位于 <http://localhost:3000>；FastAPI 位于 <http://localhost:8000
 
 ## Reproducible containers / 可复现容器
 
-Docker Compose starts the production-built web app, the Rust-accelerated API, and PostgreSQL:
+The repository launcher provides the recommended one-command deployment. It checks Docker, generates an ignored random database credential with owner-only permissions, builds and starts every service, waits for their health checks, and opens the product:
 
-Docker Compose 会启动生产构建的 Web、Rust 加速 API 与 PostgreSQL：
-
-```bash
-docker compose up --build
-```
-
-Wait until all three services are healthy, then open <http://localhost:3000>. Stop the stack without deleting data using:
-
-等待三个服务均健康后打开 <http://localhost:3000>。以下命令会停止服务但保留数据：
+仓库启动器提供推荐的一键部署方式。它会检查 Docker、生成被 Git 忽略且仅当前用户可读的随机数据库凭据、构建并启动全部服务、等待健康检查，然后打开产品：
 
 ```bash
-docker compose down
+./pokerlab
 ```
 
-Only append `-v` when you intentionally want to delete the PostgreSQL volume. / 只有明确需要删除 PostgreSQL 数据卷时才追加 `-v`。
+The product opens at <http://localhost:3000>. Operational commands are bilingual:
+
+产品会在 <http://localhost:3000> 打开。运维命令提供中英文输出：
+
+```bash
+./pokerlab status
+./pokerlab logs api
+./pokerlab stop
+```
+
+`stop` preserves the PostgreSQL volume. The generated `.pokerlab.env` file is local-only and ignored by both Git and Docker build contexts. PostgreSQL is reachable only on the private Compose network; it is not published to the host.
+
+`stop` 会保留 PostgreSQL 数据卷。生成的 `.pokerlab.env` 仅存在于本机，并被 Git 与 Docker 构建上下文同时忽略。PostgreSQL 只在 Compose 私有网络内可访问，不会暴露到宿主机。
 
 ## Configuration / 配置
 
-Copy `.env.example` for native development when defaults are not suitable. Compose already supplies its internal service URLs.
+Copy `.env.example` for native development when defaults are not suitable. For manual Compose usage, copy it to `.env`, replace the placeholder database password, and pass `--env-file .env`. The launcher handles this automatically for normal use.
 
-原生开发需要覆盖默认值时，可复制 `.env.example`；Compose 已内置容器间服务地址。
+原生开发需要覆盖默认值时，可复制 `.env.example`。手动使用 Compose 时，将其复制为 `.env`，替换数据库密码占位符，并传入 `--env-file .env`；正常使用启动器时这些步骤会自动完成。
 
 | Variable / 变量                   | Purpose / 用途                                     | Production guidance / 生产建议                                                                                             |
 | --------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |

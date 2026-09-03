@@ -73,6 +73,27 @@ PokerLab 是一套可审查的研究系统，而不是赌场风格外壳或互�
 
 ## Quick start / 快速开始
 
+### One command: launch the complete system / 一条命令启动完整系统
+
+Install and start Docker Desktop, then run the repository launcher from the project directory:
+
+安装并启动 Docker Desktop，然后在项目目录执行仓库启动器：
+
+```bash
+./pokerlab
+```
+
+That single command generates a private local database credential, builds and starts PostgreSQL, the Rust-accelerated API, and the production web app, waits for every health check, then opens PokerLab in the default browser.
+
+这一条命令会生成仅保存在本机的随机数据库凭据，构建并启动 PostgreSQL、Rust 加速 API 与生产 Web 应用，等待全部健康检查通过，然后在默认浏览器中打开 PokerLab。
+
+```bash
+./pokerlab status          # service health / 服务状态
+./pokerlab logs            # live logs / 实时日志
+./pokerlab stop            # stop and preserve data / 停止并保留数据
+./pokerlab start --no-open # headless start / 启动但不打开浏览器
+```
+
 ### Native development / 本地开发
 
 Prerequisites / 环境要求:
@@ -96,15 +117,18 @@ Open / 打开:
 - API health / API 健康检查: <http://localhost:8000/health>
 - Interactive OpenAPI / 交互式 API 文档: <http://localhost:8000/docs>
 
-### One-command containers / 一条命令启动容器
+### Manual container control / 手动控制容器
 
 ```bash
-docker compose up --build
+cp .env.example .env
+# Replace POSTGRES_PASSWORD in .env with a random local value.
+# 将 .env 中的 POSTGRES_PASSWORD 替换为随机本地值。
+docker compose --env-file .env up --build
 ```
 
-This starts the web app, Rust-accelerated API, and PostgreSQL with health checks. Stop it with `docker compose down`; add `-v` only when you intentionally want to remove the database volume.
+The `./pokerlab` launcher is recommended because it creates the ignored runtime credential securely, waits for health checks, and opens the product automatically. For manual Compose control, stop with `docker compose --env-file .env down`; add `-v` only when you intentionally want to remove the database volume.
 
-该命令会启动 Web、Rust 加速 API 与 PostgreSQL，并执行健康检查。使用 `docker compose down` 停止；只有明确需要删除数据库卷时才追加 `-v`。
+推荐使用 `./pokerlab`，因为它会安全生成被 Git 忽略的运行凭据、等待健康检查并自动打开产品。手动使用 Compose 时，以 `docker compose --env-file .env down` 停止；只有明确需要删除数据库卷时才追加 `-v`。
 
 ## Architecture / 架构
 
