@@ -69,6 +69,6 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - run: docker build -f infra/api.Dockerfile -t pokerlab-api:test .
       - run: docker build -f infra/web.Dockerfile -t pokerlab-web:test .
