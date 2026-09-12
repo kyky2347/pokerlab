@@ -4,8 +4,8 @@
 
 ### Probability. Strategy. Uncertainty.
 
-**A bilingual, local-first research instrument for Hold’em probability, reproducible simulation, decision theory, and finite game solving.**<br>
-**一个双语、本地优先的德州扑克概率、可复现模拟、决策理论与有限博弈研究工具。**
+**A local-first research instrument for Hold’em probability, reproducible simulation, decision theory, and finite game solving.**<br>
+**一个本地优先的德州扑克概率、可复现模拟、决策理论与有限博弈研究工具。**
 
 [![Quality](https://github.com/kyky2347/pokerlab/actions/workflows/ci.yml/badge.svg)](https://github.com/kyky2347/pokerlab/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-bfa06a.svg)](LICENSE)
