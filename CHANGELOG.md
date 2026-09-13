@@ -5,7 +5,9 @@ All notable changes are documented here. / 所有重要变更记录于此。
 ## Unreleased / 尚未发布
 
 - Added CODEOWNERS and immutable SHA pinning for every GitHub Actions dependency.
+- Updated PyO3 to 0.29 to resolve GHSA-36hh-v3qg-5jq4 and GHSA-chgr-c6px-7xpp.
 - 新增 CODEOWNERS，并将所有 GitHub Actions 依赖锁定到不可变提交 SHA。
+- 将 PyO3 升级至 0.29，修复 GHSA-36hh-v3qg-5jq4 与 GHSA-chgr-c6px-7xpp。
 - Added the bilingual `./pokerlab` launcher for one-command build, startup, health verification, browser opening, status, logs, and safe shutdown.
 - Replaced the checked-in Compose password with a locally generated random credential and removed the unnecessary host PostgreSQL port.
 
