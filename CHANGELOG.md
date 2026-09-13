@@ -4,6 +4,8 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Added CODEOWNERS and immutable SHA pinning for every GitHub Actions dependency.
+- 新增 CODEOWNERS，并将所有 GitHub Actions 依赖锁定到不可变提交 SHA。
 - Added the bilingual `./pokerlab` launcher for one-command build, startup, health verification, browser opening, status, logs, and safe shutdown.
 - Replaced the checked-in Compose password with a locally generated random credential and removed the unnecessary host PostgreSQL port.
 

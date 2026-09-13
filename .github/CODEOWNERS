@@ -1,0 +1,10 @@
+# Default ownership / 默认代码所有者
+* @kyky2347
+
+# Security-sensitive surfaces / 安全敏感区域
+/.github/ @kyky2347
+/infra/ @kyky2347
+/docker-compose.yml @kyky2347
+/pokerlab @kyky2347
+/packages/poker-core/ @kyky2347
+/apps/api/pokerlab_api/ @kyky2347
