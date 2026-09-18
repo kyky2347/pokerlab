@@ -31,8 +31,12 @@ Pinned runtime versions are recorded in `.node-version`, `.python-version`, `rus
 ```bash
 make check
 pnpm --filter web test:e2e
-docker compose config --quiet
+docker compose --env-file .pokerlab.env config --quiet # after ./pokerlab initializes it
 ```
+
+`make check` includes launcher regression tests using stubbed tools; they never stop real containers. API tests create temporary databases instead of writing to your experiment ledger. For Compose validation before first launch, follow the manual `.env` setup in [deployment](docs/deployment.md) and use `--env-file .env` instead.
+
+`make check` 包含使用工具替身的启动器回归测试，不会停止真实容器。API 测试使用临时数据库，不会写入你的实验台账。首次启动前检查 Compose 时，请按[部署说明](docs/deployment.md)手动配置 `.env`，并改用 `--env-file .env`。
 
 For visual changes, inspect desktop and mobile layouts in a real browser. For core changes, compare the Rust path against the Python reference and include a deterministic regression case.
 

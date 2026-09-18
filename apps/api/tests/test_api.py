@@ -1,5 +1,10 @@
-from fastapi.testclient import TestClient
+from unittest.mock import patch
 
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import event
+
+from pokerlab_api import database, main
 from pokerlab_api.main import app
 
 
@@ -9,6 +14,41 @@ def test_health_and_diagnostics():
         diagnostics = client.get("/diagnostics")
         assert diagnostics.status_code == 200
         assert diagnostics.json()["engine"] in {"Python reference", "Rust accelerated"}
+
+
+def test_diagnostics_reuses_startup_verification_but_checks_database_each_time():
+    queries = []
+
+    @event.listens_for(database.engine, "before_cursor_execute")
+    def record_query(_conn, _cursor, statement, _parameters, _context, _executemany):
+        queries.append(statement)
+
+    with patch.object(main, "verify_kuhn", wraps=main.verify_kuhn) as verify:
+        with TestClient(app) as client:
+            queries.clear()
+            first = client.get("/diagnostics")
+            second = client.get("/diagnostics")
+            assert first.status_code == second.status_code == 200
+            assert first.json()["kuhn_verification"] == second.json()["kuhn_verification"]
+            assert first.json()["kuhn_verification"]["passed"] is True
+            assert queries.count("SELECT 1") == 2
+            verify.assert_called_once_with(5_000)
+
+
+@pytest.mark.parametrize(
+    "endpoint", ["/range/equity", "/equity/monte-carlo", "/research/monte-carlo"]
+)
+def test_configured_sample_limit_applies_to_every_monte_carlo_endpoint(endpoint, monkeypatch):
+    monkeypatch.setattr(main.settings, "pokerlab_max_monte_carlo", 100)
+    if endpoint == "/range/equity":
+        payload = {"hero_range": {"AA": 1}, "villain_range": {"KK": 1}, "samples": 101}
+    else:
+        payload = {"hero": ["As", "Ks"], "villain": ["Qh", "Qd"], "samples": 101}
+    with TestClient(app) as client:
+        response = client.post(endpoint, json=payload)
+        assert response.status_code == 422
+        assert "safety limit 100" in response.json()["error"]["message"]
+        assert client.get("/experiments").json()["experiments"] == []
 
 
 def test_equity_and_ev_endpoints():

@@ -6,6 +6,7 @@ ROOT_DIR=$(cd "$(dirname "$0")" && pwd -P)
 RUNTIME_ENV="$ROOT_DIR/.pokerlab.env"
 WEB_URL="${POKERLAB_WEB_URL:-http://localhost:3000}"
 API_HEALTH_URL="${POKERLAB_API_HEALTH_URL:-http://localhost:8000/health}"
+API_DOCS_URL="${POKERLAB_API_DOCS_URL:-${API_HEALTH_URL%/health}/docs}"
 START_TIMEOUT="${POKERLAB_START_TIMEOUT:-300}"
 
 if [ -t 1 ]; then
@@ -42,6 +43,8 @@ Usage / 用法:
   ./pokerlab start          Same as above / 同上
   ./pokerlab start --no-open
                             Start without opening a browser / 启动但不打开浏览器
+  ./pokerlab start --no-build
+                            Reuse built images / 复用已构建镜像（更新代码后请正常启动）
   ./pokerlab stop           Stop services and preserve data / 停止服务并保留数据
   ./pokerlab restart        Restart everything and open the app / 重启全部服务并打开应用
   ./pokerlab status         Show service health / 查看服务健康状态
@@ -79,15 +82,27 @@ random_secret() {
   fail "Unable to generate a secure local database password. / 无法生成安全的本地数据库密码。"
 }
 
-ensure_runtime_env() {
-  if [ -f "$RUNTIME_ENV" ]; then
-    chmod 600 "$RUNTIME_ENV" 2>/dev/null || true
+require_runtime_env() {
+  [ ! -L "$RUNTIME_ENV" ] || fail "Runtime configuration must not be a symbolic link. / 运行配置不能是符号链接。"
+  [ -f "$RUNTIME_ENV" ] && [ -s "$RUNTIME_ENV" ] || fail "Missing or empty .pokerlab.env. Run ./pokerlab to initialize, or restore your existing configuration from backup. / .pokerlab.env 缺失或为空，请运行 ./pokerlab 初始化，或从备份恢复已有配置。"
+}
+
+ensure_runtime_env() (
+  if [ -e "$RUNTIME_ENV" ] || [ -L "$RUNTIME_ENV" ]; then
+    require_runtime_env
+    chmod 600 "$RUNTIME_ENV" || fail "Cannot secure runtime configuration permissions. / 无法设置运行配置的安全权限。"
     return
   fi
 
+  existing_volumes=$(docker volume ls --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME:-pokerlab}" --filter "label=com.docker.compose.volume=pokerlab-postgres" --quiet) || fail "Cannot check existing database volumes. / 无法检查已有数据库卷。"
+  [ -z "$existing_volumes" ] || fail "Database data exists but .pokerlab.env is missing. Restore the original configuration; generating a new password would not unlock the existing database. No data was changed. / 数据库已有数据，但 .pokerlab.env 缺失。请恢复原配置；新密码无法访问原数据库。未修改任何数据。"
+
   secret=$(random_secret)
-  old_umask=$(umask)
+  [ "${#secret}" -eq 64 ] || fail "Secure password generation failed. / 安全密码生成失败。"
   umask 077
+  runtime_tmp=$(mktemp -d "$ROOT_DIR/.pokerlab.env.XXXXXX") || fail "Cannot create a private runtime configuration. / 无法创建私有运行配置。"
+  trap 'rm -f "$runtime_tmp/env"; rmdir "$runtime_tmp"' 0
+  trap 'exit 1' HUP INT TERM
   {
     printf '%s\n' '# Generated locally by ./pokerlab. Never commit this file.'
     printf '%s\n' '# 由 ./pokerlab 在本地生成，切勿提交此文件。'
@@ -100,27 +115,33 @@ ensure_runtime_env() {
     printf '%s\n' 'POKERLAB_MAX_MONTE_CARLO=500000'
     printf '%s\n' 'POKERLAB_MAX_SOLVER_ITERATIONS=5000'
     printf '%s\n' 'POKERLAB_MAX_CONCURRENT_SOLVERS=2'
-  } >"$RUNTIME_ENV"
-  umask "$old_umask"
-  info "Created a private local runtime configuration. / 已创建仅本机可读的运行配置。"
-}
+  } >"$runtime_tmp/env"
+  # Publish a complete file atomically; a concurrent launch must never replace it.
+  if ln "$runtime_tmp/env" "$RUNTIME_ENV" 2>/dev/null; then
+    info "Created a private local runtime configuration. / 已创建仅本机可读的运行配置。"
+  else
+    require_runtime_env
+  fi
+)
 
 compose() {
   docker compose --project-directory "$ROOT_DIR" --env-file "$RUNTIME_ENV" "$@"
 }
 
 open_app() {
+  opened=false
   if command -v open >/dev/null 2>&1; then
-    open "$WEB_URL" >/dev/null 2>&1 || true
+    open "$WEB_URL" >/dev/null 2>&1 && opened=true
   elif command -v xdg-open >/dev/null 2>&1; then
-    xdg-open "$WEB_URL" >/dev/null 2>&1 || true
+    xdg-open "$WEB_URL" >/dev/null 2>&1 && opened=true
   elif command -v cmd.exe >/dev/null 2>&1; then
-    cmd.exe /C start "$WEB_URL" >/dev/null 2>&1 || true
-  else
-    warn "Open $WEB_URL in your browser. / 请在浏览器打开 $WEB_URL。"
-    return
+    cmd.exe /C start "" "$WEB_URL" >/dev/null 2>&1 && opened=true
   fi
-  info "Opened $WEB_URL / 已打开 $WEB_URL"
+  if [ "$opened" = true ]; then
+    info "Opened $WEB_URL / 已打开 $WEB_URL"
+  else
+    warn "Could not open a browser automatically. Open $WEB_URL manually. / 无法自动打开浏览器，请手动打开 ${WEB_URL}。"
+  fi
 }
 
 verify_endpoints() {
@@ -132,18 +153,33 @@ verify_endpoints() {
   curl --fail --silent --show-error --max-time 10 "$API_HEALTH_URL" >/dev/null || fail "API health check failed. Run ./pokerlab logs api. / API 健康检查失败，请运行 ./pokerlab logs api。"
 }
 
-start_system() {
+validate_start_options() {
   no_open=false
-  if [ "${1:-}" = "--no-open" ]; then
-    no_open=true
+  build_option=--build
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --no-open) no_open=true ;;
+      --no-build) build_option=--no-build ;;
+      *) fail "Unknown start option: $1 / 未知启动参数：$1" ;;
+    esac
     shift
-  fi
-  [ "$#" -eq 0 ] || fail "Unknown start option: $1 / 未知启动参数：$1"
+  done
+  case "$START_TIMEOUT" in
+    *[!0-9]*|'') fail "POKERLAB_START_TIMEOUT must be a positive integer. / POKERLAB_START_TIMEOUT 必须为正整数。" ;;
+  esac
+  [ "$START_TIMEOUT" -gt 0 ] 2>/dev/null || fail "POKERLAB_START_TIMEOUT must be a positive integer. / POKERLAB_START_TIMEOUT 必须为正整数。"
+}
 
+start_system() {
+  validate_start_options "$@"
   require_docker_daemon
   ensure_runtime_env
-  info "Building and starting PokerLab... / 正在构建并启动 PokerLab……"
-  if ! compose up --build --detach --wait --wait-timeout "$START_TIMEOUT"; then
+  if [ "$build_option" = --build ]; then
+    info "Building and starting PokerLab... / 正在构建并启动 PokerLab……"
+  else
+    info "Starting PokerLab with existing images... / 正在使用已有镜像启动 PokerLab……"
+  fi
+  if ! compose up "$build_option" --detach --wait --wait-timeout "$START_TIMEOUT"; then
     warn "Startup failed. Recent service status follows. / 启动失败，以下为当前服务状态。"
     compose ps >&2 || true
     fail "Run ./pokerlab logs for details. / 请运行 ./pokerlab logs 查看详情。"
@@ -152,7 +188,7 @@ start_system() {
   compose ps
   info "PokerLab is ready. / PokerLab 已就绪。"
   info "Product / 产品界面: $WEB_URL"
-  info "API docs / API 文档: http://localhost:8000/docs"
+  info "API docs / API 文档: $API_DOCS_URL"
 
   if [ "$no_open" = false ]; then
     open_app
@@ -161,24 +197,27 @@ start_system() {
 
 stop_system() {
   require_docker_daemon
-  ensure_runtime_env
+  require_runtime_env
   compose down
   info "PokerLab stopped; database data was preserved. / PokerLab 已停止，数据库数据已保留。"
 }
 
 status_system() {
   require_docker_daemon
-  ensure_runtime_env
+  require_runtime_env
   compose ps
 }
 
 logs_system() {
+  case "${1:-}" in
+    ''|web|api|postgres) ;;
+    *) fail "Unknown service: $1. Use web, api, or postgres. / 未知服务：$1，请使用 web、api 或 postgres。" ;;
+  esac
   require_docker_daemon
-  ensure_runtime_env
+  require_runtime_env
   case "${1:-}" in
     '') compose logs --follow --tail 200 ;;
     web|api|postgres) compose logs --follow --tail 200 "$1" ;;
-    *) fail "Unknown service: $1. Use web, api, or postgres. / 未知服务：$1，请使用 web、api 或 postgres。" ;;
   esac
 }
 
@@ -201,7 +240,7 @@ fi
 case "$command_name" in
   start) start_system "$@" ;;
   stop) [ "$#" -eq 0 ] || fail "The stop command takes no arguments. / stop 命令不接受参数。"; stop_system ;;
-  restart) stop_system; start_system "$@" ;;
+  restart) validate_start_options "$@"; stop_system; start_system "$@" ;;
   status) [ "$#" -eq 0 ] || fail "The status command takes no arguments. / status 命令不接受参数。"; status_system ;;
   logs) [ "$#" -le 1 ] || fail "Use at most one service name. / 最多指定一个服务名。"; logs_system "${1:-}" ;;
   doctor) [ "$#" -eq 0 ] || fail "The doctor command takes no arguments. / doctor 命令不接受参数。"; doctor ;;

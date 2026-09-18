@@ -4,6 +4,16 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Precompute weighted sampling distributions and reuse the deck without changing seeded pair/runout sequences; add a reproducible range benchmark and exact/Monte Carlo regression coverage.
+- Run diagnostic Kuhn verification once per service startup, enforce configured range-sampling limits, and reject underflowed zero-mass ranges with a structured error.
+- Harden launcher credential creation against concurrent starts and missing database credentials; validate restart arguments before stopping, report browser-opening failures honestly, and add `--no-build` for existing images.
+- Isolate API test databases from local experiment data and add launcher regression coverage to the existing quality gate.
+
+- 预计算加权采样分布并复用牌堆，保持固定种子的手牌对与补牌序列不变；新增可复现范围基准与精确/蒙特卡洛回归测试。
+- 诊断 Kuhn 自检改为每次服务启动时执行一次；范围采样遵守配置上限，权重下溢导致总质量为零时返回结构化错误。
+- 加固启动器的并发凭据创建和数据库凭据丢失保护；停止服务前校验重启参数，如实报告浏览器打开失败，并新增 `--no-build` 复用镜像选项。
+- API 测试数据库与本地实验数据隔离；启动器回归测试纳入已有质量门禁。
+
 - Added CODEOWNERS and immutable SHA pinning for every GitHub Actions dependency.
 - Updated PyO3 to 0.29 to resolve GHSA-36hh-v3qg-5jq4 and GHSA-chgr-c6px-7xpp.
 - 新增 CODEOWNERS，并将所有 GitHub Actions 依赖锁定到不可变提交 SHA。

@@ -50,6 +50,8 @@ solver_slots = threading.BoundedSemaphore(settings.pokerlab_max_concurrent_solve
 async def lifespan(app: FastAPI):
     initialize_database()
     app.state.engine = select_engine()
+    # Deterministic self-test: run once per process startup, not on every poll.
+    app.state.kuhn_verification = verify_kuhn(5_000)
     logger.info(json.dumps({"event": "startup", "engine": app.state.engine.name}))
     yield
 
@@ -211,7 +213,7 @@ def diagnostics(
         "status": "operational",
         "engine": engine.name,
         "database": active_database_name(),
-        "kuhn_verification": verify_kuhn(5_000),
+        "kuhn_verification": request.app.state.kuhn_verification,
         "limits": {
             "monte_carlo_samples": settings.pokerlab_max_monte_carlo,
             "solver_iterations": settings.pokerlab_max_solver_iterations,
@@ -275,6 +277,8 @@ def range_equity(
     db: Session = Depends(get_db),
     engine: PokerEngine = Depends(current_engine),
 ) -> dict:
+    if payload.samples > settings.pokerlab_max_monte_carlo:
+        raise ValueError(f"Samples exceed safety limit {settings.pokerlab_max_monte_carlo}")
     board = parse_cards(payload.board)
     result = calculate_range_equity(
         payload.hero_range,

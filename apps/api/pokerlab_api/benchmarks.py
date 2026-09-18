@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import argparse
 import json
 import platform
+import statistics
 import time
 
 from .cfr import RiverCFRSolver
 from .domain import Card, evaluate_seven
-from .engine import PythonPokerEngine
+from .engine import PythonPokerEngine, select_engine
 from .range_equity import calculate_range_equity
 
 
@@ -62,5 +64,74 @@ def run() -> dict:
     }
 
 
+def run_range_benchmark() -> dict:
+    """Fixed workload for end-to-end weighted-sampling regressions / 范围采样基准。"""
+    weights = dict(
+        zip(
+            "AA KK QQ JJ TT 99 88 77 AKs AQs AJs ATs KQs KJs QJs JTs AKo AQo AJo KQo".split(),
+            (
+                1,
+                1,
+                0.9,
+                0.8,
+                0.7,
+                0.6,
+                0.5,
+                0.4,
+                1,
+                0.9,
+                0.8,
+                0.7,
+                0.8,
+                0.6,
+                0.5,
+                0.4,
+                0.9,
+                0.7,
+                0.5,
+                0.4,
+            ),
+            strict=True,
+        )
+    )
+    board = tuple(Card.parse(token) for token in ("2c", "7d", "9h"))
+    engines = {engine.name: engine for engine in (PythonPokerEngine(), select_engine())}
+    results = []
+    for engine in engines.values():
+        runs = [
+            calculate_range_equity(weights, weights, board, 7, 5_000, engine.showdown)
+            for _ in range(3)
+        ]
+        stable_results = [
+            {key: value for key, value in run.items() if key != "runtime_ms"} for run in runs
+        ]
+        assert all(result == stable_results[0] for result in stable_results)
+        results.append(
+            {
+                "engine": engine.name,
+                "times_ms": [run["runtime_ms"] for run in runs],
+                "median_ms": statistics.median(run["runtime_ms"] for run in runs),
+                "result": stable_results[0],
+            }
+        )
+    return {
+        "environment": {"platform": platform.platform(), "python": platform.python_version()},
+        "workload": {
+            "hero_range": weights,
+            "villain_range": weights,
+            "board": [str(card) for card in board],
+            "seed": 7,
+            "samples": 5_000,
+            "repeats": 3,
+        },
+        "results": results,
+    }
+
+
 if __name__ == "__main__":
-    print(json.dumps(run(), indent=2))
+    parser = argparse.ArgumentParser(description="PokerLab reproducible benchmarks / 可复现基准")
+    parser.add_argument(
+        "--range-only", action="store_true", help="Benchmark weighted sampling / 范围采样基准"
+    )
+    args = parser.parse_args()
+    print(json.dumps(run_range_benchmark() if args.range_only else run(), indent=2))

@@ -42,11 +42,20 @@ The product opens at <http://localhost:3000>. Operational commands are bilingual
 ./pokerlab status
 ./pokerlab logs api
 ./pokerlab stop
+./pokerlab start --no-build --no-open
 ```
 
 `stop` preserves the PostgreSQL volume. The generated `.pokerlab.env` file is local-only and ignored by both Git and Docker build contexts. PostgreSQL is reachable only on the private Compose network; it is not published to the host.
 
 `stop` 会保留 PostgreSQL 数据卷。生成的 `.pokerlab.env` 仅存在于本机，并被 Git 与 Docker 构建上下文同时忽略。PostgreSQL 只在 Compose 私有网络内可访问，不会暴露到宿主机。
+
+Use `--no-build` only to restart unchanged, previously built images. Normal startup still builds current source. Invalid restart options are rejected before services are stopped. `status`, `logs`, and `stop` never create new credentials.
+
+只有代码未变且镜像已构建时才使用 `--no-build`；正常启动仍会构建当前源码。错误的重启参数会在停止服务之前被拒绝。`status`、`logs` 和 `stop` 不会生成新凭据。
+
+Back up `.pokerlab.env` privately alongside the database. Configuration creation is atomic and owner-only, including simultaneous launches. If a database volume already exists but the configuration is missing, startup refuses to generate a replacement password: restore the original configuration from backup. Do not delete the volume to bypass this safeguard unless you explicitly intend to discard its data. Empty files and symbolic links are rejected rather than overwritten.
+
+请将 `.pokerlab.env` 与数据库一起私密备份。配置采用原子创建与仅所有者可读写权限，并发启动也不会覆盖凭据。如果数据库卷已存在但配置缺失，启动器会拒绝生成替代密码：请从备份恢复原配置。除非明确需要丢弃数据，否则不要删除数据卷来绕过保护。空文件与符号链接会被拒绝，而不是覆盖。
 
 ## Configuration / 配置
 
@@ -70,7 +79,7 @@ Copy `.env.example` for native development when defaults are not suitable. For m
 - Restrict `CORS_ORIGINS` to the deployed web origin. / 将 CORS 限制到实际 Web 域名。
 - Persist the database and back it up before upgrades. / 持久化数据库并在升级前备份。
 - Keep compute safety limits and request timeouts enabled. / 保留计算上限与请求超时。
-- Monitor `/health`; it reports the selected Rust or Python engine without fabricating availability. / 监控 `/health`；它会如实报告当前 Rust 或 Python 引擎。
+- Use `/health` for liveness and `/diagnostics` for a live database check, the selected engine, and the Kuhn self-test result computed at this process's startup. Repeated diagnostic polls do not rerun the solver. / 用 `/health` 检查进程存活，用 `/diagnostics` 检查实时数据库连通性、实际引擎与本次进程启动时计算的 Kuhn 自检结果；重复轮询不会重新运行求解器。
 - Do not describe the finite river abstraction as a full-game GTO solver. / 不要把有限河牌抽象描述为完整牌局 GTO 求解器。
 
 The Python engine remains an automatic runtime fallback if the compiled Rust extension cannot load. This preserves availability, while diagnostics and every experiment record continue to expose the selected engine.
