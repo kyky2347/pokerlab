@@ -92,7 +92,12 @@ That single command generates a private local database credential, builds and st
 ./pokerlab logs            # live logs / 实时日志
 ./pokerlab stop            # stop and preserve data / 停止并保留数据
 ./pokerlab start --no-open # headless start / 启动但不打开浏览器
+./pokerlab start --no-build --no-open # reuse images / 复用已有镜像
 ```
+
+`--no-build` is for unchanged code with images already built. After pulling updates, run `./pokerlab` normally to rebuild. Keep a private backup of `.pokerlab.env`: if it is lost while the database volume remains, restore the original credentials; the launcher will not replace them or erase data.
+
+`--no-build` 用于代码未变且镜像已构建的情况；拉取更新后请正常运行 `./pokerlab` 以重新构建。请私密备份 `.pokerlab.env`：若配置丢失但数据库卷仍在，请恢复原凭据；启动器不会擅自更换密码或删除数据。
 
 ### Native development / 本地开发
 
@@ -166,9 +171,9 @@ make check
 pnpm --filter web test:e2e
 ```
 
-The suite covers evaluator ordering, wheel straights, duplicate rejection, exact-equity symmetry, deterministic seeds, Monte Carlo statistical tolerance, weighted blockers, canonical range aliases, Rust/Python cross-checks, EV geometry, CFR strategy normalization, Kuhn convergence, structured API errors, component behavior, desktop workflows, and mobile overflow.
+The suite covers evaluator ordering, wheel straights, duplicate rejection, exact-equity symmetry, deterministic seeds, Monte Carlo statistical tolerance, weighted blockers, canonical range aliases, Rust/Python cross-checks, EV geometry, CFR strategy normalization, Kuhn convergence, structured API errors, component behavior, desktop workflows, and mobile overflow. Launcher regression tests cover concurrent credential initialization, private permissions, non-destructive error handling, and image reuse; API tests use isolated temporary databases.
 
-测试覆盖牌力排序、A2345 顺子、重复牌拒绝、精确胜率对称性、固定种子、蒙特卡洛统计容差、加权阻断、范围别名、Rust/Python 交叉验证、EV 几何、CFR 策略归一化、Kuhn 收敛、结构化 API 错误、组件交互、桌面流程与移动端溢出。
+测试覆盖牌力排序、A2345 顺子、重复牌拒绝、精确胜率对称性、固定种子、蒙特卡洛统计容差、加权阻断、范围别名、Rust/Python 交叉验证、EV 几何、CFR 策略归一化、Kuhn 收敛、结构化 API 错误、组件交互、桌面流程与移动端溢出。启动器回归测试覆盖并发凭据初始化、私有权限、无破坏性报错与镜像复用；API 测试使用隔离的临时数据库。
 
 GitHub Actions runs formatting, linting, type checks, Python/Rust/frontend tests, production builds, desktop/mobile browser tests, and both container builds on every push and pull request.
 
@@ -185,6 +190,12 @@ These are reproducible observations from `pnpm benchmark`, not universal perform
 | CFR one-class iteration / 单类 CFR 迭代         | 34.10 iterations/s |
 
 Methodology and caveats / 方法与限制: [research/benchmarks.md](research/benchmarks.md)
+
+Weighted range sampling now builds its cumulative probability table once per request. In a separate 20-class, 5,000-sample benchmark on the same machine, median end-to-end time fell from 1,217 to 505 ms on Python and from 822 to 120 ms with Rust. The seeded result is unchanged. These are workload-specific measurements, not a promise for every calculation.
+
+加权范围采样现在每次请求只构建一次累计概率表。在同机独立测试的 20 类手牌、5,000 次采样场景中，Python 路径耗时中位数从 1,217 降至 505 毫秒，Rust 路径从 822 降至 120 毫秒，固定种子结果不变。这是特定工作负载的实测，不代表所有计算都具有同样增益。
+
+Reproduce / 复现：`cd apps/api && uv run python -m pokerlab_api.benchmarks --range-only`
 
 ## Repository map / 仓库结构
 

@@ -2,6 +2,7 @@
 .env
 .env.local
 .pokerlab.env
+.pokerlab.env.*
 .venv/
 __pycache__/
 .pytest_cache/

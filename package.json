@@ -21,7 +21,7 @@
     "dev:web": "pnpm --filter web dev",
     "dev:api": "cd apps/api && uv run uvicorn pokerlab_api.main:app --reload --port 8000",
     "build": "pnpm --filter web build",
-    "lint": "pnpm --filter web lint",
+    "lint": "pnpm --filter web lint && cd apps/api && uv run ruff check .",
     "typecheck": "pnpm --filter web typecheck",
     "test": "pnpm test:web && pnpm test:api && pnpm test:rust",
     "check": "pnpm lint && pnpm typecheck && pnpm format:check && pnpm test && pnpm build",
