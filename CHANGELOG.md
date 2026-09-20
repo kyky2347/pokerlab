@@ -4,6 +4,16 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Persist trainer questions with a 24-hour lifetime and atomic one-time scoring across API workers/restarts; failed writes roll back without consuming the question.
+- Add packaged, transactional Alembic upgrades for fresh and legacy databases, signed 64-bit PostgreSQL seeds, explicit UTC history timestamps, and an indexed stable experiment timeline.
+- Stop on configured-database initialization failures instead of silently diverting experiments into SQLite; preserve the independent Rust/Python fallback.
+- Add real PostgreSQL migration, concurrency, restart, and rollback tests to CI, with bilingual upgrade/recovery documentation.
+
+- 训练题持久化并保留 24 小时有效期，支持跨 API 进程/重启的一次性原子评分；写入失败会回滚，不消耗题目。
+- 新增随包分发的事务型 Alembic 新库/旧库升级，支持 PostgreSQL 有符号 64 位种子、明确的 UTC 时间戳和带索引的稳定台账排序。
+- 指定数据库初始化失败时明确停止，不再悄悄把实验写入 SQLite；独立的 Rust/Python 回退保持不变。
+- CI 新增真实 PostgreSQL 迁移、并发、重启与回滚测试，并同步中英文升级恢复文档。
+
 - Precompute weighted sampling distributions and reuse the deck without changing seeded pair/runout sequences; add a reproducible range benchmark and exact/Monte Carlo regression coverage.
 - Run diagnostic Kuhn verification once per service startup, enforce configured range-sampling limits, and reject underflowed zero-mass ranges with a structured error.
 - Harden launcher credential creation against concurrent starts and missing database credentials; validate restart arguments before stopping, report browser-opening failures honestly, and add `--no-build` for existing images.
