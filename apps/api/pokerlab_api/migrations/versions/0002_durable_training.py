@@ -1,7 +1,6 @@
 """Persist training questions, widen seeds, and index the experiment timeline."""
 
 import sqlalchemy as sa
-
 from alembic import op
 
 revision = "0002_durable_training"

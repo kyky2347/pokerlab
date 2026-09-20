@@ -1,6 +1,6 @@
+from alembic import context
 from sqlalchemy import create_engine, pool
 
-from alembic import context
 from pokerlab_api.config import get_settings
 from pokerlab_api.database import Base
 
