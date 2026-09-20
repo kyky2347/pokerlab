@@ -57,6 +57,35 @@ Back up `.pokerlab.env` privately alongside the database. Configuration creation
 
 请将 `.pokerlab.env` 与数据库一起私密备份。配置采用原子创建与仅所有者可读写权限，并发启动也不会覆盖凭据。如果数据库卷已存在但配置缺失，启动器会拒绝生成替代密码：请从备份恢复原配置。除非明确需要丢弃数据，否则不要删除数据卷来绕过保护。空文件与符号链接会被拒绝，而不是覆盖。
 
+## Database upgrades and recovery / 数据库升级与恢复
+
+The API runs packaged Alembic migrations before serving requests. Fresh databases are initialized automatically; the original three-table PokerLab layout is recognized and brought under version control without recreating its tables. Existing versioned databases are upgraded normally. Incomplete or unfamiliar unversioned layouts are rejected for manual investigation. `/diagnostics` exposes the live `schema_revision`.
+
+API 在接收请求前运行随包分发的 Alembic 迁移。空数据库自动初始化；原版 PokerLab 的三表结构会被识别并纳入版本管理，不会重建已有表。已有版本记录的数据库按迁移链升级。结构不完整或无法识别的无版本数据库会被拒绝，需人工排查。`/diagnostics` 返回实时 `schema_revision`。
+
+Before updating an existing installation, stop writes and take a verified database backup plus a private backup of `.pokerlab.env`. Upgrades may take a schema lock while widening PostgreSQL's seed column or adding indexes, so use a maintenance window for large databases. Startup migration transactions are serialized across workers. This release preserves stored experiments, answers, and solver jobs and uses a forward-only migration: rollback requires restoring a pre-upgrade backup and the corresponding application version, not downgrading columns or dropping training records.
+
+更新已有安装前，请停止写入、制作并验证数据库备份，同时私密备份 `.pokerlab.env`。PostgreSQL 扩展种子字段或添加索引时可能持有结构锁，大型数据库请安排维护窗口。各进程的启动迁移事务会串行执行。本版保留已存储的实验、成绩和求解记录，迁移仅支持向前升级：回滚需恢复升级前备份与对应应用版本，而不是缩窄字段或删除训练记录。
+
+To migrate separately from API startup / 单独执行迁移：
+
+```bash
+cd apps/api
+uv run python -m pokerlab_api.migrations
+```
+
+This command uses `DATABASE_URL`, including the native `.env` configuration. In a running Compose installation, use `docker compose --env-file .pokerlab.env exec api python -m pokerlab_api.migrations`. No separate command is required for normal `./pokerlab` startup.
+
+此命令使用 `DATABASE_URL`，包括本地 `.env` 配置。已运行的 Compose 安装可使用 `docker compose --env-file .pokerlab.env exec api python -m pokerlab_api.migrations`。正常运行 `./pokerlab` 无需额外迁移命令。
+
+An unavailable or misconfigured PostgreSQL database now prevents startup instead of silently falling back to a separate SQLite ledger. Correct its connectivity, credentials, or DDL permissions and retry; do not delete the data volume. SQLite remains the native default, and the independent Rust-to-Python engine fallback is unchanged.
+
+PostgreSQL 不可用或配置错误时，现在会阻止启动，不再悄悄回退到另一份 SQLite 台账。请修复连接、凭据或 DDL 权限后重试，不要删除数据卷。原生开发默认仍使用 SQLite，独立的 Rust → Python 引擎自动回退保持不变。
+
+Training questions created after this update remain answerable for 24 hours across workers and API restarts. Claiming a question and writing its score happen in one transaction: duplicate submissions cannot add duplicate scores, and a failed write leaves the question available for retry. Question records retain the actual cards, seed, engine, and adaptive weight; adaptive selection depends on answer history as well as the seed. The correct equity is never included in the question response. Old in-memory questions issued before upgrading must be regenerated; stored answer history is preserved. A full browser reload may request a new question—this guarantee concerns the issued question ID, not restoration of browser form state.
+
+本次更新后创建的训练题在 24 小时内可跨进程和 API 重启提交。领取题目评分权与写入成绩处于同一事务：重复提交不会产生重复成绩，写入失败后仍可重试。题目保存实际牌面、种子、引擎和自适应权重；自适应抽样除种子外还依赖答题历史。出题响应不会泄露正确胜率。升级前尚未提交的内存题目需重新生成，已保存成绩不受影响。浏览器整页刷新可能重新出题；此保证针对已签发的题目 ID，不代表恢复浏览器表单状态。
+
 ## Configuration / 配置
 
 Copy `.env.example` for native development when defaults are not suitable. For manual Compose usage, copy it to `.env`, replace the placeholder database password, and pass `--env-file .env`. The launcher handles this automatically for normal use.

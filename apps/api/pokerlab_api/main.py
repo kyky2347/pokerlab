@@ -5,6 +5,7 @@ import logging
 import threading
 import time
 from contextlib import asynccontextmanager
+from datetime import UTC
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -187,6 +188,9 @@ def save_experiment(
 
 
 def serialize_experiment(record: Experiment) -> dict:
+    timestamp = record.created_at
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=UTC)
     return {
         "id": record.id,
         "experiment_type": record.experiment_type,
@@ -195,7 +199,7 @@ def serialize_experiment(record: Experiment) -> dict:
         "engine": record.engine,
         "results": record.results,
         "runtime_ms": record.runtime_ms,
-        "timestamp": record.created_at.isoformat(),
+        "timestamp": timestamp.astimezone(UTC).isoformat(),
     }
 
 
@@ -213,6 +217,7 @@ def diagnostics(
         "status": "operational",
         "engine": engine.name,
         "database": active_database_name(),
+        "schema_revision": db.execute(text("SELECT version_num FROM alembic_version")).scalar_one(),
         "kuhn_verification": request.app.state.kuhn_verification,
         "limits": {
             "monte_carlo_samples": settings.pokerlab_max_monte_carlo,
@@ -431,7 +436,9 @@ def research_agents(payload: AgentComparisonRequest, db: Session = Depends(get_d
 def list_experiments(limit: int = 50, db: Session = Depends(get_db)) -> dict:
     safe_limit = min(max(limit, 1), 200)
     records = db.scalars(
-        select(Experiment).order_by(Experiment.created_at.desc()).limit(safe_limit)
+        select(Experiment)
+        .order_by(Experiment.created_at.desc(), Experiment.id.desc())
+        .limit(safe_limit)
     ).all()
     return {"experiments": [serialize_experiment(record) for record in records]}
 

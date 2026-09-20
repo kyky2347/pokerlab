@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
-from uuid import uuid4
+from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-from .database import TrainerAnswer
+from .database import TrainerAnswer, TrainerQuestion
 from .domain import Card
 from .engine import PokerEngine
 
@@ -33,7 +33,7 @@ SCENARIOS = (
     Scenario("turn_decision", "advanced", ("Qh", "Jh"), ("As", "Ad"), ("Th", "9h", "2c", "3s")),
 )
 
-QUESTION_CACHE: dict[str, dict] = {}
+QUESTION_LIFETIME = timedelta(hours=24)
 
 
 def weaknesses(db: Session) -> list[dict[str, float | str | int]]:
@@ -59,47 +59,80 @@ def create_question(seed: int, engine: PokerEngine, db: Session) -> dict:
     villain = tuple(Card.parse(token) for token in scenario.villain)
     board = tuple(Card.parse(token) for token in scenario.board)
     result = engine.exact_equity(hero, villain, board)
-    question_id = str(uuid4())
-    QUESTION_CACHE[question_id] = {"scenario": scenario, "true_equity": result["equity"]}
+    now = datetime.now(UTC)
+    question = TrainerQuestion(
+        category=scenario.category,
+        difficulty=scenario.difficulty,
+        hero=list(scenario.hero),
+        villain=list(scenario.villain),
+        board=list(scenario.board),
+        seed=seed,
+        engine=engine.name,
+        adaptive_weight=weights[SCENARIOS.index(scenario)],
+        true_equity=result["equity"],
+        created_at=now,
+        expires_at=now + QUESTION_LIFETIME,
+    )
+    db.add(question)
+    db.commit()
     return {
-        "id": question_id,
+        "id": question.id,
         "hero": scenario.hero,
         "villain": scenario.villain,
         "board": scenario.board,
         "category": scenario.category,
         "difficulty": scenario.difficulty,
         "seed": seed,
-        "adaptive_weight": 1 + 10 * stats.get(scenario.category, 0.0),
+        "adaptive_weight": question.adaptive_weight,
+        "engine": question.engine,
+        "expires_at": question.expires_at.isoformat(),
     }
 
 
 def score_answer(question_id: str, answer: float, db: Session) -> dict:
     if not 0 <= answer <= 1:
         raise ValueError("Equity answer must be between 0 and 1")
-    cached = QUESTION_CACHE.pop(question_id, None)
-    if cached is None:
-        raise ValueError("Question expired or was already answered")
-    scenario: Scenario = cached["scenario"]
-    true_equity = float(cached["true_equity"])
-    error = abs(answer - true_equity)
-    # Quadratic continuous score: 100 at zero error, 0 at or beyond 25 percentage points.
-    score = 100 * max(0.0, 1 - (error / 0.25) ** 2)
-    record = TrainerAnswer(
-        category=scenario.category,
-        difficulty=scenario.difficulty,
-        answer=answer,
-        true_equity=true_equity,
-        absolute_error=error,
-        score=score,
-    )
-    db.add(record)
-    db.commit()
+    now = datetime.now(UTC)
+    # Claim and record the answer in one transaction. Concurrent workers cannot
+    # score the same question twice, and failed commits leave it answerable.
+    try:
+        question = db.scalars(
+            update(TrainerQuestion)
+            .where(
+                TrainerQuestion.id == question_id,
+                TrainerQuestion.answered_at.is_(None),
+                TrainerQuestion.expires_at > now,
+            )
+            .values(answered_at=now)
+            .returning(TrainerQuestion)
+            .execution_options(synchronize_session="fetch")
+        ).one_or_none()
+        if question is None:
+            raise ValueError("Question expired or was already answered / 题目已过期或已提交")
+        true_equity = question.true_equity
+        error = abs(answer - true_equity)
+        # Quadratic continuous score: 100 at zero error, 0 at/beyond 25 percentage points.
+        score = 100 * max(0.0, 1 - (error / 0.25) ** 2)
+        record = TrainerAnswer(
+            question_id=question.id,
+            category=question.category,
+            difficulty=question.difficulty,
+            answer=answer,
+            true_equity=true_equity,
+            absolute_error=error,
+            score=score,
+        )
+        db.add(record)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     return {
         "answer": answer,
         "true_equity": true_equity,
         "absolute_error": error,
         "score": score,
-        "category": scenario.category,
+        "category": record.category,
         "scoring": "100 × max(0, 1 - (absolute_error / 0.25)²)",
         "weaknesses": weaknesses(db),
     }

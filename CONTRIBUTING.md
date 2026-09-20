@@ -42,6 +42,12 @@ For visual changes, inspect desktop and mobile layouts in a real browser. For co
 
 视觉变更需要在真实浏览器中检查桌面端和移动端；核心算法变更需要与 Python 参考实现交叉验证，并加入确定性的回归样例。
 
+Storage changes must also pass the real PostgreSQL suite. Point `POKERLAB_TEST_POSTGRES_URL` at a **disposable test database**, then run `uv run pytest tests/test_storage.py tests/test_trainer.py` from `apps/api`. Each PostgreSQL test creates and removes its own uniquely named schema. CI runs these tests automatically alongside SQLite; the runner-only PostgreSQL service uses loopback-bound trust authentication, never production credentials.
+
+存储修改还必须通过真实 PostgreSQL 测试。将 `POKERLAB_TEST_POSTGRES_URL` 指向**可丢弃的测试数据库**，在 `apps/api` 执行 `uv run pytest tests/test_storage.py tests/test_trainer.py`。每个 PostgreSQL 测试创建并清理自己唯一命名的 schema。CI 自动同时运行 PostgreSQL 与 SQLite 测试；运行器中的临时 PostgreSQL 使用仅绑定回环地址的 trust 认证，不使用生产凭据。
+
+Migration files live in `apps/api/pokerlab_api/migrations` so they are included in wheels and container images. Do not rewrite applied revisions. Add an upgrade, test both an unversioned legacy database and a versioned one with real records, and document locking and rollback requirements. / 迁移文件位于 `apps/api/pokerlab_api/migrations`，随 wheel 和容器分发。不要重写已应用的迁移；新增升级脚本，并使用真实记录验证无版本旧库与已版本化数据库，同时说明加锁和回滚要求。
+
 ## Pull requests / 拉取请求
 
 Keep pull requests focused. Explain the problem, mathematical or product impact, validation performed, and any remaining limitations. Do not mix unrelated formatting changes with algorithm changes.

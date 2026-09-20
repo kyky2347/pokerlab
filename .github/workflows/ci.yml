@@ -15,6 +15,21 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: pokerlab
+          POSTGRES_DB: pokerlab_test
+          # Disposable runner-only database, never a deployment credential.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - "127.0.0.1:5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U pokerlab -d pokerlab_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -35,6 +50,8 @@ jobs:
       - run: pnpm --filter web format:check
       - run: pnpm --filter web build
       - run: cd apps/api && uv run ruff format --check . && uv run ruff check . && uv run pytest
+        env:
+          POKERLAB_TEST_POSTGRES_URL: postgresql+psycopg://pokerlab@localhost:5432/pokerlab_test
       - run: cargo fmt --manifest-path packages/poker-core/Cargo.toml --check
       - run: cargo test --manifest-path packages/poker-core/Cargo.toml
 
