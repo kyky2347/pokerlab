@@ -4,6 +4,11 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Correct research policy names: the former `CFRAgent` is a fixed `SoftmaxAgent`, not a trained CFR solver. Distinguish the conservative threshold baseline from the true pot-odds oracle without changing seeded scenario/action sequences.
+- Add call frequency, standard error, approximate 95% mean-EV intervals, and versioned methodology to saved research results. Expose editable, precision-checked seeds and self-contained JSON/CSV exports; fix CSV quote escaping and bilingual result labels.
+- 修正研究策略命名：原 `CFRAgent` 实为固定 `SoftmaxAgent`，不冒充经过 CFR 训练的求解器；区分保守阈值与已知胜率的底池赔率策略，并保持种子抽样序列不变。
+- 研究记录新增跟注频率、标准误、平均 EV 的近似 95% 区间与方法版本；界面支持精度校验后的自定义种子、完整 JSON/CSV 导出，并修复 CSV 引号转义与双语结果标签。
+
 - Persist trainer questions with a 24-hour lifetime and atomic one-time scoring across API workers/restarts; failed writes roll back without consuming the question.
 - Add packaged, transactional Alembic upgrades for fresh and legacy databases, signed 64-bit PostgreSQL seeds, explicit UTC history timestamps, and an indexed stable experiment timeline.
 - Stop on configured-database initialization failures instead of silently diverting experiments into SQLite; preserve the independent Rust/Python fallback.

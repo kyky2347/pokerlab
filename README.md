@@ -30,6 +30,7 @@ PokerLab 是一套可审查的研究系统，而不是赌场风格外壳或互�
 - **Durable training / 可持续训练** — issued questions survive API restarts for 24 hours, with atomic one-time scoring across workers and data-preserving database upgrades. / 已出题目在 24 小时有效期内可跨 API 重启提交；多进程评分具备原子去重，数据库升级保留已有记录。
 - **Real finite solving / 真实有限求解** — CFR+ is implemented in this repository and verified against Kuhn Poker; no third-party solver is used.
 - **Honest limits / 坦诚展示边界** — the river solver’s no-raise abstraction is visible in the UI and documentation.
+- **Auditable policy comparisons / 可核验策略比较** — named fixed policies, editable seeds, approximate mean-EV intervals, and versioned JSON/CSV exports. This synthetic benchmark does not train CFR agents or measure real poker winnings. / 明确的固定策略、可编辑种子、平均 EV 近似区间与带方法版本的 JSON/CSV 导出；此合成基准不训练 CFR 代理，也不衡量实际扑克盈利。详见 [research methods / 研究方法](docs/research-methods.md)。
 - **Local-first / 本地优先** — SQLite works out of the box; PostgreSQL and Docker Compose are supported without making cloud accounts mandatory.
 - **English and Chinese / 中英双语** — the product shell, primary workflows, safety copy, and documentation are available in both languages.
 
@@ -65,6 +66,10 @@ PokerLab 是一套可审查的研究系统，而不是赌场风格外壳或互�
 ![CFR Solver Lite](output/playwright/solver.png)
 
 ![Research Lab](output/playwright/research-lab.png)
+
+![Reproducible policy comparison: seed 7, 1,000 synthetic decisions](output/playwright/research-agents.png)
+
+Research comparison: real API output, seed `7`, 1,000 synthetic decisions. See [methods and interpretation](docs/research-methods.md). / 策略比较截图来自真实 API 输出：种子 `7`、1,000 次合成决策；详见[研究方法与解读](docs/research-methods.md)。
 
 ### Mobile Chinese interface / 移动端中文界面
 
@@ -183,6 +188,8 @@ The suite covers evaluator ordering, wheel straights, duplicate rejection, exact
 GitHub Actions runs formatting, linting, type checks, Python/Rust/frontend tests, production builds, desktop/mobile browser tests, and both container builds on every push and pull request.
 
 Storage tests run against both SQLite and a disposable PostgreSQL service in CI, covering legacy migrations, 64-bit seeds, rollback, concurrent workers, and restart-safe training. / CI 同时在 SQLite 与临时 PostgreSQL 服务上验证存储行为，覆盖旧库迁移、64 位种子、回滚、并发进程及训练题跨重启提交。
+
+Research regressions check policy thresholds, historical seeded values, an independent uncertainty calculation, saved methodology, exact browser seed validation, and metadata-rich CSV escaping. / 研究回归测试覆盖策略阈值、历史固定种子结果、独立误差公式复核、方法持久化、浏览器种子精度校验与携带完整参数的 CSV 转义。
 
 ## Measured benchmark / 实测基准
 
