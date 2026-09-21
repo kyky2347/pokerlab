@@ -40,24 +40,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { copyJson, downloadJson, postJson } from "@/lib/api";
 import { useCopy } from "@/lib/store";
 import type { BayesianResult, EquityResult } from "@/lib/types";
-
-type AgentResult = {
-  episodes: number;
-  seed: number;
-  agents: Array<{
-    agent: string;
-    average_ev: number;
-    decision_regret: number;
-    variance: number;
-  }>;
-  runtime_ms: number;
-  scope: string;
-  experiment_id: string;
-};
+import {
+  agentCsvRows,
+  parseResearchSeed,
+  policyCopy,
+  serializeCsv,
+  type AgentResult,
+} from "@/lib/research";
 function Param({
   label,
   value,
@@ -100,12 +101,10 @@ function downloadCsv(
   rows: Record<string, string | number>[],
 ) {
   if (!rows.length) return;
-  const keys = Object.keys(rows[0]);
-  const csv = [
-    keys.join(","),
-    ...rows.map((row) => keys.map((key) => JSON.stringify(row[key])).join(",")),
-  ].join("\n");
-  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  const csv = serializeCsv(rows);
+  const url = URL.createObjectURL(
+    new Blob([csv], { type: "text/csv;charset=utf-8" }),
+  );
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
@@ -122,6 +121,8 @@ export default function Research() {
   const [aggressive, setAggressive] = useState(4);
   const [passive, setPassive] = useState(3);
   const [episodes, setEpisodes] = useState(1000);
+  const [agentSeed, setAgentSeed] = useState("20250902");
+  const parsedAgentSeed = parseResearchSeed(agentSeed);
   const initialBayesRun = useRef(false);
   const bayes = useMutation({
     mutationFn: (parameters: {
@@ -149,8 +150,8 @@ export default function Research() {
       }),
   });
   const agents = useMutation({
-    mutationFn: () =>
-      postJson<AgentResult>("/research/agents", { episodes, seed: 20250902 }),
+    mutationFn: (parameters: { episodes: number; seed: number }) =>
+      postJson<AgentResult>("/research/agents", parameters),
   });
   function runBayesianUpdate() {
     bayes.mutate({ alpha, beta, aggressive, passive });
@@ -563,35 +564,83 @@ export default function Research() {
                 <CardDescription>
                   {zh
                     ? "单街河牌跟注/弃牌决策，不代表完整扑克实力。"
-                    : "One-street river call/fold decisions—not complete poker strength."}
+                    : "Synthetic river call/fold decisions—not complete poker strength."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                <Select
-                  value={String(episodes)}
-                  disabled={agents.isPending}
-                  onValueChange={(value) => {
-                    agents.reset();
-                    setEpisodes(Number(value));
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {[100, 1000, 10000].map((value) => (
-                        <SelectItem key={value} value={String(value)}>
-                          {value.toLocaleString()} {zh ? "局" : "episodes"}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+                <FieldGroup>
+                  <Field data-disabled={agents.isPending}>
+                    <FieldLabel htmlFor="agent-episodes">
+                      {zh ? "决策数量" : "Decisions"}
+                    </FieldLabel>
+                    <Select
+                      value={String(episodes)}
+                      disabled={agents.isPending}
+                      onValueChange={(value) => {
+                        agents.reset();
+                        setEpisodes(Number(value));
+                      }}
+                    >
+                      <SelectTrigger id="agent-episodes" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {[100, 1000, 10000].map((value) => (
+                            <SelectItem key={value} value={String(value)}>
+                              {value.toLocaleString(zh ? "zh-CN" : "en-US")}{" "}
+                              {zh ? "次" : "decisions"}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field
+                    data-invalid={parsedAgentSeed === null}
+                    data-disabled={agents.isPending}
+                  >
+                    <FieldLabel htmlFor="agent-seed">
+                      {zh ? "随机种子" : "Random seed"}
+                    </FieldLabel>
+                    <Input
+                      id="agent-seed"
+                      inputMode="numeric"
+                      value={agentSeed}
+                      disabled={agents.isPending}
+                      aria-invalid={parsedAgentSeed === null}
+                      aria-describedby={
+                        parsedAgentSeed === null
+                          ? "agent-seed-error"
+                          : "agent-seed-help"
+                      }
+                      onChange={(event) => {
+                        agents.reset();
+                        setAgentSeed(event.target.value);
+                      }}
+                    />
+                    {parsedAgentSeed === null ? (
+                      <FieldError id="agent-seed-error">
+                        {zh
+                          ? "请输入 0 至 9007199254740991 的整数。"
+                          : "Enter an integer from 0 to 9007199254740991."}
+                      </FieldError>
+                    ) : (
+                      <FieldDescription id="agent-seed-help">
+                        {zh
+                          ? "相同种子、数量与方法版本可复现相同结果。"
+                          : "Same seed, count, and method version reproduce the same results."}
+                      </FieldDescription>
+                    )}
+                  </Field>
+                </FieldGroup>
                 <Button
                   size="lg"
-                  onClick={() => agents.mutate()}
-                  disabled={agents.isPending}
+                  onClick={() => {
+                    if (parsedAgentSeed !== null)
+                      agents.mutate({ episodes, seed: parsedAgentSeed });
+                  }}
+                  disabled={agents.isPending || parsedAgentSeed === null}
                 >
                   <Bot data-icon="inline-start" />
                   {agents.isPending ? (
@@ -605,21 +654,39 @@ export default function Research() {
                   )}
                 </Button>
                 {agents.data ? (
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      downloadCsv(
-                        "agent-comparison.csv",
-                        agents.data!.agents as unknown as Record<
-                          string,
-                          string | number
-                        >[],
-                      )
-                    }
-                  >
-                    <Download data-icon="inline-start" />
-                    {zh ? "下载 CSV" : "Download CSV"}
-                  </Button>
+                  <>
+                    <p className="font-data text-xs text-muted-foreground">
+                      seed {agents.data.seed} ·{" "}
+                      {agents.data.episodes.toLocaleString(
+                        zh ? "zh-CN" : "en-US",
+                      )}{" "}
+                      · {ms(agents.data.runtime_ms)}
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        downloadJson(
+                          `agent-comparison-${agents.data!.experiment_id}.json`,
+                          agents.data,
+                        )
+                      }
+                    >
+                      <Download data-icon="inline-start" />
+                      {zh ? "下载完整 JSON" : "Download full JSON"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        downloadCsv(
+                          `agent-comparison-${agents.data!.experiment_id}.csv`,
+                          agentCsvRows(agents.data!),
+                        )
+                      }
+                    >
+                      <Download data-icon="inline-start" />
+                      {zh ? "下载 CSV" : "Download CSV"}
+                    </Button>
+                  </>
                 ) : null}
               </CardContent>
             </Card>
@@ -629,37 +696,69 @@ export default function Research() {
                   {zh ? "平均 EV 与决策遗憾" : "Average EV and decision regret"}
                 </CardTitle>
                 <CardDescription>
-                  {agents.data?.scope ??
-                    "Random · Pot odds · Equity · soft regret-matched policy"}
+                  {zh
+                    ? "单位：筹码/决策。统计所选动作的期望收益，不是实际牌局输赢；没有代理进行 CFR 训练。"
+                    : "Chips per decision. Measures expected action values, not realized winnings; no agent trains with CFR."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
                 {agents.data ? (
-                  agents.data.agents.map((agent) => (
-                    <div
-                      key={agent.agent}
-                      className="grid gap-3 rounded-lg border bg-muted/25 p-4 sm:grid-cols-[1fr_repeat(3,120px)] sm:items-center"
-                    >
-                      <p className="font-semibold">{agent.agent}</p>
-                      <Metric
-                        label="Average EV"
-                        value={`$${agent.average_ev.toFixed(2)}`}
-                        accent={agent.average_ev >= 0 ? "success" : "danger"}
-                      />
-                      <Metric
-                        label="Decision regret"
-                        value={`$${agent.decision_regret.toFixed(2)}`}
-                      />
-                      <Metric
-                        label="Variance"
-                        value={agent.variance.toFixed(1)}
-                      />
-                    </div>
-                  ))
+                  <>
+                    {agents.data.agents.map((agent) => (
+                      <div
+                        key={agent.agent}
+                        className="flex flex-col gap-4 border-b pb-5 last:border-0"
+                      >
+                        <div>
+                          <p className="font-semibold">
+                            {zh
+                              ? (policyCopy[agent.agent]?.zh ?? agent.agent)
+                              : (policyCopy[agent.agent]?.en ?? agent.agent)}
+                          </p>
+                          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                            {zh
+                              ? policyCopy[agent.agent]?.descriptionZh
+                              : policyCopy[agent.agent]?.description}
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                          <Metric
+                            label={zh ? "平均 EV" : "Mean EV"}
+                            value={agent.average_ev.toFixed(2)}
+                            accent={
+                              agent.average_ev >= 0 ? "success" : "danger"
+                            }
+                          />
+                          <Metric
+                            label={zh ? "决策遗憾" : "Decision regret"}
+                            value={agent.decision_regret.toFixed(2)}
+                          />
+                          <Metric
+                            label={zh ? "跟注频率" : "Call frequency"}
+                            value={percent(agent.call_frequency, 1)}
+                          />
+                        </div>
+                        <p className="font-data text-xs text-muted-foreground">
+                          {zh
+                            ? "平均 EV 的近似 95% 置信区间"
+                            : "Approx. 95% CI for mean EV"}
+                          : [{agent.ci_low.toFixed(2)},{" "}
+                          {agent.ci_high.toFixed(2)}]
+                        </p>
+                      </div>
+                    ))}
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      {zh
+                        ? "每个策略面对相同的随机情境，并知道真实胜率。置信区间衡量均值的不确定性，不能直接据此判断策略间差异显著；方差与完整方法随文件导出。"
+                        : "Policies face the same generated scenarios and know the true equity. Intervals describe mean uncertainty, not pairwise statistical significance. Variance and full methodology are included in exports."}
+                    </p>
+                  </>
                 ) : (
-                  <div className="flex h-72 items-center justify-center text-muted-foreground">
-                    <Bot />
-                  </div>
+                  <p className="py-16 text-center text-sm text-muted-foreground">
+                    {zh
+                      ? "选择决策数量和种子，点击“比较代理”生成真实计算结果。"
+                      : "Choose a decision count and seed, then compare agents to generate results."}
+                  </p>
                 )}
               </CardContent>
             </Card>
