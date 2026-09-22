@@ -191,6 +191,8 @@ Storage tests run against both SQLite and a disposable PostgreSQL service in CI,
 
 Research regressions check policy thresholds, historical seeded values, an independent uncertainty calculation, saved methodology, exact browser seed validation, and metadata-rich CSV escaping. / 研究回归测试覆盖策略阈值、历史固定种子结果、独立误差公式复核、方法持久化、浏览器种子精度校验与携带完整参数的 CSV 转义。
 
+Turn-map regressions compare every legal turn with independent exact enumeration, verify split pots and player-swap symmetry, and cross-check Rust against Python. Both engines reject duplicate cards across players at the showdown boundary. / 转牌地图回归测试逐张对照独立精确枚举，验证平局、双方交换对称性及 Rust/Python 一致性；两个引擎均在摊牌入口拒绝双方持有重复牌的非法状态。
+
 ## Measured benchmark / 实测基准
 
 These are reproducible observations from `pnpm benchmark`, not universal performance claims. Recorded on macOS ARM with Python 3.12 using the Python reference path:
@@ -210,6 +212,12 @@ Weighted range sampling now builds its cumulative probability table once per req
 加权范围采样现在每次请求只构建一次累计概率表。在同机独立测试的 20 类手牌、5,000 次采样场景中，Python 路径耗时中位数从 1,217 降至 505 毫秒，Rust 路径从 822 降至 120 毫秒，固定种子结果不变。这是特定工作负载的实测，不代表所有计算都具有同样增益。
 
 Reproduce / 复现：`cd apps/api && uv run python -m pokerlab_api.benchmarks --range-only`
+
+The exact turn map now shares unordered runouts: 990 showdown evaluations instead of 1,980, with all 45 conditional equities unchanged. A five-repeat local algorithm comparison measured median times of **204 → 104 ms (Python)** and **41 → 20 ms (Rust)**. Both compared algorithms use the same current evaluator and validation; these are turn-map measurements, not whole-app speedups. See the [derivation / 数学推导](docs/math/equity.md#conditional-turn-map--条件转牌地图) and [benchmark record / 实测记录](research/benchmarks.md).
+
+精确转牌地图现在复用无序补牌组合，将摊牌评估从 1,980 次减少到 990 次，全部 45 张转牌的条件胜率保持不变。同机五次算法对照实测耗时中位数为 **Python 204 → 104 毫秒、Rust 41 → 20 毫秒**。两种算法使用相同的当前评估器和校验逻辑；该结果仅代表转牌地图，不是整个应用的加速比。
+
+Reproduce / 复现：`cd apps/api && uv run python -m pokerlab_api.benchmarks --turn-map-only`
 
 ## Repository map / 仓库结构
 

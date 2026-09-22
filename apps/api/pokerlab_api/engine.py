@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from itertools import combinations
 from typing import Protocol
 
-from .domain import Card, full_deck, showdown, validate_holdem_state
+from .domain import Card, full_deck, showdown, validate_holdem_state, validate_showdown_state
 
 
 @dataclass(slots=True)
@@ -60,6 +60,10 @@ class PokerEngine(Protocol):
         samples: int,
         seed: int,
     ) -> dict: ...
+
+    def turn_map(
+        self, hero: tuple[Card, Card], villain: tuple[Card, Card], flop: tuple[Card, ...]
+    ) -> list[dict[str, float | str]]: ...
 
 
 class PythonPokerEngine:
@@ -163,13 +167,18 @@ class PythonPokerEngine:
             raise ValueError("Conditional turn explorer requires exactly three flop cards")
         validate_holdem_state(hero, villain, flop)
         blocked = set(hero + villain + flop)
-        values: list[dict[str, float | str]] = []
-        for turn in full_deck():
-            if turn in blocked:
-                continue
-            result = self.exact_equity(hero, villain, flop + (turn,))
-            values.append({"card": str(turn), "equity": result["equity"]})
-        return values
+        remaining = tuple(card for card in full_deck() if card not in blocked)
+        counts = {card: EquityCounts() for card in remaining}
+        # The final board is order-independent. Each pair contributes once to each
+        # conditional turn: 990 evaluations, still 44 legal rivers per turn.
+        for first, second in combinations(remaining, 2):
+            outcome = self.showdown(hero, villain, flop + (first, second))
+            counts[first].add(outcome)
+            counts[second].add(outcome)
+        return [
+            {"card": str(turn), "equity": counts[turn].probabilities()["equity"]}
+            for turn in remaining
+        ]
 
 
 class RustPokerEngine(PythonPokerEngine):
@@ -191,6 +200,7 @@ class RustPokerEngine(PythonPokerEngine):
     def showdown(
         self, hero: tuple[Card, Card], villain: tuple[Card, Card], board: tuple[Card, ...]
     ) -> float:
+        validate_showdown_state(hero, villain, board)
         hero_rank = tuple(self._rust.evaluate_seven([str(card) for card in hero + board]))
         villain_rank = tuple(self._rust.evaluate_seven([str(card) for card in villain + board]))
         if hero_rank > villain_rank:

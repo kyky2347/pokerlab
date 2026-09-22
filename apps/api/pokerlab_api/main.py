@@ -261,7 +261,7 @@ def monte_carlo(
 def turn_map(payload: TurnMapRequest, engine: PokerEngine = Depends(current_engine)) -> dict:
     hero, villain, board = parse_fixed(payload)
     started = time.perf_counter()
-    values = engine.turn_map(hero, villain, board)  # type: ignore[attr-defined]
+    values = engine.turn_map(hero, villain, board)
     return {
         "turns": values,
         "definition": "Hero equity conditional on each legal turn card.",

@@ -5,6 +5,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import event
 
 from pokerlab_api import database, main
+from pokerlab_api.domain import Card
+from pokerlab_api.engine import PythonPokerEngine, RustPokerEngine
 from pokerlab_api.main import app
 
 
@@ -74,15 +76,30 @@ def test_equity_and_ev_endpoints():
         assert ev.json()["incremental_call_ev"] == 10
 
 
-def test_illegal_duplicate_card_state_has_structured_error():
+@pytest.mark.parametrize("endpoint", ["/equity/exact", "/equity/monte-carlo", "/equity/turn-map"])
+def test_illegal_duplicate_card_state_has_structured_error(endpoint):
     with TestClient(app) as client:
         response = client.post(
-            "/equity/exact",
+            endpoint,
             json={"hero": ["As", "Ks"], "villain": ["As", "Qd"], "board": ["Js", "8s", "2c"]},
         )
         assert response.status_code == 422
         assert response.json()["error"]["code"] == "invalid_poker_state"
         assert response.json()["error"]["request_id"] == response.headers["x-request-id"]
+
+
+@pytest.mark.parametrize("engine_type", [PythonPokerEngine, RustPokerEngine])
+def test_turn_map_endpoint_returns_exact_results_and_actual_engine(engine_type):
+    payload = {"hero": ["As", "Ks"], "villain": ["Qh", "Qd"], "board": ["Js", "8s", "2c"]}
+    engine = engine_type()
+    expected = engine.turn_map(*(tuple(map(Card.parse, payload[key])) for key in payload))
+    with TestClient(app) as client, patch.object(app.state, "engine", engine):
+        response = client.post("/equity/turn-map", json=payload)
+        assert response.status_code == 200
+        result = response.json()
+        assert result["turns"] == expected
+        assert result["engine"] == engine.name
+        assert result["runtime_ms"] >= 0
 
 
 def test_bayesian_update_and_experiment_history():

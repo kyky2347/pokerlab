@@ -11,6 +11,7 @@ from pokerlab_api.domain import (
     evaluate_seven,
     full_deck,
     parse_cards,
+    showdown,
 )
 
 
@@ -27,6 +28,23 @@ def test_deck_contains_52_unique_cards():
 def test_duplicate_cards_are_rejected():
     with pytest.raises(ValueError, match="Duplicate"):
         parse_cards(["As", "As"])
+
+
+@pytest.mark.parametrize("rank", [1, 15, 2.0, "A", None, True])
+def test_card_constructor_rejects_invalid_rank(rank):
+    with pytest.raises(ValueError, match="Invalid card"):
+        Card(rank, "s")
+
+
+@pytest.mark.parametrize("suit", ["", "cd", "cdhs", "S", "x", None, 1])
+def test_card_constructor_rejects_invalid_suit(suit):
+    with pytest.raises(ValueError, match="Invalid card"):
+        Card(14, suit)
+
+
+def test_showdown_rejects_a_card_shared_between_players():
+    with pytest.raises(ValueError, match="Duplicate"):
+        showdown(cards("As", "Ks"), cards("As", "Qd"), cards("2c", "3d", "5h", "8c", "9s"))
 
 
 def test_hand_category_ordering_and_wheel():

@@ -47,3 +47,40 @@ uv run python -m pokerlab_api.benchmarks --range-only
 The command prints complete inputs, individual timings, actual selected engine names, and results. Python always runs; Rust runs only when the normal engine-selection path can load it. Pair selection changes from rebuilding an O(P) cumulative table on every sample to one O(P) setup plus O(log P) draws. Pair enumeration still uses O(P) memory, so full-deck ranges remain more demanding than this workload. Exact enumeration and CFR performance are not represented by these ratios.
 
 命令输出完整输入、逐次耗时、实际引擎名称及结果。Python 始终运行；只有正常引擎选择流程能加载 Rust 时才测试加速路径。组合对选择由每次采样重建 O(P) 累计表，改为一次 O(P) 初始化与每次 O(log P) 抽样。组合对枚举仍使用 O(P) 内存，因此完整范围比本场景更耗资源。这些加速比不代表精确枚举或 CFR 的性能变化。
+
+## Exact conditional turn map / 精确条件转牌地图 — 2026-09-22
+
+Environment: macOS 26.5.2 ARM64, CPython 3.12.13. Fixed hands `As Ks` versus
+`Qh Qd`, flop `Js 8s 2c`. Compare the original independent-per-turn algorithm
+(45 × 44 = 1,980 showdowns) with shared unordered runouts (990 showdowns).
+Both algorithms use the **same current evaluator and strict state validation**;
+this is an algorithm comparison, not an old-commit versus new-commit timing.
+Each has one warmup followed by five timed runs, alternating execution order.
+Every run must match all 45 card/equity rows exactly or the command fails.
+
+环境为 macOS 26.5.2 ARM64、CPython 3.12.13；固定手牌 `As Ks` 对 `Qh Qd`，翻牌 `Js 8s 2c`。对照原逐张转牌独立枚举算法（45 × 44 = 1,980 次摊牌）与复用无序补牌算法（990 次摊牌）。两者使用**相同的当前评估器及严格状态校验**，并非旧提交与新提交的直接计时。各预热一次，然后交替执行顺序测量五次；每次完整核对全部 45 行牌/胜率，不一致时命令报错。
+
+| Engine / 引擎 | Independent turns median / 独立枚举中位数 | Shared runouts median / 复用补牌中位数 | Ratio / 加速比 |
+| --- | ---: | ---: | ---: |
+| Python reference | 204.28 ms | 103.51 ms | 1.97× |
+| Rust accelerated | 40.93 ms | 20.31 ms | 2.01× |
+
+Individual runs in milliseconds / 各次耗时（毫秒）：
+
+- Python independent / 独立枚举: `194.598, 204.281, 204.021, 205.028, 205.491`; shared / 复用补牌: `97.413, 97.998, 108.948, 105.661, 103.507`.
+- Rust independent / 独立枚举: `40.822, 40.973, 40.926, 40.643, 41.091`; shared / 复用补牌: `20.099, 20.326, 20.313, 20.174, 20.509`.
+
+```bash
+cd apps/api
+uv run python -m pokerlab_api.benchmarks --turn-map-only
+```
+
+The command emits full inputs, environment, engine names, timings, operation
+counts, and all conditional equities. No seed is needed for exhaustive enumeration.
+Python always runs; Rust is included only if normal engine selection succeeds.
+Timing excludes HTTP, persistence, and browser rendering. The twofold reduction
+in showdown calls is structural; wall-clock ratios vary with hardware and load.
+It does not describe Monte Carlo, range sampling, CFR, or whole-app performance.
+The mathematical identity and limitations are documented in [equity.md](../docs/math/equity.md).
+
+命令输出完整输入、环境、引擎名称、耗时、评估次数和全部条件胜率；穷举无需随机种子。Python 始终执行，Rust 仅在正常引擎选择成功时加入。计时不包含 HTTP、持久化或浏览器渲染。摊牌调用减半是算法上的确定变化，实际耗时比仍受硬件与负载影响，不代表蒙特卡洛、范围采样、CFR 或整个应用性能。数学等价关系与使用限制详见上述文档。
