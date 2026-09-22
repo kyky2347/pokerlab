@@ -31,7 +31,13 @@ class Card:
     suit: str
 
     def __post_init__(self) -> None:
-        if self.rank not in range(2, 15) or self.suit not in SUIT_CHARS:
+        if (
+            not isinstance(self.rank, int)
+            or self.rank not in range(2, 15)
+            or not isinstance(self.suit, str)
+            or len(self.suit) != 1
+            or self.suit not in SUIT_CHARS
+        ):
             raise ValueError("Invalid card")
 
     @classmethod
@@ -136,9 +142,17 @@ def evaluate_seven(cards: Iterable[Card]) -> HandRank:
     return max(evaluate_five(combo) for combo in combinations(hand, 5))
 
 
-def showdown(hero: tuple[Card, Card], villain: tuple[Card, Card], board: tuple[Card, ...]) -> float:
+def validate_showdown_state(
+    hero: tuple[Card, Card], villain: tuple[Card, Card], board: tuple[Card, ...]
+) -> None:
+    """Shared boundary for both evaluators; uniqueness spans both players and the board."""
     if len(board) != 5:
         raise ValueError("Showdown requires a five-card board")
+    validate_holdem_state(hero, villain, board)
+
+
+def showdown(hero: tuple[Card, Card], villain: tuple[Card, Card], board: tuple[Card, ...]) -> float:
+    validate_showdown_state(hero, villain, board)
     hero_rank = evaluate_seven(hero + board)
     villain_rank = evaluate_seven(villain + board)
     if hero_rank > villain_rank:

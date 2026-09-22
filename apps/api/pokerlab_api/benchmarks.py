@@ -7,7 +7,7 @@ import statistics
 import time
 
 from .cfr import RiverCFRSolver
-from .domain import Card, evaluate_seven
+from .domain import Card, evaluate_seven, full_deck
 from .engine import PythonPokerEngine, select_engine
 from .range_equity import calculate_range_equity
 
@@ -128,10 +128,83 @@ def run_range_benchmark() -> dict:
     }
 
 
+def run_turn_map_benchmark() -> dict:
+    """Compare exact algorithms with identical evaluators / 相同评估器的精确算法对照。"""
+    hero = (Card.parse("As"), Card.parse("Ks"))
+    villain = (Card.parse("Qh"), Card.parse("Qd"))
+    flop = tuple(map(Card.parse, ("Js", "8s", "2c")))
+    remaining = tuple(card for card in full_deck() if card not in hero + villain + flop)
+    engines = {engine.name: engine for engine in (PythonPokerEngine(), select_engine())}
+    results = []
+    for engine in engines.values():
+
+        def independent_turns(engine=engine):
+            return [
+                {
+                    "card": str(turn),
+                    "equity": engine.exact_equity(hero, villain, flop + (turn,))["equity"],
+                }
+                for turn in remaining
+            ]
+
+        algorithms = {
+            "independent_turns": independent_turns,
+            "shared_runouts": lambda engine=engine: engine.turn_map(hero, villain, flop),
+        }
+        expected = independent_turns()
+        if engine.turn_map(hero, villain, flop) != expected:
+            raise RuntimeError("Turn-map algorithms disagree")
+        times: dict[str, list[float]] = {name: [] for name in algorithms}
+        for repeat in range(5):
+            order = list(algorithms) if repeat % 2 == 0 else list(reversed(algorithms))
+            for name in order:
+                started = time.perf_counter()
+                result = algorithms[name]()
+                times[name].append((time.perf_counter() - started) * 1000)
+                if result != expected:
+                    raise RuntimeError("Turn-map benchmark changed an exact result")
+        medians = {name: statistics.median(values) for name, values in times.items()}
+        results.append(
+            {
+                "engine": engine.name,
+                "times_ms": times,
+                "median_ms": medians,
+                "speedup": medians["independent_turns"] / medians["shared_runouts"],
+                "turns": expected,
+            }
+        )
+    return {
+        "environment": {"platform": platform.platform(), "python": platform.python_version()},
+        "workload": {
+            "hero": [str(card) for card in hero],
+            "villain": [str(card) for card in villain],
+            "flop": [str(card) for card in flop],
+            "repeats": 5,
+            "warmup_runs_per_algorithm": 1,
+            "alternating_order": True,
+            "legal_turns": 45,
+            "rivers_per_turn": 44,
+            "showdown_evaluations": {"independent_turns": 1980, "shared_runouts": 990},
+        },
+        "results": results,
+    }
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="PokerLab reproducible benchmarks / 可复现基准")
-    parser.add_argument(
+    workload = parser.add_mutually_exclusive_group()
+    workload.add_argument(
         "--range-only", action="store_true", help="Benchmark weighted sampling / 范围采样基准"
     )
+    workload.add_argument(
+        "--turn-map-only", action="store_true", help="Benchmark exact turn maps / 精确转牌地图基准"
+    )
     args = parser.parse_args()
-    print(json.dumps(run_range_benchmark() if args.range_only else run(), indent=2))
+    benchmark = (
+        run_turn_map_benchmark
+        if args.turn_map_only
+        else run_range_benchmark
+        if args.range_only
+        else run
+    )
+    print(json.dumps(benchmark(), indent=2))

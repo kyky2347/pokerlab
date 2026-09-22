@@ -4,6 +4,11 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Halve exact turn-map showdown evaluations from 1,980 to 990 by sharing unordered runouts; preserve all 45 conditional equities, canonical ordering, and Rust/Python fallback. Add an alternating-order, output-checked benchmark and mathematical derivation.
+- Reject cross-player duplicate cards at both showdown boundaries and malformed direct card construction. Expand exact-enumeration, split-pot, symmetry, API, fallback, and cross-engine regression coverage.
+- 通过复用无序补牌组合，将精确转牌地图的摊牌评估由 1,980 次减至 990 次；保持全部 45 张转牌的条件胜率、标准顺序及 Rust/Python 回退不变，新增交替执行顺序且核对完整结果的性能基准与数学推导。
+- 两个摊牌引擎均拒绝双方共享同一张牌的非法状态，并修复直接创建非法牌对象的漏洞；补充精确枚举、平局、对称性、API、回退和跨引擎回归测试。
+
 - Correct research policy names: the former `CFRAgent` is a fixed `SoftmaxAgent`, not a trained CFR solver. Distinguish the conservative threshold baseline from the true pot-odds oracle without changing seeded scenario/action sequences.
 - Add call frequency, standard error, approximate 95% mean-EV intervals, and versioned methodology to saved research results. Expose editable, precision-checked seeds and self-contained JSON/CSV exports; fix CSV quote escaping and bilingual result labels.
 - 修正研究策略命名：原 `CFRAgent` 实为固定 `SoftmaxAgent`，不冒充经过 CFR 训练的求解器；区分保守阈值与已知胜率的底池赔率策略，并保持种子抽样序列不变。
