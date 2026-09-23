@@ -193,6 +193,8 @@ Research regressions check policy thresholds, historical seeded values, an indep
 
 Turn-map regressions compare every legal turn with independent exact enumeration, verify split pots and player-swap symmetry, and cross-check Rust against Python. Both engines reject duplicate cards across players at the showdown boundary. / 转牌地图回归测试逐张对照独立精确枚举，验证平局、双方交换对称性及 Rust/Python 一致性；两个引擎均在摊牌入口拒绝双方持有重复牌的非法状态。
 
+Solver regressions compare full cached/uncached strategies and convergence traces on both engines. Real SQLite/PostgreSQL constraint failures verify rollback, original-error preservation, job status, and concurrency-slot release. / 求解回归测试在双引擎下对照缓存与未缓存的完整策略和收敛轨迹；通过真实 SQLite/PostgreSQL 约束错误验证回滚、原始异常保留、任务状态及并发名额释放。
+
 ## Measured benchmark / 实测基准
 
 These are reproducible observations from `pnpm benchmark`, not universal performance claims. Recorded on macOS ARM with Python 3.12 using the Python reference path:
@@ -218,6 +220,12 @@ The exact turn map now shares unordered runouts: 990 showdown evaluations instea
 精确转牌地图现在复用无序补牌组合，将摊牌评估从 1,980 次减少到 990 次，全部 45 张转牌的条件胜率保持不变。同机五次算法对照实测耗时中位数为 **Python 204 → 104 毫秒、Rust 41 → 20 毫秒**。两种算法使用相同的当前评估器和校验逻辑；该结果仅代表转牌地图，不是整个应用的加速比。
 
 Reproduce / 复现：`cd apps/api && uv run python -m pokerlab_api.benchmarks --turn-map-only`
+
+River CFR now reuses each fixed deal's actual showdown outcome within its job. In a 61-deal, 100-iteration local benchmark, evaluations fell from **30,500 to 61**, with unchanged strategies and convergence. Median time was **3,270 → 113 ms on Python (29.01×)** and **743 → 103 ms on Rust (7.19×)**. These ratios describe this workload only; the finite game tree and [solver limitations](docs/solver-limitations.md) are unchanged.
+
+河牌 CFR 现在在任务内复用每组固定牌面的真实摊牌结果。在 61 组手牌对、100 轮的本地基准中，评估次数由 **30,500 减至 61**，策略与收敛轨迹不变。耗时中位数为 **Python 3,270 → 113 毫秒（29.01×）、Rust 743 → 103 毫秒（7.19×）**。这些比率仅适用于该工作负载，有限博弈树和[求解器限制](docs/solver-limitations.md)保持不变。
+
+Reproduce / 复现：`cd apps/api && uv run python -m pokerlab_api.benchmarks --solver-only`
 
 ## Repository map / 仓库结构
 

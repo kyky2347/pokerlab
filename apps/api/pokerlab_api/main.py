@@ -352,11 +352,9 @@ def create_solver_job(
     if not solver_slots.acquire(blocking=False):
         raise HTTPException(status_code=429, detail="Solver concurrency limit reached")
     started = time.perf_counter()
-    job = SolverJob(status="running", parameters=payload.model_dump())
+    persisted_job_id: str | None = None
     try:
         board = parse_cards(payload.board)
-        db.add(job)
-        db.commit()
         solver = RiverCFRSolver(
             board,
             payload.oop_range,
@@ -367,6 +365,12 @@ def create_solver_job(
             payload.bet_large,
             engine.showdown,
         )
+        # Validate the complete game before recording a running job. A failed
+        # initial insert must not be retried as an invented failed-job record.
+        job = SolverJob(status="running", parameters=payload.model_dump())
+        db.add(job)
+        db.commit()
+        persisted_job_id = job.id
         result = solver.solve(payload.iterations)
         result["engine"] = engine.name
         job.status = "completed"
@@ -375,10 +379,29 @@ def create_solver_job(
         db.commit()
         return {"id": job.id, "status": job.status, **result}
     except Exception as exc:
-        job.status = "failed"
-        job.runtime_ms = (time.perf_counter() - started) * 1000
-        job.results = {"error_type": type(exc).__name__}
-        db.commit()
+        try:
+            # A failed flush leaves the Session unusable until explicit rollback.
+            db.rollback()
+            if persisted_job_id is not None:
+                with db.begin():
+                    failed_job = db.get(SolverJob, persisted_job_id)
+                    if failed_job is not None:
+                        failed_job.status = "failed"
+                        failed_job.runtime_ms = (time.perf_counter() - started) * 1000
+                        failed_job.results = {"error_type": type(exc).__name__}
+        except Exception as record_error:
+            # Recovery is best-effort during an outage; never replace the original
+            # error or put exception messages / connection details in job results.
+            logger.error(
+                json.dumps(
+                    {
+                        "event": "solver_failure_record_error",
+                        "job_id": persisted_job_id,
+                        "original_error_type": type(exc).__name__,
+                        "record_error_type": type(record_error).__name__,
+                    }
+                )
+            )
         raise
     finally:
         solver_slots.release()

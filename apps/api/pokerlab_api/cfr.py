@@ -148,10 +148,17 @@ class RiverCFRSolver:
         if not self.deals:
             raise ValueError("Solver ranges have no blocker-compatible combo pairs")
         mass = sum(deal.chance_weight for deal in self.deals)
+        if mass <= 0:
+            raise ValueError(
+                "Solver range weights must produce a positive representable combo-pair mass"
+            )
         self.deals = tuple(
             RiverDeal(deal.oop, deal.ip, deal.chance_weight / mass) for deal in self.deals
         )
         self.information_sets: dict[str, InformationSet] = {}
+        # A solver instance has one fixed board and evaluator. Cache only real
+        # terminal outcomes, never strategies or regrets, and never across jobs.
+        self._showdown_cache: dict[RiverDeal, float] = {}
 
     @staticmethod
     def _player(history: tuple[str, ...]) -> int:
@@ -185,10 +192,19 @@ class RiverCFRSolver:
             ("check", "bet_large", "call"),
         }
 
+    def _showdown_outcome(self, deal: RiverDeal) -> float:
+        outcome = self._showdown_cache.get(deal)
+        if outcome is None:
+            outcome = self.evaluator(deal.oop.cards, deal.ip.cards, self.board)
+            if outcome not in (0.0, 0.5, 1.0):
+                raise ValueError("Showdown outcome must be 0, 0.5, or 1")
+            self._showdown_cache[deal] = outcome
+        return outcome
+
     def _oop_terminal_utility(self, deal: RiverDeal, history: tuple[str, ...]) -> float:
         if history == ("check", "check"):
             stake = self.pot / 2
-            outcome = self.evaluator(deal.oop.cards, deal.ip.cards, self.board)
+            outcome = self._showdown_outcome(deal)
             return (outcome * 2 - 1) * stake
         bet_action = next(action for action in history if action.startswith("bet"))
         bet = self.bet_sizes[bet_action]
@@ -196,7 +212,7 @@ class RiverCFRSolver:
         response = history[-1]
         if response == "fold":
             return self.pot / 2 if bettor == 0 else -self.pot / 2
-        outcome = self.evaluator(deal.oop.cards, deal.ip.cards, self.board)
+        outcome = self._showdown_outcome(deal)
         return (outcome * 2 - 1) * (self.pot / 2 + bet)
 
     @staticmethod
@@ -258,6 +274,8 @@ class RiverCFRSolver:
         return result
 
     def solve(self, iterations: int) -> dict:
+        if isinstance(iterations, bool) or not isinstance(iterations, int) or iterations < 1:
+            raise ValueError("Solver iterations must be a positive integer")
         started = time.perf_counter()
         convergence: list[dict[str, float | int]] = []
         checkpoint = max(10, iterations // 40)

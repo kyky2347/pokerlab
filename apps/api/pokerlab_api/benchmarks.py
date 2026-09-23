@@ -190,6 +190,74 @@ def run_turn_map_benchmark() -> dict:
     }
 
 
+def run_solver_benchmark() -> dict:
+    """Compare fresh solver jobs; count real evaluations / 新任务的真实摊牌评估对照。"""
+
+    class UncachedRiverSolver(RiverCFRSolver):
+        def _showdown_outcome(self, deal):
+            return self.evaluator(deal.oop.cards, deal.ip.cards, self.board)
+
+    board = tuple(map(Card.parse, ("Ah", "Kd", "7s", "3c", "2d")))
+    engines = {engine.name: engine for engine in (PythonPokerEngine(), select_engine())}
+    algorithms = {"uncached": UncachedRiverSolver, "cached": RiverCFRSolver}
+    results = []
+    for engine in engines.values():
+        expected = None
+        times: dict[str, list[float]] = {name: [] for name in algorithms}
+        evaluations: dict[str, list[int]] = {name: [] for name in algorithms}
+        for repeat in range(4):  # First pair is warmup; alternate order afterwards.
+            order = list(algorithms) if repeat % 2 == 0 else list(reversed(algorithms))
+            for name in order:
+                calls = 0
+
+                def evaluate(oop, ip, board, engine=engine):
+                    nonlocal calls
+                    calls += 1
+                    return engine.showdown(oop, ip, board)
+
+                started = time.perf_counter()
+                solver = algorithms[name](board, {"AQo": 1}, {"KQo": 1}, 100, 100, 0.5, 1, evaluate)
+                result = solver.solve(100)
+                elapsed_ms = (time.perf_counter() - started) * 1000
+                stable = {key: value for key, value in result.items() if key != "runtime_ms"}
+                if expected is None:
+                    expected = stable
+                if stable != expected:
+                    raise RuntimeError("Solver benchmark changed a strategy or convergence result")
+                if repeat:
+                    times[name].append(elapsed_ms)
+                    evaluations[name].append(calls)
+        medians = {name: statistics.median(values) for name, values in times.items()}
+        results.append(
+            {
+                "engine": engine.name,
+                "times_ms": times,
+                "median_ms": medians,
+                "speedup": medians["uncached"] / medians["cached"],
+                "showdown_evaluations": evaluations,
+                "result": expected,
+            }
+        )
+    return {
+        "environment": {"platform": platform.platform(), "python": platform.python_version()},
+        "workload": {
+            "board": [str(card) for card in board],
+            "oop_range": {"AQo": 1},
+            "ip_range": {"KQo": 1},
+            "pot": 100,
+            "effective_stack": 100,
+            "bet_small": 0.5,
+            "bet_large": 1,
+            "iterations": 100,
+            "repeats": 3,
+            "warmup_jobs_per_algorithm": 1,
+            "alternating_order": True,
+            "fresh_solver_per_run": True,
+        },
+        "results": results,
+    }
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="PokerLab reproducible benchmarks / 可复现基准")
     workload = parser.add_mutually_exclusive_group()
@@ -199,12 +267,18 @@ if __name__ == "__main__":
     workload.add_argument(
         "--turn-map-only", action="store_true", help="Benchmark exact turn maps / 精确转牌地图基准"
     )
-    args = parser.parse_args()
-    benchmark = (
-        run_turn_map_benchmark
-        if args.turn_map_only
-        else run_range_benchmark
-        if args.range_only
-        else run
+    workload.add_argument(
+        "--solver-only",
+        action="store_true",
+        help="Benchmark river solver caching / 河牌求解缓存基准",
     )
+    args = parser.parse_args()
+    if args.solver_only:
+        benchmark = run_solver_benchmark
+    elif args.turn_map_only:
+        benchmark = run_turn_map_benchmark
+    elif args.range_only:
+        benchmark = run_range_benchmark
+    else:
+        benchmark = run
     print(json.dumps(benchmark(), indent=2))
