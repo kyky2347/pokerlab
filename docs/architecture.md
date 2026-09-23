@@ -34,4 +34,10 @@ Database initialization is different from engine fallback: a failed configured d
 
 ## Solver boundary / 求解器边界
 
-The river solver uses a finite educational tree: OOP may check or make one of two bets; after a check, IP may check or make one of two bets; the facing player may fold or call. There are no raises. Private information sets are keyed by player, hand class, and public history. Terminal utilities are zero-sum and use actual seven-card showdown ranks.
+The river solver uses a finite educational tree: OOP may check or make one of two bets; after a check, IP may check or make one of two bets; the facing player may fold or call. There are no raises. Private information sets are keyed by player, exact physical combo, and public history. Terminal utilities are zero-sum and use actual seven-card showdown ranks. A job-local cache reuses each fixed deal's terminal outcome without altering traversal or strategy updates.
+
+河牌求解采用有限、无加注的教学博弈树。信息集由玩家、精确物理手牌组合和公开行动历史标识，终局收益为零和。任务内缓存复用每组固定牌面的真实摊牌结果，不改变遍历顺序或策略更新。
+
+Solver requests validate the game before inserting a job. Once the initial `running` record commits, computation or completion-write failures roll back the session before attempting a separate `failed` update. Failure-record errors are logged by type without replacing the original error; the concurrency slot is released in all paths. This follows SQLAlchemy's requirement for [explicit rollback after failed flushes](https://docs.sqlalchemy.org/en/20/orm/session_basics.html#flushing).
+
+求解请求先验证牌局再写入任务。初始 `running` 记录提交后，计算或完成结果写入失败会先回滚会话，再独立尝试记录 `failed`。失败状态自身若无法写入，仅记录错误类型且不覆盖原始异常；所有退出路径均释放并发名额。这遵循 SQLAlchemy 对失败 flush 后显式回滚的要求。

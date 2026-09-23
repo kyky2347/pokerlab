@@ -4,6 +4,13 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Reuse actual river showdown outcomes within each solver job while preserving complete strategies and convergence traces; add a reproducible cached/uncached benchmark for both engines.
+- Reject underflowed solver chance mass, invalid evaluator outputs, and invalid direct iteration counts. Validate games before creating jobs; roll back failed writes, preserve original errors when failure reporting also fails, and always release solver capacity.
+- Add SQLite/PostgreSQL fault-injection and concurrency regression tests; document synchronous, per-process limits and interrupted-job recovery limitations.
+- 在每个河牌求解任务内复用真实摊牌结果，完整策略和收敛轨迹保持不变；新增双引擎缓存/未缓存对照基准。
+- 拒绝求解权重总质量下溢、非法评估输出和非法直接迭代次数；创建任务前验证牌局，写入失败时回滚，失败状态也无法写入时保留原始异常，并始终释放并发名额。
+- 新增 SQLite/PostgreSQL 真实故障注入与并发回归测试，明确同步接口、进程级并发及中断任务恢复的限制。
+
 - Halve exact turn-map showdown evaluations from 1,980 to 990 by sharing unordered runouts; preserve all 45 conditional equities, canonical ordering, and Rust/Python fallback. Add an alternating-order, output-checked benchmark and mathematical derivation.
 - Reject cross-player duplicate cards at both showdown boundaries and malformed direct card construction. Expand exact-enumeration, split-pot, symmetry, API, fallback, and cross-engine regression coverage.
 - 通过复用无序补牌组合，将精确转牌地图的摊牌评估由 1,980 次减至 990 次；保持全部 45 张转牌的条件胜率、标准顺序及 Rust/Python 回退不变，新增交替执行顺序且核对完整结果的性能基准与数学推导。
