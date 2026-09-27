@@ -49,6 +49,10 @@ The product opens at <http://localhost:3000>. Operational commands are bilingual
 
 `stop` 会保留 PostgreSQL 数据卷。生成的 `.pokerlab.env` 仅存在于本机，并被 Git 与 Docker 构建上下文同时忽略。PostgreSQL 只在 Compose 私有网络内可访问，不会暴露到宿主机。
 
+Web and API host ports bind to `127.0.0.1`, not every network interface. Other local applications can still connect; this is a local-first default, not user authentication. Upgrade Docker Engine to 28.0.0 or newer: older releases have a [documented localhost-publishing limitation](https://docs.docker.com/engine/network/port-publishing/) affecting machines on the same network segment. Do not change daemon routing/firewall settings to make this unauthenticated API publicly reachable.
+
+Web 与 API 的宿主机端口绑定 `127.0.0.1`，不再绑定所有网卡。其他本机应用仍可连接；这是本地优先的默认配置，不是用户认证。请使用 Docker Engine 28.0.0 或更新版本：旧版存在[官方记录的 localhost 端口发布限制](https://docs.docker.com/engine/network/port-publishing/)，同网段机器可能访问本机绑定的端口。不要通过修改 Docker 路由或防火墙让这个无认证 API 直接暴露到公网。
+
 Use `--no-build` only to restart unchanged, previously built images. Normal startup still builds current source. Invalid restart options are rejected before services are stopped. `status`, `logs`, and `stop` never create new credentials.
 
 只有代码未变且镜像已构建时才使用 `--no-build`；正常启动仍会构建当前源码。错误的重启参数会在停止服务之前被拒绝。`status`、`logs` 和 `stop` 不会生成新凭据。
@@ -56,6 +60,35 @@ Use `--no-build` only to restart unchanged, previously built images. Normal star
 Back up `.pokerlab.env` privately alongside the database. Configuration creation is atomic and owner-only, including simultaneous launches. If a database volume already exists but the configuration is missing, startup refuses to generate a replacement password: restore the original configuration from backup. Do not delete the volume to bypass this safeguard unless you explicitly intend to discard its data. Empty files and symbolic links are rejected rather than overwritten.
 
 请将 `.pokerlab.env` 与数据库一起私密备份。配置采用原子创建与仅所有者可读写权限，并发启动也不会覆盖凭据。如果数据库卷已存在但配置缺失，启动器会拒绝生成替代密码：请从备份恢复原配置。除非明确需要丢弃数据，否则不要删除数据卷来绕过保护。空文件与符号链接会被拒绝，而不是覆盖。
+
+### Custom local ports / 自定义本机端口
+
+Choose two unused, distinct TCP ports. No Compose override file is needed:
+
+选择两个未被占用且不同的 TCP 端口，无需创建 Compose 覆盖文件：
+
+```bash
+export POKERLAB_WEB_PORT=13000 POKERLAB_API_PORT=18000
+./pokerlab
+./pokerlab open
+./pokerlab restart --no-open
+```
+
+The app opens at `http://localhost:13000`; API health and docs use `http://localhost:18000`. Export either port independently to keep the other's default (3000/8000). Values must be decimal integers from 1 to 65535 without leading zeros. Privileged ports may need additional host permissions; prefer unprivileged ports such as this example. Invalid/equal ports are rejected before Docker operations, and invalid Compose configuration is rejected before restart stops services. Port availability is enforced by Docker; the launcher never stops another application's containers or chooses random ports.
+
+应用会在 `http://localhost:13000` 打开，API 健康检查和文档使用 `http://localhost:18000`。可以只设置一个端口，另一个保留默认值（3000/8000）。端口必须是 1 至 65535 的十进制整数，不能有前导零。低端口可能需要额外宿主机权限，建议使用示例中的非特权端口。非法或相同端口会在任何 Docker 操作前被拒绝；重启也会在停止服务前校验 Compose 配置。端口占用由 Docker 检查；启动器不会停止其他应用的容器，也不会随机选择端口。
+
+Launcher ports are shell settings: repeat the exports in a new terminal; do not add them to `.pokerlab.env`. Keep the same values for subsequent commands. Unset both variables to return to the default ports. These settings do not create a separate installation or database, and existing `.pokerlab.env` contents are never rewritten.
+
+启动器端口是终端环境设置：新开终端后需重新 `export`，不要把它们添加到 `.pokerlab.env`。后续命令应保留相同值；取消这两个环境变量即可恢复默认端口。这些设置不会创建另一套安装或数据库，也不会重写已有 `.pokerlab.env` 的内容。
+
+When either port is exported, the launcher derives `NEXT_PUBLIC_API_URL` and `CORS_ORIGINS` from the local ports, overriding values in legacy `.pokerlab.env` files. Explicit **shell** exports of these two URL settings take precedence for custom deployments. Without port exports, existing runtime-file URL settings keep their prior behavior. Manual Compose users must set ports and any explicitly configured API URL/CORS origins consistently themselves. The launcher does not source runtime files as shell scripts.
+
+只要显式导出任一端口，启动器就会根据本机端口生成 `NEXT_PUBLIC_API_URL` 和 `CORS_ORIGINS`，覆盖旧 `.pokerlab.env` 中的对应值。若在**终端**中明确导出这两个 URL 设置，则以终端值为准，支持自定义部署。不导出端口时，运行配置文件中的 URL 设置继续保持原有行为。手动调用 Compose 时，需自行保持端口、显式 API 地址与跨域来源一致。启动器不会把运行配置当作 shell 脚本执行。
+
+`POKERLAB_WEB_URL`, `POKERLAB_API_HEALTH_URL`, and `POKERLAB_API_DOCS_URL` remain optional overrides for browser/check/display URLs, such as a reverse proxy. They do not change port mappings or the frontend build URL. Next.js embeds the API URL at build time: after changing the API port or `NEXT_PUBLIC_API_URL`, run `./pokerlab` **without** `--no-build`. Reuse images only when both source and build-time configuration are unchanged.
+
+`POKERLAB_WEB_URL`、`POKERLAB_API_HEALTH_URL` 和 `POKERLAB_API_DOCS_URL` 仍可覆盖浏览器、检查和展示地址，例如反向代理场景；它们不改变端口映射或前端构建地址。Next.js 在构建时写入 API 地址：修改 API 端口或 `NEXT_PUBLIC_API_URL` 后，请运行**不带** `--no-build` 的 `./pokerlab`。仅在源码与构建配置均未变更时复用镜像。
 
 ## Database upgrades and recovery / 数据库升级与恢复
 
@@ -105,6 +138,7 @@ Copy `.env.example` for native development when defaults are not suitable. For m
 
 - Run `make check` and `pnpm --filter web test:e2e` against the release commit. / 对发布提交运行完整质量门禁与浏览器测试。
 - Terminate TLS at a trusted reverse proxy or platform edge. / 在可信反向代理或平台边缘终止 TLS。
+- Put every API route behind authentication and authorization before any shared/public deployment; PokerLab does not provide built-in accounts, and CORS is not authentication. Keep the default loopback bindings, or use a private container network to reach a trusted gateway. / 共享或公开部署前，必须为全部 API 路由配置身份认证与授权；PokerLab 没有内置账号，CORS 不是身份认证。保持默认回环绑定，或通过私有容器网络连接可信网关。
 - Restrict `CORS_ORIGINS` to the deployed web origin. / 将 CORS 限制到实际 Web 域名。
 - Persist the database and back it up before upgrades. / 持久化数据库并在升级前备份。
 - Keep compute safety limits and request timeouts enabled. / 保留计算上限与请求超时。

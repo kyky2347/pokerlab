@@ -105,6 +105,23 @@ That single command generates a private local database credential, builds and st
 
 `--no-build` 用于代码未变且镜像已构建的情况；拉取更新后请正常运行 `./pokerlab` 以重新构建。请私密备份 `.pokerlab.env`：若配置丢失但数据库卷仍在，请恢复原凭据；启动器不会擅自更换密码或删除数据。
 
+Ports already in use? Start on a different pair, without editing Compose or stopping another application:
+
+默认端口被占用？无需修改 Compose 或停止其他应用，即可换一组端口启动：
+
+```bash
+export POKERLAB_WEB_PORT=13000 POKERLAB_API_PORT=18000
+./pokerlab
+```
+
+The browser, API build URL, CORS defaults, and health checks follow these ports. Keep the exports for later commands (including `open` and `restart`); they are shell settings, not saved to `.pokerlab.env`. Changing the API port requires a normal rebuild, not `--no-build`. Existing credentials and records stay intact. See [configuration precedence](docs/deployment.md#custom-local-ports--自定义本机端口) for reverse-proxy overrides.
+
+浏览器、前端构建中的 API 地址、默认跨域来源与健康检查会同步使用新端口。后续命令（包括 `open` 和 `restart`）需保留这些环境变量；端口只在终端中设置，不写入 `.pokerlab.env`。修改 API 端口后需正常构建，不能使用 `--no-build`。已有凭据和记录保持不变。反向代理覆盖规则见[配置优先级](docs/deployment.md#custom-local-ports--自定义本机端口)。
+
+Container web/API ports now bind only to `127.0.0.1` by default. PokerLab has no built-in user authentication: CORS is not access control, and public hosting needs an authenticated HTTPS gateway. See [security guidance](SECURITY.md).
+
+容器 Web/API 端口现在默认仅绑定 `127.0.0.1`。PokerLab 没有内置用户认证；CORS 不是访问控制，公开部署需使用带身份认证的 HTTPS 网关。详见[安全指南](SECURITY.md)。
+
 ### Native development / 本地开发
 
 Prerequisites / 环境要求:

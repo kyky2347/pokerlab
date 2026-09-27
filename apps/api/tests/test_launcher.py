@@ -1,5 +1,6 @@
 """Exercise the real POSIX launcher without Docker, browsers, or user data."""
 
+import json
 import os
 import re
 import shutil
@@ -28,10 +29,18 @@ def launcher(tmp_path):
 printf '%s\\n' "docker $*" >> "$POKERLAB_TEST_LOG"
 case "$*" in
   'volume ls '*) printf '%s\\n' "${TEST_VOLUMES:-}"; exit "${TEST_VOLUME_EXIT:-0}" ;;
-  *' up '*) exit "${TEST_UP_EXIT:-0}" ;;
+  *' config --quiet') exit "${TEST_CONFIG_EXIT:-0}" ;;
+  *' up '*)
+    printf 'ports=%s,%s api=%s cors=%s\\n' \\
+      "${POKERLAB_WEB_PORT:-}" "${POKERLAB_API_PORT:-}" \\
+      "${NEXT_PUBLIC_API_URL:-}" "${CORS_ORIGINS:-}" >> "$POKERLAB_TEST_LOG"
+    exit "${TEST_UP_EXIT:-0}" ;;
 esac
 """,
-        "curl": '#!/bin/sh\nexit "${TEST_CURL_EXIT:-0}"\n',
+        "curl": """#!/bin/sh
+printf '%s\\n' "curl $*" >> "$POKERLAB_TEST_LOG"
+exit "${TEST_CURL_EXIT:-0}"
+""",
         "open": """#!/bin/sh
 printf '%s\\n' "open $*" >> "$POKERLAB_TEST_LOG"
 exit "${TEST_OPEN_EXIT:-0}"
@@ -47,6 +56,7 @@ exit "${TEST_OPEN_EXIT:-0}"
             key: value
             for key, value in os.environ.items()
             if not key.startswith(("POKERLAB_", "COMPOSE_", "TEST_"))
+            and key not in {"NEXT_PUBLIC_API_URL", "CORS_ORIGINS"}
         },
         "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
         "POKERLAB_TEST_LOG": str(log),
@@ -196,3 +206,186 @@ def test_stop_preserves_runtime_credentials_and_volumes(launcher):
     assert (root / ".pokerlab.env").read_bytes() == before
     assert " down\n" in log.read_text()
     assert " down -v" not in log.read_text()
+
+
+@pytest.mark.parametrize("key", ["POKERLAB_WEB_PORT", "POKERLAB_API_PORT"])
+@pytest.mark.parametrize(
+    "port",
+    ["", "0", "-1", "65536", "100000000000000000000", "abc", "2.5", "08000", "80:80", "$(id)"],
+)
+def test_invalid_ports_are_rejected_before_restart_side_effects(launcher, key, port):
+    root, log, run = launcher
+    result = run("restart", **{key: port})
+    assert result.returncode != 0
+    assert key in result.stderr
+    assert not log.exists()
+    assert not (root / ".pokerlab.env").exists()
+
+
+def test_equal_ports_are_rejected_before_docker(launcher):
+    _root, log, run = launcher
+    result = run("start", POKERLAB_WEB_PORT="8000")
+    assert result.returncode != 0
+    assert "must be different" in result.stderr
+    assert not log.exists()
+
+
+@pytest.mark.parametrize("web,api", [("13000", "18000"), ("1", "65535")])
+def test_custom_ports_connect_every_local_endpoint_without_changing_credentials(launcher, web, api):
+    root, log, run = launcher
+    runtime = root / ".pokerlab.env"
+    # Legacy defaults must not send a custom-port frontend to another app's API.
+    original = (
+        "POSTGRES_PASSWORD=private-test-value\n"
+        "NEXT_PUBLIC_API_URL=http://localhost:8000\n"
+        "CORS_ORIGINS=http://localhost:3000\n"
+        "DO_NOT_EXECUTE=$(touch unsafe-file)\n"
+    )
+    runtime.write_text(original)
+    overrides = {"POKERLAB_WEB_PORT": web, "POKERLAB_API_PORT": api}
+    result = run("start", **overrides)
+    assert result.returncode == 0, result.stderr
+    commands = log.read_text()
+    assert f"ports={web},{api} api=http://localhost:{api} cors=http://localhost:{web}" in commands
+    assert f"curl --fail --silent --show-error --max-time 10 http://localhost:{web}\n" in commands
+    assert (
+        f"curl --fail --silent --show-error --max-time 10 http://localhost:{api}/health\n"
+        in commands
+    )
+    assert f"open http://localhost:{web}" in commands
+    assert f"http://localhost:{api}/docs" in result.stdout
+    assert runtime.read_text() == original
+    assert not (root / "unsafe-file").exists()
+    assert "private-test-value" not in result.stdout + result.stderr + commands
+    assert run("open", **overrides).returncode == 0
+    assert run("restart", "--no-open", **overrides).returncode == 0
+    assert runtime.read_text() == original
+
+
+@pytest.mark.parametrize(
+    "overrides,web,api",
+    [
+        ({"POKERLAB_WEB_PORT": "13000"}, "13000", "8000"),
+        ({"POKERLAB_API_PORT": "18000"}, "3000", "18000"),
+    ],
+)
+def test_single_port_override_keeps_other_service_default(launcher, overrides, web, api):
+    _root, log, run = launcher
+    result = run("start", "--no-open", **overrides)
+    assert result.returncode == 0, result.stderr
+    assert (
+        f"ports={web},{api} api=http://localhost:{api} cors=http://localhost:{web}"
+        in log.read_text()
+    )
+
+
+def test_explicit_proxy_configuration_is_preserved(launcher):
+    _root, log, run = launcher
+    result = run(
+        "start",
+        POKERLAB_WEB_PORT="13000",
+        POKERLAB_API_PORT="18000",
+        NEXT_PUBLIC_API_URL="https://api.example.test",
+        CORS_ORIGINS="https://web.example.test",
+        POKERLAB_WEB_URL="https://web.example.test",
+        POKERLAB_API_HEALTH_URL="https://api.example.test/health",
+    )
+    assert result.returncode == 0, result.stderr
+    assert "api=https://api.example.test cors=https://web.example.test" in log.read_text()
+    assert "open https://web.example.test" in log.read_text()
+    assert "https://api.example.test/docs" in result.stdout
+
+
+def test_default_launch_does_not_override_runtime_file_url_settings(launcher):
+    _root, log, run = launcher
+    assert run("start", "--no-open").returncode == 0
+    assert "ports=3000,8000 api= cors=\n" in log.read_text()
+
+
+def test_invalid_compose_configuration_does_not_stop_existing_services(launcher):
+    root, log, run = launcher
+    runtime = root / ".pokerlab.env"
+    runtime.write_text("POSTGRES_PASSWORD=private-test-value\n")
+    result = run("restart", TEST_CONFIG_EXIT="1")
+    assert result.returncode != 0
+    assert "no services were stopped" in result.stderr
+    assert " down" not in log.read_text()
+    assert " up " not in log.read_text()
+    assert runtime.read_text() == "POSTGRES_PASSWORD=private-test-value\n"
+
+
+@pytest.mark.parametrize(
+    "overrides,web,api,api_url,cors",
+    [
+        ({}, "3000", "8000", "http://localhost:8000", "http://localhost:3000"),
+        (
+            {"POKERLAB_WEB_PORT": "13000", "POKERLAB_API_PORT": "18000"},
+            "13000",
+            "18000",
+            "http://localhost:18000",
+            "http://localhost:13000",
+        ),
+        (
+            {
+                "NEXT_PUBLIC_API_URL": "https://api.example.test",
+                "CORS_ORIGINS": "https://web.example.test",
+            },
+            "3000",
+            "8000",
+            "https://api.example.test",
+            "https://web.example.test",
+        ),
+    ],
+)
+def test_real_compose_model_uses_loopback_and_consistent_defaults(
+    tmp_path, overrides, web, api, api_url, cors
+):
+    # No daemon, containers, real credentials, or user configuration required.
+    if not shutil.which("docker"):
+        pytest.skip("Docker Compose is required for configuration integration tests")
+    if subprocess.run(["docker", "compose", "version"], capture_output=True).returncode:
+        pytest.skip("Docker Compose is unavailable")
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if not key.startswith(("POKERLAB_", "COMPOSE_", "POSTGRES_"))
+        and key not in {"NEXT_PUBLIC_API_URL", "CORS_ORIGINS"}
+    }
+    env.update(
+        {
+            "COMPOSE_DISABLE_ENV_FILE": "1",
+            "POSTGRES_USER": "test",
+            "POSTGRES_DB": "test",
+            "POSTGRES_PASSWORD": "disposable-test-only",
+            **overrides,
+        }
+    )
+    result = subprocess.run(
+        [
+            "docker",
+            "compose",
+            "--env-file",
+            os.devnull,
+            "-f",
+            str(REPO_ROOT / "docker-compose.yml"),
+            "config",
+            "--format",
+            "json",
+        ],
+        env=env,
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    assert result.returncode == 0, result.stderr
+    services = json.loads(result.stdout)["services"]
+    for name, port in [("web", web), ("api", api)]:
+        bindings = services[name]["ports"]
+        assert len(bindings) == 1
+        assert bindings[0]["host_ip"] == "127.0.0.1"
+        assert bindings[0]["published"] == port
+        assert bindings[0]["target"] == (3000 if name == "web" else 8000)
+    assert "ports" not in services["postgres"]
+    assert services["web"]["build"]["args"]["NEXT_PUBLIC_API_URL"] == api_url
+    assert services["api"]["environment"]["CORS_ORIGINS"] == cors

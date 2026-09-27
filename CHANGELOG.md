@@ -4,6 +4,11 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Bind container web/API ports to loopback by default. Add validated custom local ports that synchronize the frontend build URL, CORS defaults, browser opening, and health/documentation links without rewriting existing credentials.
+- Validate Compose configuration before shutdown/restart; cover invalid ports, legacy URL overrides, secret preservation, proxy overrides, and the real rendered Compose model. Document build-time API URL changes and the lack of built-in authentication in English and Chinese.
+- 容器 Web/API 端口默认绑定本机回环地址；新增校验后的自定义本机端口，同步前端构建地址、跨域默认值、浏览器打开及健康检查/文档链接，不重写已有凭据。
+- 停止/重启前校验 Compose 配置；补充非法端口、旧版 URL 覆盖、凭据保留、反向代理覆盖及真实 Compose 渲染模型测试。中英文文档明确 API 地址需重新构建，以及系统没有内置身份认证的边界。
+
 - Reuse actual river showdown outcomes within each solver job while preserving complete strategies and convergence traces; add a reproducible cached/uncached benchmark for both engines.
 - Reject underflowed solver chance mass, invalid evaluator outputs, and invalid direct iteration counts. Validate games before creating jobs; roll back failed writes, preserve original errors when failure reporting also fails, and always release solver capacity.
 - Add SQLite/PostgreSQL fault-injection and concurrency regression tests; document synchronous, per-process limits and interrupted-job recovery limitations.
