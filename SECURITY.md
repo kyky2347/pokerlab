@@ -18,12 +18,16 @@ Include the affected commit, reproduction steps, impact, and any suggested mitig
 
 ## Operational guidance / 运行建议
 
+- The default Compose deployment publishes web/API only on `127.0.0.1`. Use Docker Engine 28.0.0+; [older engines have a localhost-publishing limitation](https://docs.docker.com/engine/network/port-publishing/). Custom ports retain this binding.
+- There is no built-in user authentication or per-user data isolation. Never expose the API directly to untrusted networks; use an authenticated HTTPS gateway with authorization for all routes. CORS is not authentication. Loopback binding does not protect against other users/processes on the same host.
 - Keep `CORS_ORIGINS` restricted to trusted frontend origins.
 - Do not expose SQLite on shared multi-process deployments; use PostgreSQL.
 - Keep Monte Carlo, solver iteration, and solver concurrency limits enabled.
 - Never put database credentials in `NEXT_PUBLIC_*` variables.
 - Treat exported experiments as potentially sensitive if they contain private research inputs.
 
+- 默认 Compose 部署仅向 `127.0.0.1` 发布 Web/API 端口，自定义端口也保持该绑定。请使用 Docker Engine 28.0.0+；[旧版存在 localhost 端口发布限制](https://docs.docker.com/engine/network/port-publishing/)。
+- 没有内置用户认证或用户间数据隔离。不要把 API 直接暴露到不可信网络；应使用带身份认证的 HTTPS 网关，并为全部路由配置授权。CORS 不是身份认证；回环绑定也不能防范同一主机上的其他用户或进程。
 - 将 `CORS_ORIGINS` 限制为可信前端来源。
 - 共享或多进程部署应使用 PostgreSQL，不要直接暴露 SQLite。
 - 保持蒙特卡洛、求解器迭代与并发限制开启。

@@ -4,9 +4,6 @@ set -eu
 
 ROOT_DIR=$(cd "$(dirname "$0")" && pwd -P)
 RUNTIME_ENV="$ROOT_DIR/.pokerlab.env"
-WEB_URL="${POKERLAB_WEB_URL:-http://localhost:3000}"
-API_HEALTH_URL="${POKERLAB_API_HEALTH_URL:-http://localhost:8000/health}"
-API_DOCS_URL="${POKERLAB_API_DOCS_URL:-${API_HEALTH_URL%/health}/docs}"
 START_TIMEOUT="${POKERLAB_START_TIMEOUT:-300}"
 
 if [ -t 1 ]; then
@@ -53,6 +50,13 @@ Usage / 用法:
   ./pokerlab open           Open the running app / 打开已运行的应用
   ./pokerlab help           Show this help / 显示帮助
 
+Custom local ports / 自定义本机端口:
+  export POKERLAB_WEB_PORT=13000 POKERLAB_API_PORT=18000
+  ./pokerlab
+Keep these exports for later commands; rebuild after changing the API port.
+后续命令请保留这些环境变量；修改 API 端口后需重新构建。
+Web and API ports bind to 127.0.0.1 only. / Web 与 API 端口仅绑定 127.0.0.1。
+
 Requires Docker Desktop or Docker Engine with Compose v2.
 需要 Docker Desktop，或带有 Compose v2 的 Docker Engine。
 EOF
@@ -66,6 +70,37 @@ require_docker_cli() {
 require_docker_daemon() {
   require_docker_cli
   docker info >/dev/null 2>&1 || fail "Docker is not running. Start Docker Desktop and try again. / Docker 未运行，请启动 Docker Desktop 后重试。"
+}
+
+validate_port() {
+  case "$2" in
+    ''|0*|*[!0-9]*) fail "$1 must be an integer from 1 to 65535 without leading zeros. / $1 必须为 1 至 65535 的整数，且不能有前导零。" ;;
+  esac
+  [ "${#2}" -le 5 ] && [ "$2" -le 65535 ] || fail "$1 must be between 1 and 65535. / $1 必须在 1 至 65535 之间。"
+}
+
+configure_local_network() {
+  # Ports are shell inputs, not executable runtime-file content. Explicit local
+  # port selection overrides legacy URL defaults without rewriting credentials.
+  custom_ports=false
+  if [ "${POKERLAB_WEB_PORT+x}" = x ] || [ "${POKERLAB_API_PORT+x}" = x ]; then
+    custom_ports=true
+  fi
+  POKERLAB_WEB_PORT="${POKERLAB_WEB_PORT-3000}"
+  POKERLAB_API_PORT="${POKERLAB_API_PORT-8000}"
+  validate_port POKERLAB_WEB_PORT "$POKERLAB_WEB_PORT"
+  validate_port POKERLAB_API_PORT "$POKERLAB_API_PORT"
+  [ "$POKERLAB_WEB_PORT" != "$POKERLAB_API_PORT" ] || fail "Web and API ports must be different. / Web 与 API 必须使用不同端口。"
+  export POKERLAB_WEB_PORT POKERLAB_API_PORT
+
+  WEB_URL="${POKERLAB_WEB_URL:-http://localhost:$POKERLAB_WEB_PORT}"
+  API_HEALTH_URL="${POKERLAB_API_HEALTH_URL:-http://localhost:$POKERLAB_API_PORT/health}"
+  API_DOCS_URL="${POKERLAB_API_DOCS_URL:-${API_HEALTH_URL%/health}/docs}"
+  if [ "$custom_ports" = true ]; then
+    NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-http://localhost:$POKERLAB_API_PORT}"
+    CORS_ORIGINS="${CORS_ORIGINS:-http://localhost:$POKERLAB_WEB_PORT}"
+    export NEXT_PUBLIC_API_URL CORS_ORIGINS
+  fi
 }
 
 random_secret() {
@@ -110,8 +145,6 @@ ensure_runtime_env() (
     printf '%s\n' 'POSTGRES_DB=pokerlab'
     printf '%s\n' 'POSTGRES_USER=pokerlab'
     printf 'POSTGRES_PASSWORD=%s\n' "$secret"
-    printf '%s\n' 'NEXT_PUBLIC_API_URL=http://localhost:8000'
-    printf '%s\n' 'CORS_ORIGINS=http://localhost:3000'
     printf '%s\n' 'POKERLAB_MAX_MONTE_CARLO=500000'
     printf '%s\n' 'POKERLAB_MAX_SOLVER_ITERATIONS=5000'
     printf '%s\n' 'POKERLAB_MAX_CONCURRENT_SOLVERS=2'
@@ -171,13 +204,13 @@ validate_start_options() {
 }
 
 start_system() {
-  validate_start_options "$@"
   require_docker_daemon
   ensure_runtime_env
   if [ "$build_option" = --build ]; then
     info "Building and starting PokerLab... / 正在构建并启动 PokerLab……"
   else
     info "Starting PokerLab with existing images... / 正在使用已有镜像启动 PokerLab……"
+    warn "The API URL is baked into the web image. If it changed, restart without --no-build. / API 地址在 Web 构建时写入；若已修改，请去掉 --no-build 重新启动。"
   fi
   if ! compose up "$build_option" --detach --wait --wait-timeout "$START_TIMEOUT"; then
     warn "Startup failed. Recent service status follows. / 启动失败，以下为当前服务状态。"
@@ -198,6 +231,7 @@ start_system() {
 stop_system() {
   require_docker_daemon
   require_runtime_env
+  compose config --quiet || fail "Invalid Compose configuration; no services were stopped. / Compose 配置无效，未停止任何服务。"
   compose down
   info "PokerLab stopped; database data was preserved. / PokerLab 已停止，数据库数据已保留。"
 }
@@ -238,13 +272,13 @@ if [ "$#" -gt 0 ]; then
 fi
 
 case "$command_name" in
-  start) start_system "$@" ;;
+  start) validate_start_options "$@"; configure_local_network; start_system "$@" ;;
   stop) [ "$#" -eq 0 ] || fail "The stop command takes no arguments. / stop 命令不接受参数。"; stop_system ;;
-  restart) validate_start_options "$@"; stop_system; start_system "$@" ;;
+  restart) validate_start_options "$@"; configure_local_network; stop_system; start_system "$@" ;;
   status) [ "$#" -eq 0 ] || fail "The status command takes no arguments. / status 命令不接受参数。"; status_system ;;
   logs) [ "$#" -le 1 ] || fail "Use at most one service name. / 最多指定一个服务名。"; logs_system "${1:-}" ;;
   doctor) [ "$#" -eq 0 ] || fail "The doctor command takes no arguments. / doctor 命令不接受参数。"; doctor ;;
-  open) [ "$#" -eq 0 ] || fail "The open command takes no arguments. / open 命令不接受参数。"; open_app ;;
+  open) [ "$#" -eq 0 ] || fail "The open command takes no arguments. / open 命令不接受参数。"; configure_local_network; open_app ;;
   help|-h|--help) usage ;;
   *) usage >&2; fail "Unknown command: $command_name / 未知命令：$command_name" ;;
 esac

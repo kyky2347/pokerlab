@@ -4,9 +4,9 @@ services:
       context: .
       dockerfile: infra/web.Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:${POKERLAB_API_PORT:-8000}}
     ports:
-      - "3000:3000"
+      - "127.0.0.1:${POKERLAB_WEB_PORT:-3000}:3000"
     depends_on:
       api:
         condition: service_healthy
@@ -18,12 +18,12 @@ services:
       dockerfile: infra/api.Dockerfile
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:?Run ./pokerlab to generate local configuration}:${POSTGRES_PASSWORD:?Run ./pokerlab to generate local configuration}@postgres:5432/${POSTGRES_DB:?Run ./pokerlab to generate local configuration}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:${POKERLAB_WEB_PORT:-3000}}
       POKERLAB_MAX_MONTE_CARLO: ${POKERLAB_MAX_MONTE_CARLO:-500000}
       POKERLAB_MAX_SOLVER_ITERATIONS: ${POKERLAB_MAX_SOLVER_ITERATIONS:-5000}
       POKERLAB_MAX_CONCURRENT_SOLVERS: ${POKERLAB_MAX_CONCURRENT_SOLVERS:-2}
     ports:
-      - "8000:8000"
+      - "127.0.0.1:${POKERLAB_API_PORT:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy
