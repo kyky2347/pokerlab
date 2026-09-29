@@ -11,7 +11,7 @@ export function PageHeader({
   description,
   badge,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   description: string;
   badge?: string;
@@ -19,9 +19,11 @@ export function PageHeader({
   return (
     <header className="mb-7 grid gap-4 border-b pb-7 md:grid-cols-[1fr_auto] md:items-end">
       <div className="max-w-3xl">
-        <p className="font-data mb-3 text-[11px] tracking-[0.16em] text-primary uppercase">
-          {eyebrow}
-        </p>
+        {eyebrow ? (
+          <p className="font-data mb-3 text-[11px] tracking-[0.16em] text-primary uppercase">
+            {eyebrow}
+          </p>
+        ) : null}
         <h1 className="font-display text-4xl leading-none tracking-[-0.035em] sm:text-5xl">
           {title}
         </h1>
