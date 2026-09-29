@@ -4,6 +4,7 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Update the test-only transitive `undici` dependency to 8.10.2 for [GHSA-3wwx-pv8p-q78v](https://github.com/nodejs/undici/security/advisories/GHSA-3wwx-pv8p-q78v). / 将测试环境间接依赖 `undici` 升级至 8.10.2，修复该 WebSocket 拒绝服务漏洞。
 - Add indexed cursor-paginated experiment summaries and on-demand original JSON exports without loading every saved result. Preserve 64-bit integer seeds in browser copy/download and keep legacy experiment endpoints compatible.
 - Replace the hardcoded SQLite badge with the queried database backend; add bilingual pagination, empty/error/retry states, clipboard feedback, keyboard-accessible JSON, and request cancellation. Cover SQLite/PostgreSQL paging, concurrent inserts/deletion, lossless exports, and frontend recovery/race conditions.
 - 新增基于索引的游标分页实验摘要和按需原始 JSON 导出，不再批量加载全部结果；浏览器复制/下载保留完整 64 位整数种子，旧实验接口保持兼容。

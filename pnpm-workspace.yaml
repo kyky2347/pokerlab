@@ -2,6 +2,10 @@ packages:
   - "apps/*"
   - "packages/*"
 
+overrides:
+  # GHSA-3wwx-pv8p-q78v: patch the affected jsdom test dependency.
+  "undici@>=8.1.0 <8.10.2": "8.10.2"
+
 allowBuilds:
   unrs-resolver: set this to true or false
 
