@@ -6,9 +6,10 @@ import threading
 import time
 from contextlib import asynccontextmanager
 from datetime import UTC
+from urllib.parse import quote
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -20,6 +21,7 @@ from .config import get_settings
 from .database import Experiment, SolverJob, active_database_name, get_db, initialize_database
 from .domain import Card, parse_cards, validate_holdem_state
 from .engine import PokerEngine, select_engine
+from .history import HistoryCursor, experiment_page
 from .range_equity import calculate_range_equity
 from .ranges import range_statistics
 from .research import bayesian_update, compare_agents
@@ -464,6 +466,37 @@ def list_experiments(limit: int = 50, db: Session = Depends(get_db)) -> dict:
         .limit(safe_limit)
     ).all()
     return {"experiments": [serialize_experiment(record) for record in records]}
+
+
+@app.get("/experiments/page", tags=["experiments"])
+def paged_experiments(
+    limit: int = Query(default=20, ge=1, le=100),
+    cursor: str | None = Query(default=None, max_length=512),
+    db: Session = Depends(get_db),
+) -> dict:
+    try:
+        boundary = HistoryCursor.decode(cursor) if cursor is not None else None
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from None
+    return experiment_page(db, limit, boundary)
+
+
+@app.get("/experiments/{experiment_id}/export", tags=["experiments"], response_class=Response)
+def export_experiment(experiment_id: str, db: Session = Depends(get_db)) -> Response:
+    record = db.get(Experiment, experiment_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Experiment not found")
+    # Serialize once on the server. Copy/download must not round-trip 64-bit
+    # integers through JavaScript's floating-point JSON.parse/JSON.stringify.
+    filename = f"pokerlab-{quote(record.id, safe='')}.json"
+    return Response(
+        content=json.dumps(serialize_experiment(record), ensure_ascii=False, indent=2),
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @app.get("/experiments/{experiment_id}", tags=["experiments"])

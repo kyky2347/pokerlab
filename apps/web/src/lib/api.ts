@@ -13,7 +13,14 @@ export class ApiError extends Error {
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {
-  const payload = (await response.json().catch(() => ({}))) as {
+  const payload = (await response.json().catch((error: unknown) => {
+    if (
+      error instanceof DOMException &&
+      (error.name === "AbortError" || error.name === "TimeoutError")
+    )
+      throw error;
+    return {};
+  })) as {
     error?: { message?: string };
     detail?: string;
   };
@@ -27,12 +34,15 @@ async function parseResponse<T>(response: Response): Promise<T> {
   return payload as T;
 }
 
-export async function getJson<T>(path: string): Promise<T> {
+export async function getJson<T>(
+  path: string,
+  signal?: AbortSignal,
+): Promise<T> {
   try {
-    return parseResponse<T>(
+    return await parseResponse<T>(
       await fetch(`${API_URL}${path}`, {
         cache: "no-store",
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        signal: requestSignal(signal),
       }),
     );
   } catch (error) {
@@ -42,9 +52,33 @@ export async function getJson<T>(path: string): Promise<T> {
   }
 }
 
+function requestSignal(signal?: AbortSignal) {
+  const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+  return signal ? AbortSignal.any([signal, timeout]) : timeout;
+}
+
+// Preserve the server's JSON bytes, including integers beyond Number.MAX_SAFE_INTEGER.
+export async function getText(
+  path: string,
+  signal?: AbortSignal,
+): Promise<string> {
+  try {
+    const response = await fetch(`${API_URL}${path}`, {
+      cache: "no-store",
+      signal: requestSignal(signal),
+    });
+    if (!response.ok) await parseResponse<never>(response);
+    return await response.text();
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "TimeoutError")
+      throw new ApiError("The API request timed out after three minutes.", 408);
+    throw error;
+  }
+}
+
 export async function postJson<T>(path: string, body: unknown): Promise<T> {
   try {
-    return parseResponse<T>(
+    return await parseResponse<T>(
       await fetch(`${API_URL}${path}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -60,8 +94,12 @@ export async function postJson<T>(path: string, body: unknown): Promise<T> {
 }
 
 export function downloadJson(filename: string, value: unknown) {
+  downloadJsonText(filename, JSON.stringify(value, null, 2));
+}
+
+export function downloadJsonText(filename: string, text: string) {
   const url = URL.createObjectURL(
-    new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }),
+    new Blob([text], { type: "application/json" }),
   );
   const anchor = document.createElement("a");
   anchor.href = url;

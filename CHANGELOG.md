@@ -4,6 +4,11 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Add indexed cursor-paginated experiment summaries and on-demand original JSON exports without loading every saved result. Preserve 64-bit integer seeds in browser copy/download and keep legacy experiment endpoints compatible.
+- Replace the hardcoded SQLite badge with the queried database backend; add bilingual pagination, empty/error/retry states, clipboard feedback, keyboard-accessible JSON, and request cancellation. Cover SQLite/PostgreSQL paging, concurrent inserts/deletion, lossless exports, and frontend recovery/race conditions.
+- 新增基于索引的游标分页实验摘要和按需原始 JSON 导出，不再批量加载全部结果；浏览器复制/下载保留完整 64 位整数种子，旧实验接口保持兼容。
+- 数据库标识改为实际查询后端，新增双语分页、空状态、错误/重试、剪贴板反馈、可键盘访问的 JSON 和请求取消；补充 SQLite/PostgreSQL 分页、新增/删除记录、无损导出及前端恢复/竞态回归测试。
+
 - Bind container web/API ports to loopback by default. Add validated custom local ports that synchronize the frontend build URL, CORS defaults, browser opening, and health/documentation links without rewriting existing credentials.
 - Validate Compose configuration before shutdown/restart; cover invalid ports, legacy URL overrides, secret preservation, proxy overrides, and the real rendered Compose model. Document build-time API URL changes and the lack of built-in authentication in English and Chinese.
 - 容器 Web/API 端口默认绑定本机回环地址；新增校验后的自定义本机端口，同步前端构建地址、跨域默认值、浏览器打开及健康检查/文档链接，不重写已有凭据。

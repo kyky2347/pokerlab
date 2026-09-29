@@ -44,7 +44,7 @@ PokerLab 是一套可审查的研究系统，而不是赌场风格外壳或互�
 | **EV Lab / EV 实验室**               | Explicit pot conventions, break-even equity, incremental call EV, and decision curves. / 明确的底池约定、盈亏平衡胜率、增量跟注 EV 与决策曲线。                                                              |
 | **CFR Solver Lite / CFR 轻量求解器** | A real blocker-aware CFR+ river abstraction with mixed strategies and convergence diagnostics. / 真实运行、阻断牌感知的河牌 CFR+ 抽象、混合策略与收敛诊断。                                                  |
 | **Research / AI / 研究实验室**       | Beta–Binomial inference, seeded convergence exports, and transparent agent comparisons. / Beta–Binomial 推断、固定种子收敛导出与透明代理对比。                                                               |
-| **Experiment ledger / 实验台账**     | SQLite/PostgreSQL persistence with complete JSON and CSV export. / SQLite/PostgreSQL 持久化及完整 JSON、CSV 导出。                                                                                           |
+| **Experiment ledger / 实验台账**     | Lightweight cursor pagination, actual database attribution, and lossless complete JSON export. Research comparisons also offer CSV. / 轻量游标分页、真实数据库标识及无损完整 JSON 导出；研究对比另提供 CSV。 |
 
 <details>
 <summary><strong>Open the visual gallery / 展开界面画廊</strong></summary>
@@ -74,6 +74,12 @@ Research comparison: real API output, seed `7`, 1,000 synthetic decisions. See [
 ### Mobile Chinese interface / 移动端中文界面
 
 ![PokerLab mobile Chinese](output/playwright/mobile-home-zh.png)
+
+### Paginated experiment history / 分页实验历史
+
+![Experiment history with PostgreSQL and a full 64-bit seed](output/playwright/history-desktop-en.png)
+
+The screenshots use real seeded API runs in an isolated PostgreSQL deployment. See the [bilingual history and export guide](docs/experiment-history.md), including the mobile view. / 截图来自隔离 PostgreSQL 部署中的真实固定种子 API 实验；详见[中英文历史与导出指南](docs/experiment-history.md)，包含移动端视图。
 
 </details>
 
@@ -178,6 +184,10 @@ API 是结果真值源；前端负责交互与可视化，但不计算权威胜�
 Database schemas now upgrade automatically at API startup. Existing experiment, training-answer, and solver records are preserved; PostgreSQL stores every API-accepted seed (`0` through `2^63 - 1`) in a 64-bit column. If the configured database cannot be initialized, startup stops instead of silently sending new records to another database. Back up before upgrading; see [deployment and recovery](docs/deployment.md#database-upgrades-and-recovery--数据库升级与恢复).
 
 数据库结构会在 API 启动时自动升级，保留现有实验、训练成绩与求解记录；PostgreSQL 使用 64 位字段存储 API 接受的全部种子（`0` 至 `2^63 - 1`）。指定数据库无法初始化时会停止启动，不再悄悄把新记录写入另一份数据库。升级前请备份，详见[部署与恢复](docs/deployment.md#database-upgrades-and-recovery--数据库升级与恢复)。
+
+The experiment ledger now fetches 20 lightweight summaries per page and loads only the selected record's complete JSON. Copy/download preserves the server's original integer tokens, including seeds above JavaScript's safe-integer range. Newer runs do not shift the boundary while browsing older pages; refresh to see the latest records. The database badge comes from the live API, not a hardcoded SQLite label. See [history and export contracts](docs/experiment-history.md).
+
+实验台账现在每页获取 20 条轻量摘要，仅按需加载选中记录的完整 JSON。复制和下载保留服务端原始整数文本，包括超出 JavaScript 安全整数范围的种子。浏览旧记录时，新实验不会挤动已发出的分页边界；刷新可查看最新记录。数据库标识来自实时 API，不再固定显示 SQLite。详见[历史与导出契约](docs/experiment-history.md)。
 
 ## Mathematical contract / 数学契约
 

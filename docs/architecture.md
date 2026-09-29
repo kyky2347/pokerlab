@@ -32,6 +32,10 @@ Database initialization is different from engine fallback: a failed configured d
 
 数据库初始化与引擎回退相互独立：指定数据库失败会停止启动，而不是把记录重定向到新台账。随包迁移在接收请求前以事务执行，并通过 PostgreSQL advisory lock 或 SQLite immediate transaction 串行化多进程启动。训练器持久化已出题目，条件领取题目与写入评分在同一事务完成。实验台账使用带索引的 `(created_at, id)` 确定性排序，两种数据库均返回明确的 UTC 时间戳。
 
+The browser history uses `/experiments/page`: a bounded keyset query reads metadata only, never the `parameters` or `results` JSON columns. A cursor carries the last timestamp/ID, so newer inserts do not duplicate entries on subsequent older pages; deletion of the boundary row does not invalidate the cursor. This is not a frozen database snapshot. The selected record is fetched separately from `/experiments/{id}/export` as server-formatted text, preserving 64-bit integers without a JavaScript parse/stringify round-trip. Superseded browser requests are cancelled, and history/detail failures have independent retry states. See [the API contract](experiment-history.md).
+
+浏览器历史使用 `/experiments/page`：有上限的键集分页查询只读取元数据，不读取 `parameters` 和 `results` JSON 列。游标携带上一页末尾的时间戳与 ID，较新的插入不会让后续旧页出现重复；边界记录被删除也不会使游标失效。这不是冻结的数据库快照。选中记录通过 `/experiments/{id}/export` 单独获取服务端格式化文本，不经过 JavaScript 解析/重组，从而保留 64 位整数。过时的浏览器请求会取消；历史与详情加载失败分别提供重试。详见 [API 契约](experiment-history.md)。
+
 ## Solver boundary / 求解器边界
 
 The river solver uses a finite educational tree: OOP may check or make one of two bets; after a check, IP may check or make one of two bets; the facing player may fold or call. There are no raises. Private information sets are keyed by player, exact physical combo, and public history. Terminal utilities are zero-sum and use actual seven-card showdown ranks. A job-local cache reuses each fixed deal's terminal outcome without altering traversal or strategy updates.
