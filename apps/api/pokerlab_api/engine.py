@@ -10,6 +10,12 @@ from itertools import combinations
 from typing import Protocol
 
 from .domain import Card, full_deck, showdown, validate_holdem_state, validate_showdown_state
+from .uncertainty import (
+    CONFIDENCE_LEVEL,
+    CONFIDENCE_METHOD,
+    CONFIDENCE_SCOPE,
+    hoeffding_interval,
+)
 
 
 @dataclass(slots=True)
@@ -130,28 +136,33 @@ class PythonPokerEngine:
             sum_x2 += outcome * outcome
             if index == 1 or index == samples or index % interval == 0:
                 mean = sum_x / index
-                variance = max(0.0, (sum_x2 - index * mean * mean) / max(1, index - 1))
-                se = math.sqrt(variance / index)
+                ci_low, ci_high = hoeffding_interval(mean, index)
                 convergence.append(
                     {
                         "samples": index,
                         "estimate": mean,
-                        "ci_low": max(0.0, mean - 1.96 * se),
-                        "ci_high": min(1.0, mean + 1.96 * se),
+                        "ci_low": ci_low,
+                        "ci_high": ci_high,
                     }
                 )
         probabilities = counts.probabilities()
         mean = probabilities["equity"]
-        variance = max(0.0, (sum_x2 - samples * mean * mean) / max(1, samples - 1))
-        se = math.sqrt(variance / samples)
+        variance = (
+            max(0.0, (sum_x2 - samples * mean * mean) / (samples - 1)) if samples > 1 else None
+        )
+        se = math.sqrt(variance / samples) if variance is not None else None
+        ci_low, ci_high = hoeffding_interval(mean, samples)
         probabilities.update(
             {
                 "method": "monte_carlo",
                 "samples": samples,
                 "sample_variance": variance,
                 "standard_error": se,
-                "ci_low": max(0.0, mean - 1.96 * se),
-                "ci_high": min(1.0, mean + 1.96 * se),
+                "ci_low": ci_low,
+                "ci_high": ci_high,
+                "confidence_level": CONFIDENCE_LEVEL,
+                "confidence_method": CONFIDENCE_METHOD,
+                "confidence_scope": CONFIDENCE_SCOPE,
                 "seed": seed,
                 "runtime_ms": (time.perf_counter() - started) * 1000,
                 "engine": self.name,

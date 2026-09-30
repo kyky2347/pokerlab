@@ -38,7 +38,7 @@ PokerLab 是一套可审查的研究系统，而不是赌场风格外壳或互�
 
 | Instrument / 工具                    | What it does / 功能                                                                                                                                                                                          |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Equity Lab / 胜率实验室**          | Exact legal-runout enumeration, seeded Monte Carlo, variance, standard error, 95% confidence intervals, and a conditional turn map. / 精确枚举、固定种子蒙特卡洛、方差、标准误、95% 置信区间与条件转牌地图。 |
+| **Equity Lab / 胜率实验室**          | Exact legal-runout enumeration, seeded Monte Carlo, estimated standard error, conservative pointwise 95% Hoeffding intervals, and a conditional turn map. / 精确枚举、固定种子蒙特卡洛、估计标准误、保守的逐点 95% Hoeffding 区间与条件转牌地图。 |
 | **Range Lab / 范围实验室**           | A weighted 13×13 range matrix, physical blockers, combo accounting, and range-vs-range equity. / 13×13 加权范围矩阵、物理阻断牌、组合统计与范围对范围胜率。                                                  |
 | **Guess the Equity / 猜胜率**        | Legal scenarios, continuous quadratic scoring, and an interpretable weakness-weighted sampler. / 合法牌局、连续二次评分与可解释的薄弱项加权出题。                                                            |
 | **EV Lab / EV 实验室**               | Explicit pot conventions, break-even equity, incremental call EV, and decision curves. / 明确的底池约定、盈亏平衡胜率、增量跟注 EV 与决策曲线。                                                              |
@@ -51,7 +51,9 @@ PokerLab 是一套可审查的研究系统，而不是赌场风格外壳或互�
 
 ### Equity and ranges / 胜率与范围
 
-![Equity Lab](output/playwright/equity-lab.png)
+![Equity Lab with finite-sample confidence intervals](output/playwright/confidence-equity-en.png)
+
+Real API output: 10,000 samples, seed `20250902`, Rust evaluator. The shaded region connects conservative pointwise intervals, not a simultaneous confidence band. See the [bilingual uncertainty guide](docs/math/monte-carlo.md) and mobile result. / 真实 API 输出：10,000 个样本、种子 `20250902`、Rust 评估器。阴影连接保守的逐点区间，不是同时置信带；详见[双语不确定性指南](docs/math/monte-carlo.md)及移动端结果。
 
 ![Range Lab](output/playwright/range-lab.png)
 
@@ -191,6 +193,10 @@ The experiment ledger now fetches 20 lightweight summaries per page and loads on
 
 ## Mathematical contract / 数学契约
 
+Monte Carlo uncertainty remains nonzero even when every observed outcome agrees. New fixed-hand runs use finite-sample Hoeffding intervals with explicit method metadata; one-sample standard error is undefined, not zero. These are pointwise bounds at a fixed sample count, not a simultaneous band or an early-stopping rule. Saved historical results remain unchanged. See [the bilingual derivation and compatibility notes](docs/math/monte-carlo.md).
+
+即使观察结果全相同，蒙特卡洛区间也不会压缩成“零误差”。新的固定手牌实验采用带明确方法元数据的有限样本 Hoeffding 区间；单样本标准误未定义，不显示为零。这是固定样本量下的逐点区间，不是同时置信带或提前停止规则；历史记录保持原样。详见[中英文推导与兼容性说明](docs/math/monte-carlo.md)。
+
 - Equity / 胜率: `E = P(win) + 0.5 × P(tie)`
 - Monte Carlo / 蒙特卡洛: `Êₙ = (1/n) ΣXᵢ`, where `Xᵢ ∈ {0, 0.5, 1}`
 - Call EV / 跟注 EV: `EV(call) = e(P + B + C) − C`
@@ -217,6 +223,8 @@ GitHub Actions runs formatting, linting, type checks, Python/Rust/frontend tests
 Storage tests run against both SQLite and a disposable PostgreSQL service in CI, covering legacy migrations, 64-bit seeds, rollback, concurrent workers, and restart-safe training. / CI 同时在 SQLite 与临时 PostgreSQL 服务上验证存储行为，覆盖旧库迁移、64 位种子、回滚、并发进程及训练题跨重启提交。
 
 Research regressions check policy thresholds, historical seeded values, an independent uncertainty calculation, saved methodology, exact browser seed validation, and metadata-rich CSV escaping. / 研究回归测试覆盖策略阈值、历史固定种子结果、独立误差公式复核、方法持久化、浏览器种子精度校验与携带完整参数的 CSV 转义。
+
+Fixed-hand Monte Carlo regressions enumerate multinomial outcome counts to check finite-sample coverage without random pass/fail thresholds. They also cover one-sample null moments, identical observations, historical seeded values on both engines, stored method metadata, bilingual explanations, and exact chart endpoints. / 固定手牌蒙特卡洛回归通过枚举多项分布结果次数验证有限样本覆盖率，不使用随机通过阈值；同时覆盖单样本空统计量、相同观察值、双引擎历史种子结果、方法元数据持久化、双语说明及图表端点。
 
 Turn-map regressions compare every legal turn with independent exact enumeration, verify split pots and player-swap symmetry, and cross-check Rust against Python. Both engines reject duplicate cards across players at the showdown boundary. / 转牌地图回归测试逐张对照独立精确枚举，验证平局、双方交换对称性及 Rust/Python 一致性；两个引擎均在摊牌入口拒绝双方持有重复牌的非法状态。
 

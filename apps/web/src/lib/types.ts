@@ -6,10 +6,13 @@ export type EquityResult = {
   method: string;
   states?: number;
   samples?: number;
-  sample_variance?: number;
-  standard_error?: number;
+  sample_variance?: number | null;
+  standard_error?: number | null;
   ci_low?: number;
   ci_high?: number;
+  confidence_level?: number;
+  confidence_method?: string;
+  confidence_scope?: string;
   seed?: number;
   runtime_ms: number;
   engine: string;

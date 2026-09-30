@@ -33,11 +33,12 @@ export default function About() {
         : "Enumerate every legal runout when practical; otherwise use independent Monte Carlo.",
     },
     {
+      id: "monte-carlo",
       title: zh ? "蒙特卡洛" : "Monte Carlo",
-      equation: "Êₙ = (1/n) Σ Xᵢ,  Xᵢ ∈ {0, ½, 1}",
+      equation: "rₙ = √(ln 40 / 2n), CI = [Êₙ ± rₙ] ∩ [0,1]",
       text: zh
-        ? "标准误为 s/√n；图表显示正态近似 95% 置信区间。"
-        : "Standard error is s/√n; charts show the normal-approximation 95% interval.",
+        ? "对独立同分布的 {0, ½, 1} 胜率得分，Hoeffding 区间在预先固定样本量时具有至少 95% 的重复抽样覆盖率。区间较保守，不是整条轨迹的同时置信带，不支持看结果后提前停止。估计标准误 s/√n 在 n=1 时未定义，样本标准误为零也不证明真实误差为零。"
+        : "For independent, identically distributed equity scores in {0, ½, 1}, the conservative Hoeffding interval has at least 95% repeated-sampling coverage at a prespecified sample count. It is not a simultaneous band and does not justify stopping after inspecting results. Estimated SE s/√n is undefined at n=1; zero sample SE does not prove zero error.",
     },
     {
       title: zh ? "贝叶斯更新" : "Bayesian update",
@@ -64,7 +65,6 @@ export default function About() {
   return (
     <div>
       <PageHeader
-        eyebrow="Documentation / 文档"
         title={zh ? "方法、架构与边界" : "Methods, architecture & limits"}
         description={
           zh
@@ -99,16 +99,18 @@ export default function About() {
           </CardHeader>
           <CardContent className="flex flex-col gap-0">
             {sections.map((section, index) => (
-              <div key={section.title}>
+              <div key={section.title} id={section.id} className="scroll-mt-20">
                 {index ? <Separator /> : null}
-                <div className="grid gap-3 py-5 md:grid-cols-[160px_260px_1fr]">
+                <div className="grid gap-3 py-5 md:grid-cols-[160px_minmax(0,1fr)]">
                   <h3 className="font-semibold">{section.title}</h3>
-                  <code className="font-data text-sm text-primary">
-                    {section.equation}
-                  </code>
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    {section.text}
-                  </p>
+                  <div className="flex min-w-0 flex-col gap-3">
+                    <code className="font-data text-sm break-words text-primary">
+                      {section.equation}
+                    </code>
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      {section.text}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}

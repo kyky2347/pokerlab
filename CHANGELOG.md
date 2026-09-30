@@ -4,6 +4,12 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Patch Next.js / eslint-config-next to 16.3.6 and the toolchain's brace-expansion branches to 1.1.21 / 5.0.12 for the September 30 dependency advisories. The app does not currently use the affected `next/og` dynamic image API. / 针对 9 月 30 日依赖告警升级 Next.js 及 ESLint 配套至 16.3.6，工具链 brace-expansion 至 1.1.21 / 5.0.12；当前应用未使用受影响的 `next/og` 动态图片接口。
+- Replace fixed-hand Monte Carlo normal-approximation intervals with conservative, pointwise 95% Hoeffding bounds; one-sample variance/standard error are null. Preserve seeded samples and point estimates, add versioned method metadata, and leave historical records unchanged.
+- Explain fixed-sample coverage and optional-stopping limitations in both languages, keep charts within 0–100%, avoid truncated interval endpoints, and include uncertainty metadata in research CSV exports. Add deterministic distribution-coverage and cross-engine regression tests.
+- 固定手牌蒙特卡洛区间改为保守的逐点 95% Hoeffding 界，单样本方差/标准误返回 null；保留种子样本与点估计，新增版本化方法元数据，旧记录不改写。
+- 双语说明固定样本量覆盖率与提前停止限制，图表限定 0–100%，完整显示区间端点，研究 CSV 保留方法元数据；补充确定性分布覆盖率与跨引擎回归测试。
+
 - Update the test-only transitive `undici` dependency to 8.10.2 for [GHSA-3wwx-pv8p-q78v](https://github.com/nodejs/undici/security/advisories/GHSA-3wwx-pv8p-q78v). / 将测试环境间接依赖 `undici` 升级至 8.10.2，修复该 WebSocket 拒绝服务漏洞。
 - Add indexed cursor-paginated experiment summaries and on-demand original JSON exports without loading every saved result. Preserve 64-bit integer seeds in browser copy/download and keep legacy experiment endpoints compatible.
 - Replace the hardcoded SQLite badge with the queried database backend; add bilingual pagination, empty/error/retry states, clipboard feedback, keyboard-accessible JSON, and request cancellation. Cover SQLite/PostgreSQL paging, concurrent inserts/deletion, lossless exports, and frontend recovery/race conditions.

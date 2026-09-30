@@ -24,6 +24,7 @@ import {
   percent,
 } from "@/components/lab-ui";
 import { Button } from "@/components/ui/button";
+import { MonteCarloUncertainty } from "@/components/monte-carlo-uncertainty";
 import {
   Card,
   CardContent,
@@ -59,6 +60,7 @@ import {
   serializeCsv,
   type AgentResult,
 } from "@/lib/research";
+import { monteCarloCsvRows } from "@/lib/monte-carlo";
 function Param({
   label,
   value,
@@ -165,7 +167,6 @@ export default function Research() {
   return (
     <div>
       <PageHeader
-        eyebrow="Module 06 · Reproducible research"
         title={zh ? "研究 / AI 实验室" : "Research / AI Lab"}
         description={
           zh
@@ -437,7 +438,7 @@ export default function Research() {
                       onClick={() => copyJson(monte.data)}
                     >
                       <Clipboard data-icon="inline-start" />
-                      Copy experiment JSON
+                      {zh ? "复制实验 JSON" : "Copy experiment JSON"}
                     </Button>
                     <Button
                       variant="outline"
@@ -449,22 +450,19 @@ export default function Research() {
                       }
                     >
                       <Download data-icon="inline-start" />
-                      Download JSON
+                      {zh ? "下载 JSON" : "Download JSON"}
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() =>
                         downloadCsv(
                           "monte-carlo-convergence.csv",
-                          (monte.data?.convergence ?? []) as unknown as Record<
-                            string,
-                            string | number
-                          >[],
+                          monteCarloCsvRows(monte.data),
                         )
                       }
                     >
                       <Download data-icon="inline-start" />
-                      Download CSV
+                      {zh ? "下载 CSV" : "Download CSV"}
                     </Button>
                   </>
                 ) : null}
@@ -494,6 +492,8 @@ export default function Research() {
                         />
                         <XAxis
                           dataKey="samples"
+                          type="number"
+                          domain={[0, "dataMax"]}
                           tick={{
                             fill: "var(--muted-foreground)",
                             fontSize: 10,
@@ -501,7 +501,7 @@ export default function Research() {
                           axisLine={false}
                         />
                         <YAxis
-                          domain={["dataMin - .05", "dataMax + .05"]}
+                          domain={[0, 1]}
                           tickFormatter={(v) => percent(v, 0)}
                           tick={{
                             fill: "var(--muted-foreground)",
@@ -516,25 +516,31 @@ export default function Research() {
                             borderRadius: 8,
                           }}
                           formatter={(v) => percent(Number(v))}
+                          labelFormatter={(value) =>
+                            `${zh ? "样本数" : "Samples"}: ${value}`
+                          }
                         />
                         <Line
-                          type="monotone"
+                          type="linear"
                           dataKey="estimate"
+                          name={zh ? "胜率估计" : "Equity estimate"}
                           stroke="var(--chart-1)"
                           dot={false}
                           isAnimationActive={false}
                         />
                         <Line
-                          type="monotone"
+                          type="linear"
                           dataKey="ci_low"
+                          name={zh ? "区间下界" : "Lower bound"}
                           stroke="var(--chart-4)"
                           dot={false}
                           strokeDasharray="3 3"
                           isAnimationActive={false}
                         />
                         <Line
-                          type="monotone"
+                          type="linear"
                           dataKey="ci_high"
+                          name={zh ? "区间上界" : "Upper bound"}
                           stroke="var(--chart-4)"
                           dot={false}
                           strokeDasharray="3 3"
@@ -548,6 +554,9 @@ export default function Research() {
                     <FlaskConical />
                   </div>
                 )}
+                {monte.data ? (
+                  <MonteCarloUncertainty result={monte.data} zh={zh} />
+                ) : null}
               </CardContent>
             </Card>
             {monte.error ? <ErrorAlert message={monte.error.message} /> : null}

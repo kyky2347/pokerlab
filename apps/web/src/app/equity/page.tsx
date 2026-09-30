@@ -26,6 +26,7 @@ import {
 } from "@/components/lab-ui";
 import { PokerCard } from "@/components/poker-card";
 import { PokerTable } from "@/components/poker-table";
+import { MonteCarloUncertainty } from "@/components/monte-carlo-uncertainty";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -43,6 +44,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { postJson } from "@/lib/api";
+import { checkpointInterval } from "@/lib/monte-carlo";
 import { useCopy } from "@/lib/store";
 import type { EquityResult } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -153,7 +155,6 @@ export default function EquityLab() {
   return (
     <div>
       <PageHeader
-        eyebrow="Module 01 · Probability"
         title={zh ? "胜率实验室" : "Equity Lab"}
         description={
           zh
@@ -244,8 +245,8 @@ export default function EquityLab() {
               </CardTitle>
               <CardDescription>
                 {zh
-                  ? "阴影为逐步 95% 置信带，虚线为精确胜率。"
-                  : "The band is the running 95% CI; the dashed line is exact equity."}
+                  ? "阴影连接各检查点的区间；金色实线为样本估计，绿色虚线为精确胜率。区间方法见结果说明。"
+                  : "Shading joins the checkpoint intervals. The gold line is the sample estimate; the green dashed line is exact equity. See the result for the interval method."}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -273,12 +274,14 @@ export default function EquityLab() {
                       <CartesianGrid stroke="var(--border)" vertical={false} />
                       <XAxis
                         dataKey="samples"
+                        type="number"
+                        domain={[0, "dataMax"]}
                         tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
                         axisLine={false}
                         tickLine={false}
                       />
                       <YAxis
-                        domain={["dataMin - 0.04", "dataMax + 0.04"]}
+                        domain={[0, 1]}
                         tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
                         tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
                         axisLine={false}
@@ -290,23 +293,29 @@ export default function EquityLab() {
                           border: "1px solid var(--border)",
                           borderRadius: 8,
                         }}
-                        formatter={(v) => percent(Number(v))}
+                        formatter={(v) =>
+                          Array.isArray(v)
+                            ? v
+                                .map((value) => percent(Number(value)))
+                                .join(" – ")
+                            : percent(Number(v))
+                        }
+                        labelFormatter={(value) =>
+                          `${zh ? "样本数" : "Samples"}: ${value}`
+                        }
                       />
                       <Area
-                        type="monotone"
-                        dataKey="ci_high"
+                        type="linear"
+                        dataKey={checkpointInterval}
+                        name={zh ? "逐点区间" : "Pointwise interval"}
                         stroke="none"
                         fill="url(#ciBand)"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="ci_low"
-                        stroke="none"
-                        fill="var(--card)"
+                        isAnimationActive={false}
                       />
                       <Line
-                        type="monotone"
+                        type="linear"
                         dataKey="estimate"
+                        name={zh ? "胜率估计" : "Equity estimate"}
                         stroke="var(--chart-1)"
                         dot={false}
                         isAnimationActive={false}
@@ -438,23 +447,42 @@ export default function EquityLab() {
           {monteCarloData ? (
             <Card>
               <CardHeader>
-                <CardTitle>Monte Carlo</CardTitle>
-                <CardDescription>seed {monteCarloData.seed}</CardDescription>
+                <CardTitle>{zh ? "蒙特卡洛" : "Monte Carlo"}</CardTitle>
+                <CardDescription>
+                  {monteCarloData.engine} · {zh ? "种子" : "Seed"}{" "}
+                  {monteCarloData.seed}
+                </CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-5">
                 <Metric
-                  label="Estimate"
+                  label={zh ? "胜率估计" : "Estimate"}
                   value={percent(monteCarloData.equity)}
+                  detail={`${monteCarloData.samples?.toLocaleString()} ${zh ? "个样本" : "samples"}`}
                 />
                 <Metric
-                  label="95% CI"
-                  value={`${percent(monteCarloData.ci_low ?? 0, 1)}–${percent(monteCarloData.ci_high ?? 0, 1)}`}
+                  label={zh ? "估计标准误" : "Estimated std. error"}
+                  value={
+                    monteCarloData.standard_error == null
+                      ? "—"
+                      : percent(monteCarloData.standard_error, 3)
+                  }
+                  detail={
+                    monteCarloData.standard_error == null
+                      ? zh
+                        ? "至少需要 2 个样本"
+                        : "Needs at least 2 samples"
+                      : undefined
+                  }
                 />
-                <Metric
-                  label="Std. error"
-                  value={percent(monteCarloData.standard_error ?? 0, 3)}
-                />
-                <Metric label="Runtime" value={ms(monteCarloData.runtime_ms)} />
+                <div className="col-span-2">
+                  <Metric
+                    label={zh ? "运行时间" : "Runtime"}
+                    value={ms(monteCarloData.runtime_ms)}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <MonteCarloUncertainty result={monteCarloData} zh={zh} />
+                </div>
               </CardContent>
             </Card>
           ) : null}
