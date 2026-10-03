@@ -22,6 +22,16 @@ flowchart LR
 - `research`: reproducible experiment notes and measured benchmark outputs.
 - `tests`: cross-layer smoke and mathematical invariant coverage.
 
+## Evaluator hot path / 评估器高频路径
+
+Rust still enumerates all 21 five-card subsets of each seven-card hand and returns the same lexicographically ordered category/kicker vector. The public boundary parses cards and rejects wrong lengths and duplicates before evaluation. Only the private subset evaluator reuses this uniqueness guarantee: a fixed rank histogram, stack-resident rank groups, and a straight bitmask replace repeated hash-table allocation and sorting. No lookup database, external evaluator, unsafe code, or approximation is introduced. The Python reference and seeded sampling orchestration are unchanged.
+
+Rust 仍对七张牌枚举全部 21 个五张子集，返回相同的、按字典序比较的牌型/踢脚牌向量。公开入口先解析牌面并拒绝错误数量及重复牌；只有私有子集评估函数复用此唯一性保证。固定点数计数数组、栈内分组和顺子位掩码替代重复哈希表分配与排序，不引入查询数据库、第三方评估器、unsafe 代码或近似算法。Python 参考实现和固定种子抽样流程保持不变。
+
+Every normal Rust test run exhaustively compares **all 2,598,960 physical five-card hands**, including complete kicker vectors, with a frozen test-only copy of the original ranking logic. All 8,192 rank subsets also cross-check straight detection. Python integration tests compare 5,000 seeded seven-card hands, category edge cases, order/suit invariance, invalid extension inputs, and complete Monte Carlo results across both engines. This is exhaustive five-card coverage, **not** enumeration of all seven-card hands or a proof that the full application is bug-free. See [measured benchmarks and reproduction](../research/benchmarks.md#rust-evaluator-hot-path--rust-评估器高频路径--2026-10-03).
+
+每次常规 Rust 测试都会穷举 **全部 2,598,960 种五张实体牌组合**，将包括踢脚牌在内的完整结果与仅用于测试的旧排序逻辑逐一对照；全部 8,192 种点数子集也会验证顺子检测。Python 集成测试另核对 5,000 组固定种子七张牌、牌型边界、顺序/花色不变量、扩展入口非法输入及双引擎完整蒙特卡洛结果。这是五张牌的穷举覆盖，**不是**所有七张牌组合的穷举，也不表示整个应用不存在缺陷。实测与复现方式见上述链接。
+
 ## Failure behavior / 故障行为
 
 The API tries `RustPokerEngine` at startup. Import or runtime failure selects `PythonPokerEngine`, records that choice in diagnostics, and never substitutes fabricated results. `DATABASE_URL` defaults to SQLite; any remote Postgres URL remains optional.
