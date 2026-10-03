@@ -183,6 +183,8 @@ The API is the canonical result source. The frontend owns interaction and visual
 
 API 是结果真值源；前端负责交互与可视化，但不计算权威胜率。Rust 与 Python 评估器会在固定随机样本上交叉验证。详见[架构说明](docs/architecture.md)、[数学说明](docs/math)与[求解器边界](docs/solver-limitations.md)。
 
+The Rust hot path uses fixed rank arrays and bitmasks while preserving complete best-of-21 enumeration. Its tests exhaustively cross-check all 2,598,960 five-card hands, including kickers; the Python reference and automatic fallback remain unchanged. / Rust 高频路径使用固定点数数组和位掩码，仍完整枚举 21 个五张子集；测试穷举核对全部 2,598,960 种五张牌及踢脚牌，Python 参考实现与自动回退保持不变。
+
 Database schemas now upgrade automatically at API startup. Existing experiment, training-answer, and solver records are preserved; PostgreSQL stores every API-accepted seed (`0` through `2^63 - 1`) in a 64-bit column. If the configured database cannot be initialized, startup stops instead of silently sending new records to another database. Back up before upgrading; see [deployment and recovery](docs/deployment.md#database-upgrades-and-recovery--数据库升级与恢复).
 
 数据库结构会在 API 启动时自动升级，保留现有实验、训练成绩与求解记录；PostgreSQL 使用 64 位字段存储 API 接受的全部种子（`0` 至 `2^63 - 1`）。指定数据库无法初始化时会停止启动，不再悄悄把新记录写入另一份数据库。升级前请备份，详见[部署与恢复](docs/deployment.md#database-upgrades-and-recovery--数据库升级与恢复)。
@@ -219,6 +221,8 @@ The suite covers evaluator ordering, wheel straights, duplicate rejection, exact
 测试覆盖牌力排序、A2345 顺子、重复牌拒绝、精确胜率对称性、固定种子、蒙特卡洛统计容差、加权阻断、范围别名、Rust/Python 交叉验证、EV 几何、CFR 策略归一化、Kuhn 收敛、结构化 API 错误、组件交互、桌面流程与移动端溢出。启动器回归测试覆盖并发凭据初始化、私有权限、无破坏性报错与镜像复用；API 测试使用隔离的临时数据库。
 
 GitHub Actions runs formatting, linting, type checks, Python/Rust/frontend tests, production builds, desktop/mobile browser tests, and both container builds on every push and pull request.
+
+Dependency audits are separate from the quality gate. As of 2026-10-03, `pnpm audit` reports one unpatched high-severity `braces` advisory in the ESLint development toolchain; see [current security limitations](SECURITY.md#known-dependency-advisories--已知依赖告警). / 依赖审计与质量门禁分开；截至 2026-10-03，`pnpm audit` 报告 ESLint 开发工具链中一项尚无修复版的高危 `braces` 告警，详见[已知安全限制](SECURITY.md#known-dependency-advisories--已知依赖告警)。
 
 Storage tests run against both SQLite and a disposable PostgreSQL service in CI, covering legacy migrations, 64-bit seeds, rollback, concurrent workers, and restart-safe training. / CI 同时在 SQLite 与临时 PostgreSQL 服务上验证存储行为，覆盖旧库迁移、64 位种子、回滚、并发进程及训练题跨重启提交。
 
@@ -259,6 +263,12 @@ Reproduce / 复现：`cd apps/api && uv run python -m pokerlab_api.benchmarks --
 River CFR now reuses each fixed deal's actual showdown outcome within its job. In a 61-deal, 100-iteration local benchmark, evaluations fell from **30,500 to 61**, with unchanged strategies and convergence. Median time was **3,270 → 113 ms on Python (29.01×)** and **743 → 103 ms on Rust (7.19×)**. These ratios describe this workload only; the finite game tree and [solver limitations](docs/solver-limitations.md) are unchanged.
 
 河牌 CFR 现在在任务内复用每组固定牌面的真实摊牌结果。在 61 组手牌对、100 轮的本地基准中，评估次数由 **30,500 减至 61**，策略与收敛轨迹不变。耗时中位数为 **Python 3,270 → 113 毫秒（29.01×）、Rust 743 → 103 毫秒（7.19×）**。这些比率仅适用于该工作负载，有限博弈树和[求解器限制](docs/solver-limitations.md)保持不变。
+
+### Rust evaluator throughput / Rust 评估器吞吐
+
+In the 2026-10-03 same-machine, five-repeat comparison against `b3adcda`, 5,000 varied seven-card evaluations fell from **42.64 to 9.79 ms (4.35×)** and 10,000 Monte Carlo samples from **189.31 to 50.47 ms (3.75×)**. Both extensions used the same release compiler. All complete non-runtime results match the independent Python reference, including confidence intervals and convergence checkpoints. These are core workload measurements, not whole-app latency promises; [full timings and reproduction](research/benchmarks.md#rust-evaluator-hot-path--rust-评估器高频路径--2026-10-03).
+
+2026-10-03 同机五次对照 `b3adcda` 的实测中，5,000 组不同七张牌评估从 **42.64 降至 9.79 毫秒（4.35×）**，10,000 次蒙特卡洛从 **189.31 降至 50.47 毫秒（3.75×）**；两份扩展使用相同 release 编译器。全部非耗时结果与独立 Python 参考实现一致，包括置信区间与收敛检查点。这些是核心工作负载实测，不是整个应用延迟承诺；完整耗时与复现方式见上述链接。
 
 Reproduce / 复现：`cd apps/api && uv run python -m pokerlab_api.benchmarks --solver-only`
 

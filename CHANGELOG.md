@@ -4,6 +4,12 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Accelerate Rust's existing best-of-21 evaluator with stack-resident rank counts/groups and straight bitmasks, validating unique cards once at the public boundary. Preserve complete rank vectors, seeded results, Python fallback, and all statistical methods.
+- Exhaustively compare every physical five-card hand (2,598,960) with the original test-only ranker; check all rank subsets, 5,000 seeded seven-card hands, kicker edge cases, suit/order invariance, invalid extension input, and complete cross-engine Monte Carlo results. Add a reproducible, output-checked baseline-extension benchmark and publish measured timings.
+- 优化 Rust 完整 21 子集评估路径，以栈内点数计数/分组和顺子位掩码减少重复分配，仅在公开入口校验唯一性；保留完整牌力向量、固定种子结果、Python 回退及全部统计方法。
+- 穷举全部 2,598,960 种五张牌与原始测试专用评估器对照；验证全部点数子集、5,000 组七张牌、踢脚牌边界、花色/顺序不变量、扩展非法输入及双引擎完整蒙特卡洛结果。新增核对完整输出的基线扩展对照命令与实测记录。
+- Disclose the currently unpatched `braces` development-toolchain advisory (GHSA-vfj7-8cjw-p6xm) without suppressing audit results. / 如实记录目前尚无修复版的 `braces` 开发工具链告警，不屏蔽审计结果。
+
 - Patch Next.js / eslint-config-next to 16.3.6 and the toolchain's brace-expansion branches to 1.1.21 / 5.0.12 for the September 30 dependency advisories. The app does not currently use the affected `next/og` dynamic image API. / 针对 9 月 30 日依赖告警升级 Next.js 及 ESLint 配套至 16.3.6，工具链 brace-expansion 至 1.1.21 / 5.0.12；当前应用未使用受影响的 `next/og` 动态图片接口。
 - Replace fixed-hand Monte Carlo normal-approximation intervals with conservative, pointwise 95% Hoeffding bounds; one-sample variance/standard error are null. Preserve seeded samples and point estimates, add versioned method metadata, and leave historical records unchanged.
 - Explain fixed-sample coverage and optional-stopping limitations in both languages, keep charts within 0–100%, avoid truncated interval endpoints, and include uncertainty metadata in research CSV exports. Add deterministic distribution-coverage and cross-engine regression tests.

@@ -134,3 +134,102 @@ normal engine selection succeeds. Full-deal CFR is deterministic and uses no
 random seed. See [CFR math](../docs/math/cfr.md) and [runtime limits](../docs/solver-limitations.md).
 
 命令输出完整输入、实际引擎、逐次耗时、评估次数和核对后的结果。Python 始终执行，Rust 仅在正常引擎选择成功时加入。全手牌枚举 CFR 为确定性计算，不使用随机种子。数学依据及运行限制详见上述链接。
+
+## Rust evaluator hot path / Rust 评估器高频路径 — 2026-10-03
+
+Environment: macOS 26.5.2 ARM64, CPython 3.12.13, Rust 1.98.0. The baseline
+is the extension built from `b3adcda`; the candidate is the fixed-array/bitmask
+implementation. Both were freshly compiled in release mode with the **same
+compiler and package configuration**, then loaded side by side. This is a
+same-process native-extension comparison, not Python versus Rust. CI and
+production containers separately verify compatibility with the pinned Rust 1.88.
+
+环境为 macOS 26.5.2 ARM64、CPython 3.12.13、Rust 1.98.0。基线扩展来自
+`b3adcda`，候选为固定数组/位掩码实现；两者均使用**相同编译器与包配置**重新
+以 release 模式编译，再在同一进程并排加载。这是原生扩展优化前后对照，不是
+Python 对 Rust 的比较。CI 和生产容器另使用固定的 Rust 1.88 验证兼容性。
+
+The batch contains 5,000 varied seven-card hands sampled with seed `20251003`
+from the canonical rank-major `cdhs` deck. The other workloads use `As Ks`
+versus `Qh Qd` on `Js 8s 2c`: 990 exact runouts, 10,000 Monte Carlo samples
+with the same seed, or all 45 conditional turns. Card-token preparation is
+outside the batch timing; each native call still parses and validates its input.
+Engine workloads include validation, orchestration and result generation.
+HTTP, persistence, browser rendering, and reference comparisons are excluded.
+
+批量场景从按点数、`cdhs` 花色排序的标准牌堆，以种子 `20251003` 抽取
+5,000 组不同七张牌输入。其他场景为 `As Ks` 对 `Qh Qd`、翻牌 `Js 8s 2c`：
+990 次精确补牌、同种子的 10,000 次蒙特卡洛，或全部 45 张条件转牌。批量计时
+不含牌面字符串准备，但每次原生调用仍解析和校验输入；引擎场景包含校验、调度与
+结果生成。不包含 HTTP、持久化、浏览器渲染及参考结果对比。
+
+Each variant warms up once, followed by five timed runs in alternating order.
+Every complete output must match the independent Python reference: all rank
+vectors, probabilities, moments, interval metadata, convergence points and turn
+rows, excluding only runtime and engine labels. A mismatch aborts the command;
+the output checksum is for auditing, not a substitute for the full comparison.
+
+每种实现先预热一次，再交替顺序计时五次。每次完整输出都必须与独立 Python
+参考实现一致，包括全部牌力向量、概率、统计量、区间元数据、收敛点与转牌行，
+仅排除耗时和引擎标签。不一致时命令立即失败；输出摘要用于审计，不代替完整比较。
+
+| Workload / 场景 | Baseline median / 基线中位数 | Optimized median / 优化中位数 | Ratio / 加速比 |
+| --- | ---: | ---: | ---: |
+| 5,000 seven-card evaluations / 七张牌评估 | 42.64 ms | 9.79 ms | 4.35× |
+| Exact flop, 990 runouts / 精确翻牌 | 17.95 ms | 4.05 ms | 4.43× |
+| 10,000 Monte Carlo samples / 蒙特卡洛 | 189.31 ms | 50.47 ms | 3.75× |
+| Full conditional turn map / 完整转牌地图 | 18.31 ms | 4.38 ms | 4.18× |
+
+Individual milliseconds, rounded to six decimals / 各次毫秒数，保留六位小数：
+
+- Seven-card baseline: `42.635208, 42.794417, 42.462459, 42.589084, 42.940916`; optimized: `9.568666, 9.793167, 9.960958, 9.658000, 9.994500`.
+- Exact baseline: `17.880416, 17.854542, 17.994375, 17.952583, 18.035500`; optimized: `4.025875, 4.068958, 4.053291, 3.966000, 4.190000`.
+- Monte Carlo baseline: `189.608584, 188.691833, 190.431917, 189.305292, 189.098167`; optimized: `50.471125, 50.627042, 49.427791, 50.802792, 49.812042`.
+- Turn-map baseline: `18.504750, 18.349792, 18.086083, 18.310000, 17.988416`; optimized: `4.377000, 4.411500, 4.095417, 4.427792, 4.328542`.
+
+The baseline extension SHA-256 is
+`7f13bcbf77b723b81fecbf3069391488c247eb053d161c6f428a1c0f6a81c8ee`.
+The validated output SHA-256 values, in table order, are:
+
+上述基线二进制与核对结果的 SHA-256 如下；结果顺序与表格一致：
+
+```text
+959abb59f2a25a49f7e1697ba6b374b0c3f3bad33aff51a573aaf05433833125
+f4d0e45351d95ec04e59ae52484a480d94bd93ee1a18afaad436e62fa00f3f9e
+c4d857b53193fdf5661182562611fe21583309dc76932e11b4ac857c095d295c
+a380958587a22f046ed7a8de45b4eb7c99ad29c3e7ebea5dc4fe772701dc2b09
+```
+
+Run the current implementation, always checking against Python / 运行当前实现并核对 Python：
+
+```bash
+cd apps/api
+uv sync --frozen --reinstall-package poker-core-rs
+uv run python -m pokerlab_api.evaluator_benchmark
+```
+
+For a paired comparison, build `b3adcda` in a separate checkout with the same
+Python ABI, architecture, Rust toolchain and release flags. Find its native
+extension path with `uv run python -c 'import poker_core_rs; print(poker_core_rs.poker_core_rs.__file__)'`.
+Pass that **trusted native binary** to the current checkout's command:
+
+双版本对照时，在独立检出目录构建 `b3adcda`，使用相同 Python ABI、架构、Rust
+工具链及 release 参数。上述命令可显示其原生扩展路径，再将这个**可信本地二进制**
+传给当前检出目录中的命令：
+
+```bash
+uv run python -m pokerlab_api.evaluator_benchmark \
+  --baseline-extension /absolute/path/to/baseline/poker_core_rs.cpython-312-darwin.so
+```
+
+The default command reports current timings without inventing a speedup. The
+optional path loads native code, so never use untrusted binaries. The benchmark
+requires a working Rust extension and reports a failure if it cannot load one;
+the application's automatic Python fallback remains unchanged. Absolute timing
+and ratios depend on workload, toolchain, hardware and load. These measurements
+do not establish speedups for full-deck ranges, CFR, HTTP endpoints or the UI.
+
+默认命令只报告当前耗时，不虚构加速比。可选路径会加载原生代码，切勿使用不可信
+二进制。基准必须有可加载的 Rust 扩展，否则明确失败；应用自身的自动 Python
+回退不变。耗时和比率取决于工作负载、工具链、硬件与负载，不代表完整范围、CFR、
+HTTP 接口或界面的加速效果。

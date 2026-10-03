@@ -1,10 +1,13 @@
 #![cfg_attr(not(any(feature = "python", test)), allow(dead_code))]
 
+#[cfg(test)]
+mod evaluator_tests;
+
 #[cfg(feature = "python")]
 use pyo3::exceptions::PyValueError;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct Card {
@@ -48,76 +51,79 @@ impl Card {
 type HandRank = Vec<u8>;
 
 fn straight_high(ranks: impl Iterator<Item = u8>) -> Option<u8> {
-    let mut unique: Vec<u8> = ranks.collect::<HashSet<_>>().into_iter().collect();
-    if unique.contains(&14) {
-        unique.push(1);
+    let mut mask = ranks.fold(0_u16, |mask, rank| mask | (1 << rank));
+    // Ace is also rank one for the wheel; retain rank fourteen for Broadway.
+    if mask & (1 << 14) != 0 {
+        mask |= 1 << 1;
     }
-    unique.sort_unstable();
-    let mut run = 1;
-    let mut best = None;
-    for pair in unique.windows(2) {
-        if pair[1] == pair[0] + 1 {
-            run += 1;
-            if run >= 5 {
-                best = Some(pair[1]);
-            }
-        } else {
-            run = 1;
-        }
-    }
-    best
+    (5_u8..=14).rev().find(|high| {
+        let window = 0b11111_u16 << (high - 4);
+        mask & window == window
+    })
 }
 
+#[cfg(test)]
 fn evaluate_five_cards(cards: &[Card]) -> Result<HandRank, String> {
     if cards.len() != 5 || cards.iter().copied().collect::<HashSet<_>>().len() != 5 {
         return Err("five unique cards are required".into());
     }
-    let mut counts: HashMap<u8, u8> = HashMap::new();
+    Ok(rank_five_unique(cards.try_into().unwrap()))
+}
+
+// Private hot path: callers supply five distinct indices of a validated hand.
+// Do not expose this helper at the Python/domain boundary without validation.
+fn rank_five_unique(cards: &[Card; 5]) -> HandRank {
+    let mut counts = [0_u8; 15];
     for card in cards {
-        *counts.entry(card.rank).or_default() += 1;
+        counts[card.rank as usize] += 1;
     }
-    let mut grouped: Vec<(u8, u8)> = counts.iter().map(|(&rank, &count)| (count, rank)).collect();
+    let mut groups = [(0_u8, 0_u8); 5];
+    let mut group_count = 0;
+    for rank in 2..=14 {
+        if counts[rank] != 0 {
+            groups[group_count] = (counts[rank], rank as u8);
+            group_count += 1;
+        }
+    }
+    let grouped = &mut groups[..group_count];
     grouped.sort_unstable_by(|a, b| b.cmp(a));
     let flush = cards.iter().all(|card| card.suit == cards[0].suit);
     let straight = straight_high(cards.iter().map(|card| card.rank));
     if let (true, Some(high)) = (flush, straight) {
-        return Ok(vec![8, high]);
+        return vec![8, high];
     }
     if grouped[0].0 == 4 {
-        return Ok(vec![7, grouped[0].1, grouped[1].1]);
+        return vec![7, grouped[0].1, grouped[1].1];
     }
     if grouped[0].0 == 3 && grouped[1].0 == 2 {
-        return Ok(vec![6, grouped[0].1, grouped[1].1]);
+        return vec![6, grouped[0].1, grouped[1].1];
     }
     if flush {
-        let mut ranks: Vec<u8> = cards.iter().map(|card| card.rank).collect();
+        let mut ranks = cards.map(|card| card.rank);
         ranks.sort_unstable_by(|a, b| b.cmp(a));
-        let mut result = vec![5];
+        let mut result = Vec::with_capacity(6);
+        result.push(5);
         result.extend(ranks);
-        return Ok(result);
+        return result;
     }
     if let Some(high) = straight {
-        return Ok(vec![4, high]);
+        return vec![4, high];
     }
     if grouped[0].0 == 3 {
-        let mut kickers: Vec<u8> = grouped[1..].iter().map(|group| group.1).collect();
-        kickers.sort_unstable_by(|a, b| b.cmp(a));
-        return Ok(vec![vec![3, grouped[0].1], kickers].concat());
+        return vec![3, grouped[0].1, grouped[1].1, grouped[2].1];
     }
-    let mut pairs: Vec<u8> = grouped.iter().filter(|g| g.0 == 2).map(|g| g.1).collect();
-    pairs.sort_unstable_by(|a, b| b.cmp(a));
-    if pairs.len() == 2 {
-        let kicker = grouped.iter().find(|g| g.0 == 1).unwrap().1;
-        return Ok(vec![2, pairs[0], pairs[1], kicker]);
+    if grouped[0].0 == 2 && grouped[1].0 == 2 {
+        return vec![2, grouped[0].1, grouped[1].1, grouped[2].1];
     }
-    if pairs.len() == 1 {
-        let mut kickers: Vec<u8> = grouped.iter().filter(|g| g.0 == 1).map(|g| g.1).collect();
-        kickers.sort_unstable_by(|a, b| b.cmp(a));
-        return Ok(vec![vec![1, pairs[0]], kickers].concat());
+    if grouped[0].0 == 2 {
+        return vec![1, grouped[0].1, grouped[1].1, grouped[2].1, grouped[3].1];
     }
-    let mut ranks: Vec<u8> = cards.iter().map(|card| card.rank).collect();
+    let mut ranks = cards.map(|card| card.rank);
     ranks.sort_unstable_by(|a, b| b.cmp(a));
-    Ok(vec![vec![0], ranks].concat())
+    let mut result = Vec::with_capacity(6);
+    result.push(0);
+    result.extend(ranks);
+    result
 }
 
 fn evaluate_seven_cards(cards: &[Card]) -> Result<HandRank, String> {
@@ -130,9 +136,8 @@ fn evaluate_seven_cards(cards: &[Card]) -> Result<HandRank, String> {
             for c in (b + 1)..5 {
                 for d in (c + 1)..6 {
                     for e in (d + 1)..7 {
-                        let rank = evaluate_five_cards(&[
-                            cards[a], cards[b], cards[c], cards[d], cards[e],
-                        ])?;
+                        let rank =
+                            rank_five_unique(&[cards[a], cards[b], cards[c], cards[d], cards[e]]);
                         if best.as_ref().is_none_or(|current| rank > *current) {
                             best = Some(rank);
                         }

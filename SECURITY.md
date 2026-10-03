@@ -18,6 +18,18 @@ Include the affected commit, reproduction steps, impact, and any suggested mitig
 
 ## Operational guidance / 运行建议
 
+### Known dependency advisories / 已知依赖告警
+
+As of **2026-10-03**, `pnpm audit` reports [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm): deeply nested brace patterns can exhaust the stack in `braces <=3.0.3`. In this lockfile it is reached through the **ESLint development toolchain** (`eslint-config-next → @next/eslint-plugin-next → fast-glob → micromatch → braces`). The public advisory lists no patched release, and the npm registry still lists 3.0.3 as latest. Although the audit output suggests `>=3.0.4`, that version was not available at verification time.
+
+截至 **2026-10-03**，`pnpm audit` 报告上述高危告警：`braces <=3.0.3` 处理深层嵌套模式时可能耗尽调用栈。本锁文件中的依赖路径来自 **ESLint 开发工具链**（路径如上）。官方公告尚无修复版，npm 最新版仍为 3.0.3；审计输出虽然提示 `>=3.0.4`，但核实时该版本并不存在。
+
+This advisory is **not suppressed or marked fixed**. Avoid supplying untrusted patterns to this tooling and run untrusted-repository checks in isolated, resource-limited CI workers. The app does not directly import this package, but a development-only dependency classification is not a guarantee of safety. Recheck the registry/advisory before upgrading and rerun the quality gate once a supported patch is published. Existing loopback deployment and repository protections remain in effect.
+
+本项目**没有屏蔽告警，也不宣称已修复**。不要向此工具链传入不可信模式；检查不可信仓库时应使用隔离、受资源限制的 CI。应用未直接导入此包，但“仅开发依赖”并不代表没有风险。升级前应重新核实公告和注册表，正式补丁发布后再升级并重跑质量门禁。现有回环部署与仓库保护继续生效。
+
+### Deployment / 部署
+
 - The default Compose deployment publishes web/API only on `127.0.0.1`. Use Docker Engine 28.0.0+; [older engines have a localhost-publishing limitation](https://docs.docker.com/engine/network/port-publishing/). Custom ports retain this binding.
 - There is no built-in user authentication or per-user data isolation. Never expose the API directly to untrusted networks; use an authenticated HTTPS gateway with authorization for all routes. CORS is not authentication. Loopback binding does not protect against other users/processes on the same host.
 - Keep `CORS_ORIGINS` restricted to trusted frontend origins.
