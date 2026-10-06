@@ -3,11 +3,38 @@ from __future__ import annotations
 import math
 import random
 import time
-from collections.abc import Callable
+from array import array
+from collections.abc import Callable, Sequence
 from itertools import accumulate, combinations
 
-from .domain import Card, full_deck, showdown
-from .ranges import expand_weighted_range, range_statistics
+from .domain import SUIT_CHARS, Card, full_deck, showdown
+from .ranges import WeightedCombo, expand_weighted_range, range_statistics
+
+
+def _build_pair_table(
+    hero_combos: Sequence[WeightedCombo], villain_combos: Sequence[WeightedCombo]
+) -> tuple[array, array]:
+    """Store ordered, blocker-compatible pairs without a Python object per pair."""
+
+    def mask(combo: WeightedCombo) -> int:
+        first, second = combo.cards
+        return (1 << (4 * (first.rank - 2) + SUIT_CHARS.index(first.suit))) | (
+            1 << (4 * (second.rank - 2) + SUIT_CHARS.index(second.suit))
+        )
+
+    hero_masks = [mask(combo) for combo in hero_combos]
+    villain_masks = [mask(combo) for combo in villain_combos]
+    # At most 1,326 combos per player: every encoded pair fits in 32 bits.
+    pair_codes, pair_weights = array("I"), array("d")
+    villain_count = len(villain_combos)
+    for hero_index, hero in enumerate(hero_combos):
+        hero_mask = hero_masks[hero_index]
+        offset = hero_index * villain_count
+        for villain_index, villain in enumerate(villain_combos):
+            if not hero_mask & villain_masks[villain_index]:
+                pair_codes.append(offset + villain_index)
+                pair_weights.append(hero.weight * villain.weight)
+    return pair_codes, pair_weights
 
 
 def calculate_range_equity(
@@ -27,27 +54,25 @@ def calculate_range_equity(
     started = time.perf_counter()
     hero_combos = expand_weighted_range(hero_weights, board)
     villain_combos = expand_weighted_range(villain_weights, board)
-    valid_pairs = [
-        (hero, villain, hero.weight * villain.weight)
-        for hero in hero_combos
-        for villain in villain_combos
-        if not set(hero.cards).intersection(villain.cards)
-    ]
-    if not valid_pairs:
+    pair_codes, pair_weights = _build_pair_table(hero_combos, villain_combos)
+    villain_count = len(villain_combos)
+    if not pair_codes:
         raise ValueError("No blocker-compatible combination pairs remain")
-    pair_mass = sum(pair[2] for pair in valid_pairs)
+    pair_mass = sum(pair_weights)
     if pair_mass <= 0:
         raise ValueError(
             "Range weights must produce a positive representable combination-pair mass"
         )
     missing = 5 - len(board)
-    total_states = len(valid_pairs) * math.comb(52 - len(board) - 4, missing)
+    total_states = len(pair_codes) * math.comb(52 - len(board) - 4, missing)
     board_blocked = set(board)
     available_deck = tuple(card for card in full_deck() if card not in board_blocked)
     win_weight = tie_weight = lose_weight = total_weight = 0.0
     if total_states <= 250_000:
         method = "exact_weighted_enumeration"
-        for hero, villain, pair_weight in valid_pairs:
+        for pair_code, pair_weight in zip(pair_codes, pair_weights, strict=True):
+            hero_index, villain_index = divmod(pair_code, villain_count)
+            hero, villain = hero_combos[hero_index], villain_combos[villain_index]
             blocked = set(hero.cards + villain.cards)
             deck = tuple(card for card in available_deck if card not in blocked)
             for runout in combinations(deck, missing):
@@ -65,9 +90,11 @@ def calculate_range_equity(
         rng = random.Random(seed)
         # Keep random.choices' accumulation order and RNG calls unchanged so old
         # seeds reproduce exactly, but build this O(pairs) table only once.
-        cumulative_weights = list(accumulate(pair[2] for pair in valid_pairs))
+        cumulative_weights = array("d", accumulate(pair_weights))
         for _ in range(samples):
-            hero, villain, _ = rng.choices(valid_pairs, cum_weights=cumulative_weights, k=1)[0]
+            pair_code = rng.choices(pair_codes, cum_weights=cumulative_weights, k=1)[0]
+            hero_index, villain_index = divmod(pair_code, villain_count)
+            hero, villain = hero_combos[hero_index], villain_combos[villain_index]
             blocked = set(hero.cards + villain.cards)
             deck = tuple(card for card in available_deck if card not in blocked)
             runout = tuple(rng.sample(deck, missing))
@@ -89,7 +116,7 @@ def calculate_range_equity(
         "win": win,
         "tie": tie,
         "lose": lose,
-        "valid_combo_pairs": len(valid_pairs),
+        "valid_combo_pairs": len(pair_codes),
         "weighted_combo_pair_mass": pair_mass,
         "evaluated_states": evaluated,
         "method": method,
