@@ -36,15 +36,15 @@ PokerLab 是一套可审查的研究系统，而不是赌场风格外壳或互�
 
 ## Product tour / 功能导览
 
-| Instrument / 工具                    | What it does / 功能                                                                                                                                                                                          |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Instrument / 工具                    | What it does / 功能                                                                                                                                                                                                                               |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Equity Lab / 胜率实验室**          | Exact legal-runout enumeration, seeded Monte Carlo, estimated standard error, conservative pointwise 95% Hoeffding intervals, and a conditional turn map. / 精确枚举、固定种子蒙特卡洛、估计标准误、保守的逐点 95% Hoeffding 区间与条件转牌地图。 |
-| **Range Lab / 范围实验室**           | A weighted 13×13 range matrix, physical blockers, combo accounting, and range-vs-range equity. / 13×13 加权范围矩阵、物理阻断牌、组合统计与范围对范围胜率。                                                  |
-| **Guess the Equity / 猜胜率**        | Legal scenarios, continuous quadratic scoring, and an interpretable weakness-weighted sampler. / 合法牌局、连续二次评分与可解释的薄弱项加权出题。                                                            |
-| **EV Lab / EV 实验室**               | Explicit pot conventions, break-even equity, incremental call EV, and decision curves. / 明确的底池约定、盈亏平衡胜率、增量跟注 EV 与决策曲线。                                                              |
-| **CFR Solver Lite / CFR 轻量求解器** | A real blocker-aware CFR+ river abstraction with mixed strategies and convergence diagnostics. / 真实运行、阻断牌感知的河牌 CFR+ 抽象、混合策略与收敛诊断。                                                  |
-| **Research / AI / 研究实验室**       | Beta–Binomial inference, seeded convergence exports, and transparent agent comparisons. / Beta–Binomial 推断、固定种子收敛导出与透明代理对比。                                                               |
-| **Experiment ledger / 实验台账**     | Lightweight cursor pagination, actual database attribution, and lossless complete JSON export. Research comparisons also offer CSV. / 轻量游标分页、真实数据库标识及无损完整 JSON 导出；研究对比另提供 CSV。 |
+| **Range Lab / 范围实验室**           | A weighted 13×13 range matrix, physical blockers, combo accounting, and range-vs-range equity. / 13×13 加权范围矩阵、物理阻断牌、组合统计与范围对范围胜率。                                                                                       |
+| **Guess the Equity / 猜胜率**        | Legal scenarios, continuous quadratic scoring, and an interpretable weakness-weighted sampler. / 合法牌局、连续二次评分与可解释的薄弱项加权出题。                                                                                                 |
+| **EV Lab / EV 实验室**               | Explicit pot conventions, break-even equity, incremental call EV, and decision curves. / 明确的底池约定、盈亏平衡胜率、增量跟注 EV 与决策曲线。                                                                                                   |
+| **CFR Solver Lite / CFR 轻量求解器** | A real blocker-aware CFR+ river abstraction with mixed strategies and convergence diagnostics. / 真实运行、阻断牌感知的河牌 CFR+ 抽象、混合策略与收敛诊断。                                                                                       |
+| **Research / AI / 研究实验室**       | Beta–Binomial inference, seeded convergence exports, and transparent agent comparisons. / Beta–Binomial 推断、固定种子收敛导出与透明代理对比。                                                                                                    |
+| **Experiment ledger / 实验台账**     | Lightweight cursor pagination, actual database attribution, and lossless complete JSON export. Research comparisons also offer CSV. / 轻量游标分页、真实数据库标识及无损完整 JSON 导出；研究对比另提供 CSV。                                      |
 
 <details>
 <summary><strong>Open the visual gallery / 展开界面画廊</strong></summary>
@@ -222,7 +222,9 @@ The suite covers evaluator ordering, wheel straights, duplicate rejection, exact
 
 GitHub Actions runs formatting, linting, type checks, Python/Rust/frontend tests, production builds, desktop/mobile browser tests, and both container builds on every push and pull request.
 
-Dependency audits are separate from the quality gate. As of 2026-10-03, `pnpm audit` reports one unpatched high-severity `braces` advisory in the ESLint development toolchain; see [current security limitations](SECURITY.md#known-dependency-advisories--已知依赖告警). / 依赖审计与质量门禁分开；截至 2026-10-03，`pnpm audit` 报告 ESLint 开发工具链中一项尚无修复版的高危 `braces` 告警，详见[已知安全限制](SECURITY.md#known-dependency-advisories--已知依赖告警)。
+Full-range regression tests verify every legal pair across preflop/flop/turn/river boards, original seeded pair/runout streams, and exact float accumulation order. / 全范围回归测试覆盖翻牌前、翻牌、转牌与河牌的每个合法组合对，并核对原始种子手牌/补牌序列及精确浮点累加顺序。
+
+Dependency audits are separate from the quality gate. As of 2026-10-06, the `source-map-js` advisory is patched with 1.2.2; `pnpm audit` still reports one unpatched high-severity `braces` advisory in the ESLint development toolchain. See [current security limitations](SECURITY.md#known-dependency-advisories--已知依赖告警). / 依赖审计与质量门禁分开；截至 2026-10-06，`source-map-js` 告警已通过 1.2.2 修复，`pnpm audit` 仍报告 ESLint 开发工具链中一项尚无修复版的高危 `braces` 告警。详见[已知安全限制](SECURITY.md#known-dependency-advisories--已知依赖告警)。
 
 Storage tests run against both SQLite and a disposable PostgreSQL service in CI, covering legacy migrations, 64-bit seeds, rollback, concurrent workers, and restart-safe training. / CI 同时在 SQLite 与临时 PostgreSQL 服务上验证存储行为，覆盖旧库迁移、64 位种子、回滚、并发进程及训练题跨重启提交。
 
@@ -253,6 +255,12 @@ Weighted range sampling now builds its cumulative probability table once per req
 加权范围采样现在每次请求只构建一次累计概率表。在同机独立测试的 20 类手牌、5,000 次采样场景中，Python 路径耗时中位数从 1,217 降至 505 毫秒，Rust 路径从 822 降至 120 毫秒，固定种子结果不变。这是特定工作负载的实测，不代表所有计算都具有同样增益。
 
 Reproduce / 复现：`cd apps/api && uv run python -m pokerlab_api.benchmarks --range-only`
+
+Full-range pair preparation now uses compact arrays while preserving every legal pair and seeded result. On the measured machine, all 169 classes per player (1,624,350 preflop pairs) used **199.31 → 31.69 MiB** peak traced Python allocations (**84.1% less**) and **809.86 → 158.66 ms** median setup time. This includes pair construction, mass summation, and cumulative weights—not equity evaluation, process RSS, HTTP, or the UI. Memory remains O(pairs). See [methodology and raw timings](research/benchmarks.md#compact-range-pair-preparation--紧凑范围组合对准备--2026-10-06).
+
+全范围组合对准备现使用紧凑数组，保留每个合法组合与种子结果。同机实测每人全部 169 类手牌（翻牌前 1,624,350 对），Python 跟踪分配峰值从 **199.31 降至 31.69 MiB（减少 84.1%）**，准备耗时中位数从 **809.86 降至 158.66 毫秒**。测量包含组合对构建、权重求和及累计表，不包含胜率评估、进程 RSS、HTTP 或界面；内存仍为 O(组合对数)。方法和原始耗时见上述链接。
+
+Reproduce / 复现：`cd apps/api && uv run python -m pokerlab_api.range_pair_benchmark`
 
 The exact turn map now shares unordered runouts: 990 showdown evaluations instead of 1,980, with all 45 conditional equities unchanged. A five-repeat local algorithm comparison measured median times of **204 → 104 ms (Python)** and **41 → 20 ms (Rust)**. Both compared algorithms use the same current evaluator and validation; these are turn-map measurements, not whole-app speedups. See the [derivation / 数学推导](docs/math/equity.md#conditional-turn-map--条件转牌地图) and [benchmark record / 实测记录](research/benchmarks.md).
 

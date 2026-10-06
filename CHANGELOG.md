@@ -4,6 +4,12 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Replace per-pair Python objects in range equity with compact index/weight arrays and precomputed card masks. Preserve every legal pair, weighted distribution, exact accumulation order, seeded draw stream, and Rust/Python fallback. Add full-range and benchmark regression tests.
+- Publish a reproducible full-table-checked setup benchmark: the full 169-class preflop workload uses 199.31 → 31.69 MiB of peak traced Python allocations (84.1% less) and 809.86 → 158.66 ms median setup time on the measured machine. These are preparation-only measurements, not process RSS or whole-app performance.
+- 范围胜率改用紧凑索引/权重数组与预计算牌面掩码，保留全部合法组合、加权分布、精确累加顺序、种子抽样序列与 Rust/Python 回退；新增全范围及基准回归测试。
+- 发布核对完整表的可复现准备阶段基准：实测完整 169 类翻牌前范围的 Python 跟踪分配峰值从 199.31 降至 31.69 MiB（减少 84.1%），准备耗时中位数从 809.86 降至 158.66 毫秒；不代表进程 RSS 或整个应用性能。
+- Patch `source-map-js` to 1.2.2 for GHSA-68fv-2mgg-jv7q; recheck and retain disclosure of the still-unpatched `braces` advisory. / 将 `source-map-js` 升级至 1.2.2 修复对应告警；重新核实并保留尚无上游补丁的 `braces` 风险披露。
+
 - Accelerate Rust's existing best-of-21 evaluator with stack-resident rank counts/groups and straight bitmasks, validating unique cards once at the public boundary. Preserve complete rank vectors, seeded results, Python fallback, and all statistical methods.
 - Exhaustively compare every physical five-card hand (2,598,960) with the original test-only ranker; check all rank subsets, 5,000 seeded seven-card hands, kicker edge cases, suit/order invariance, invalid extension input, and complete cross-engine Monte Carlo results. Add a reproducible, output-checked baseline-extension benchmark and publish measured timings.
 - 优化 Rust 完整 21 子集评估路径，以栈内点数计数/分组和顺子位掩码减少重复分配，仅在公开入口校验唯一性；保留完整牌力向量、固定种子结果、Python 回退及全部统计方法。
