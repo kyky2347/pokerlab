@@ -90,6 +90,51 @@ When either port is exported, the launcher derives `NEXT_PUBLIC_API_URL` and `CO
 
 `POKERLAB_WEB_URL`、`POKERLAB_API_HEALTH_URL` 和 `POKERLAB_API_DOCS_URL` 仍可覆盖浏览器、检查和展示地址，例如反向代理场景；它们不改变端口映射或前端构建地址。Next.js 在构建时写入 API 地址：修改 API 端口或 `NEXT_PUBLIC_API_URL` 后，请运行**不带** `--no-build` 的 `./pokerlab`。仅在源码与构建配置均未变更时复用镜像。
 
+## Dependency runtime checks / 依赖运行时检查
+
+After a frozen install, run from the repository root / 冻结安装后在仓库根目录运行：
+
+```bash
+pnpm install --frozen-lockfile --ignore-scripts
+pnpm test:dependencies
+```
+
+This is also part of `pnpm check`. It resolves the shell-quote copy used by
+`concurrently` and the sharp copy used by Next.js, verifies patched version
+floors, rejects post-comment line terminators without executing them, and checks
+normal command quoting/startup. Image tests perform actual SVG-to-PNG and lossless
+WebP conversions and inspect decoded pixels. No services or network ports are
+opened by these tests.
+
+这项检查也已纳入 `pnpm check`。测试解析 `concurrently` 与 Next.js 实际使用的
+shell-quote 和 sharp 副本，检查补丁版本下限，在不执行危险输入的情况下验证
+注释后换行符被拒绝，并检查正常转义和命令启动。图像测试真实执行 SVG 转 PNG
+及无损 WebP 转换，然后核对解码像素；不会启动服务或占用网络端口。
+
+The container CI job additionally tests the **final runtime image**, not the
+builder or host's node_modules. To reproduce / 容器 CI 还检测**最终运行镜像**，
+而非构建阶段或宿主机的 node_modules。复现方式：
+
+```bash
+docker build -f infra/web.Dockerfile -t pokerlab-web:verify .
+docker run --rm --network none --read-only --cap-drop ALL \
+  --security-opt no-new-privileges \
+  --mount "type=bind,source=${PWD}/scripts,target=/workspace/scripts,readonly" \
+  --entrypoint node pokerlab-web:verify --test scripts/image-runtime.test.mjs
+```
+
+Tests are mounted read-only; they are not added to the production image. Missing
+native packages, outdated sharp/librsvg, incorrect pixels, or unexpected decoding
+behavior fail the check. If using a global/custom libvips build, the loaded
+librsvg must meet the same floor; unknown/prerelease versions fail deliberately.
+Rebuild after security updates—`--no-build` continues to run old binaries.
+These targeted checks do not replace `pnpm audit`; see [known risks](../SECURITY.md).
+
+测试以只读方式挂载，不写入生产镜像。原生包缺失、sharp/librsvg 版本过旧、
+像素不符或解码异常都会使检查失败。全局/自编译 libvips 使用的 librsvg 也需
+满足同一版本下限，未知或预发布版本会主动失败。安全更新后必须重新构建，
+`--no-build` 仍会运行旧二进制。这些定向检查不能替代 `pnpm audit`，已知风险见上述链接。
+
 ## Database upgrades and recovery / 数据库升级与恢复
 
 The API runs packaged Alembic migrations before serving requests. Fresh databases are initialized automatically; the original three-table PokerLab layout is recognized and brought under version control without recreating its tables. Existing versioned databases are upgraded normally. Incomplete or unfamiliar unversioned layouts are rejected for manual investigation. `/diagnostics` exposes the live `schema_revision`.

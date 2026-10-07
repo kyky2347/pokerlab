@@ -10,6 +10,10 @@ overrides:
   "brace-expansion@>=5.0.0 <5.0.12": "5.0.12"
   # GHSA-68fv-2mgg-jv7q: validate indexed source-map section offsets.
   "source-map-js@>=1.0.0 <1.2.2": "1.2.2"
+  # GHSA-pqg4-j6r4-53mv: reject line terminators after shell comment tokens.
+  "shell-quote@>=1.8.4 <1.11.0": "1.11.0"
+  # GHSA-wq5f-xc86-pv6w: patched prebuilt librsvg in Next.js image processing.
+  "sharp@<0.35.5": "0.35.5"
 
 allowBuilds:
   unrs-resolver: set this to true or false
