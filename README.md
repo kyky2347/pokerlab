@@ -230,6 +230,8 @@ Dependency audits are separate from the quality gate. As of 2026-10-07, the `sou
 
 Storage tests run against both SQLite and a disposable PostgreSQL service in CI, covering legacy migrations, 64-bit seeds, rollback, concurrent workers, and restart-safe training. / CI 同时在 SQLite 与临时 PostgreSQL 服务上验证存储行为，覆盖旧库迁移、64 位种子、回滚、并发进程及训练题跨重启提交。
 
+The Python migration toolchain also pins Mako 1.4.2 for its Windows template-URI traversal fix. Tests cover POSIX/emulated Windows rejection and rendering the packaged Alembic template; no schema change is introduced. / Python 迁移工具链同时锁定 Mako 1.4.2，修复 Windows 模板 URI 遍历问题；测试覆盖 POSIX/模拟 Windows 的拒绝行为与实际 Alembic 模板渲染，不引入数据库结构变更。
+
 Research regressions check policy thresholds, historical seeded values, an independent uncertainty calculation, saved methodology, exact browser seed validation, and metadata-rich CSV escaping. / 研究回归测试覆盖策略阈值、历史固定种子结果、独立误差公式复核、方法持久化、浏览器种子精度校验与携带完整参数的 CSV 转义。
 
 Fixed-hand Monte Carlo regressions enumerate multinomial outcome counts to check finite-sample coverage without random pass/fail thresholds. They also cover one-sample null moments, identical observations, historical seeded values on both engines, stored method metadata, bilingual explanations, and exact chart endpoints. / 固定手牌蒙特卡洛回归通过枚举多项分布结果次数验证有限样本覆盖率，不使用随机通过阈值；同时覆盖单样本空统计量、相同观察值、双引擎历史种子结果、方法元数据持久化、双语说明及图表端点。

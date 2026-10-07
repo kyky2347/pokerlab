@@ -46,9 +46,13 @@ The 2026-10-07 lockfile update also patches:
 
 `pnpm test:dependencies` 验证实际间接依赖，对不安全的转义输入只检查拒绝行为，绝不执行它们。图像测试同时覆盖本地环境和最终独立部署容器，检查已加载版本与实际 PNG/WebP 像素。版本下限检查会主动拒绝未知或预发布原生版本。这些是定向回归保护，**并非完整漏洞扫描器**；依赖变更后仍应运行 `pnpm audit`，现存 braces 告警不屏蔽。
 
-On 2026-10-07, `pip-audit` found no known advisories in the installed Python third-party environment. The editable first-party `pokerlab-api` and `poker-core-rs` distributions were explicitly skipped; this is not a claim that local code or every possible platform dependency is vulnerability-free.
+The same update pins Alembic's transitive **Mako to 1.4.2** for [GHSA-5639-2j2p-m4mx](https://github.com/advisories/GHSA-5639-2j2p-m4mx), a Windows drive-letter template-URI traversal issue. PokerLab uses packaged migration templates, not user-controlled template paths. Regression tests check rejection under both POSIX and emulated Windows path semantics and render the actual migration template.
 
-2026-10-07，`pip-audit` 在已安装的 Python 第三方环境中未发现已知漏洞。可编辑安装的本项目 `pokerlab-api` 与 `poker-core-rs` 被明确跳过；这不表示本地代码或所有平台上的依赖都不存在漏洞。
+同一更新将 Alembic 的间接依赖 **Mako 锁定至 1.4.2**，修复上述 Windows 盘符模板 URI 目录遍历问题。PokerLab 使用随包分发的迁移模板，不接受用户控制的模板路径。回归测试覆盖 POSIX 与模拟 Windows 路径语义下的拒绝行为，并渲染实际迁移模板。
+
+On 2026-10-07, `pip-audit` initially reported no known advisories while GitHub Dependabot identified Mako. We cross-checked the upstream advisory and patched it rather than trusting a single feed. The editable first-party `pokerlab-api` and `poker-core-rs` distributions are explicitly skipped by that Python audit; neither a clean feed nor these targeted guards establish that local code or every platform dependency is vulnerability-free.
+
+2026-10-07，`pip-audit` 起初报告未发现已知漏洞，但 GitHub Dependabot 标出了 Mako。我们核对上游公告并修复，而非只相信单一数据源。可编辑安装的本项目 `pokerlab-api` 与 `poker-core-rs` 被该 Python 审计明确跳过；单个数据源的清洁结果或上述定向检查，均不意味着本地代码和所有平台依赖绝无漏洞。
 
 ### Deployment / 部署
 
