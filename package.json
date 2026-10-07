@@ -23,13 +23,14 @@
     "build": "pnpm --filter web build",
     "lint": "pnpm --filter web lint && cd apps/api && uv run ruff check .",
     "typecheck": "pnpm --filter web typecheck",
-    "test": "pnpm test:web && pnpm test:api && pnpm test:rust",
+    "test": "pnpm test:dependencies && pnpm test:web && pnpm test:api && pnpm test:rust",
     "check": "pnpm lint && pnpm typecheck && pnpm format:check && pnpm test && pnpm build",
     "test:web": "pnpm --filter web test",
     "test:api": "cd apps/api && uv run pytest",
     "test:rust": "cargo test --manifest-path packages/poker-core/Cargo.toml",
+    "test:dependencies": "node --test scripts/*.test.mjs",
     "benchmark": "cd apps/api && uv run python -m pokerlab_api.benchmarks",
-    "format:check": "pnpm --filter web format:check && cd apps/api && uv run ruff format --check . && cd ../.. && cargo fmt --manifest-path packages/poker-core/Cargo.toml --check"
+    "format:check": "pnpm --filter web format:check && pnpm --filter web exec prettier --check ../../scripts && cd apps/api && uv run ruff format --check . && cd ../.. && cargo fmt --manifest-path packages/poker-core/Cargo.toml --check"
   },
   "devDependencies": {
     "concurrently": "10.0.5"

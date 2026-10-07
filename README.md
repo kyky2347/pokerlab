@@ -224,9 +224,13 @@ GitHub Actions runs formatting, linting, type checks, Python/Rust/frontend tests
 
 Full-range regression tests verify every legal pair across preflop/flop/turn/river boards, original seeded pair/runout streams, and exact float accumulation order. / 全范围回归测试覆盖翻牌前、翻牌、转牌与河牌的每个合法组合对，并核对原始种子手牌/补牌序列及精确浮点累加顺序。
 
-Dependency audits are separate from the quality gate. As of 2026-10-06, the `source-map-js` advisory is patched with 1.2.2; `pnpm audit` still reports one unpatched high-severity `braces` advisory in the ESLint development toolchain. See [current security limitations](SECURITY.md#known-dependency-advisories--已知依赖告警). / 依赖审计与质量门禁分开；截至 2026-10-06，`source-map-js` 告警已通过 1.2.2 修复，`pnpm audit` 仍报告 ESLint 开发工具链中一项尚无修复版的高危 `braces` 告警。详见[已知安全限制](SECURITY.md#known-dependency-advisories--已知依赖告警)。
+Dependency audits are separate from the quality gate. As of 2026-10-07, the `source-map-js`, `shell-quote`, and `sharp` advisories are patched with 1.2.2, 1.11.0, and 0.35.5 respectively; `pnpm audit` still reports one unpatched high-severity `braces` advisory in the ESLint development toolchain. See [current security limitations](SECURITY.md#known-dependency-advisories--已知依赖告警). / 依赖审计与质量门禁分开；截至 2026-10-07，`source-map-js`、`shell-quote` 和 `sharp` 告警分别通过 1.2.2、1.11.0 和 0.35.5 修复；`pnpm audit` 仍报告 ESLint 开发工具链中一项尚无修复版的高危 `braces` 告警。详见[已知安全限制](SECURITY.md#known-dependency-advisories--已知依赖告警)。
+
+`pnpm test:dependencies` checks the actual launcher/image dependency copies: unsafe post-comment line terminators are rejected, ordinary quoted arguments and parallel commands still work, and native SVG/PNG/WebP processing returns verified pixels. It is part of `pnpm check`. CI also runs the image tests against the **final standalone container**, with no network and a read-only filesystem, checking both sharp and its loaded librsvg version. These targeted regressions do not replace a vulnerability audit. / `pnpm test:dependencies` 验证启动器与图像处理实际加载的依赖副本：拒绝注释后不安全的换行符、保留正常参数转义和并行启动，并核对原生 SVG/PNG/WebP 转换后的像素。该检查已纳入 `pnpm check`；CI 还在禁网、只读的**最终独立部署容器**中执行图像测试，同时检查 sharp 与实际加载的 librsvg 版本。这些定向回归测试不能代替漏洞审计。
 
 Storage tests run against both SQLite and a disposable PostgreSQL service in CI, covering legacy migrations, 64-bit seeds, rollback, concurrent workers, and restart-safe training. / CI 同时在 SQLite 与临时 PostgreSQL 服务上验证存储行为，覆盖旧库迁移、64 位种子、回滚、并发进程及训练题跨重启提交。
+
+The Python migration toolchain also pins Mako 1.4.2 for its Windows template-URI traversal fix. Tests cover POSIX/emulated Windows rejection and rendering the packaged Alembic template; no schema change is introduced. / Python 迁移工具链同时锁定 Mako 1.4.2，修复 Windows 模板 URI 遍历问题；测试覆盖 POSIX/模拟 Windows 的拒绝行为与实际 Alembic 模板渲染，不引入数据库结构变更。
 
 Research regressions check policy thresholds, historical seeded values, an independent uncertainty calculation, saved methodology, exact browser seed validation, and metadata-rich CSV escaping. / 研究回归测试覆盖策略阈值、历史固定种子结果、独立误差公式复核、方法持久化、浏览器种子精度校验与携带完整参数的 CSV 转义。
 

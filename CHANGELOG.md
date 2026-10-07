@@ -4,6 +4,13 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Patch the launcher's transitive `shell-quote` to 1.11.0 (GHSA-pqg4-j6r4-53mv) and Next.js's `sharp` to 0.35.5 with librsvg 2.63.2 (GHSA-wq5f-xc86-pv6w). Preserve frozen installs and leave poker mathematics, seeded behavior, and Rust/Python fallback unchanged.
+- Add dependency runtime regression tests for rejected post-comment line terminators, normal argument quoting, parallel command startup, security version floors, and real SVG/PNG/WebP decoding/encoding. Check the actual final standalone Docker image in network-disabled, read-only CI runs; add `pnpm test:dependencies` to the quality gate.
+- 启动器间接依赖 `shell-quote` 升级至 1.11.0，Next.js 的 `sharp` 升级至 0.35.5（含 librsvg 2.63.2），修复对应两项告警；保留冻结安装，不改动扑克数学、种子行为或 Rust/Python 回退。
+- 新增依赖运行时回归：注释后换行符拒绝、正常参数转义、并行启动、安全版本下限及真实 SVG/PNG/WebP 编解码；CI 在禁网、只读的最终独立部署镜像内验证原生依赖，并将 `pnpm test:dependencies` 纳入质量门禁。
+- Recheck npm/Python advisories on 2026-10-07; keep the unresolved `braces` development-toolchain finding visible, without audit suppression. / 2026-10-07 重新审计 npm/Python 依赖；继续公开未解决的 `braces` 开发工具链告警，不屏蔽审计结果。
+- Cross-check GitHub advisory data after the Python audit missed Mako; update the Alembic dependency to Mako 1.4.2 for GHSA-5639-2j2p-m4mx. Add POSIX/emulated Windows traversal guards and packaged migration-template rendering tests without changing the database schema. / 对照 GitHub 公告补上 Python 审计未报告的 Mako 风险；Alembic 间接依赖升级至 Mako 1.4.2，新增 POSIX/模拟 Windows 遍历拒绝与随包迁移模板渲染回归，不改变数据库结构。
+
 - Replace per-pair Python objects in range equity with compact index/weight arrays and precomputed card masks. Preserve every legal pair, weighted distribution, exact accumulation order, seeded draw stream, and Rust/Python fallback. Add full-range and benchmark regression tests.
 - Publish a reproducible full-table-checked setup benchmark: the full 169-class preflop workload uses 199.31 → 31.69 MiB of peak traced Python allocations (84.1% less) and 809.86 → 158.66 ms median setup time on the measured machine. These are preparation-only measurements, not process RSS or whole-app performance.
 - 范围胜率改用紧凑索引/权重数组与预计算牌面掩码，保留全部合法组合、加权分布、精确累加顺序、种子抽样序列与 Rust/Python 回退；新增全范围及基准回归测试。

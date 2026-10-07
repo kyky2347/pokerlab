@@ -20,9 +20,9 @@ Include the affected commit, reproduction steps, impact, and any suggested mitig
 
 ### Known dependency advisories / 已知依赖告警
 
-As of **2026-10-06**, `pnpm audit` reports [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm): deeply nested brace patterns can exhaust the stack in `braces <=3.0.3`. In this lockfile it is reached through the **ESLint development toolchain** (`eslint-config-next → @next/eslint-plugin-next → fast-glob → micromatch → braces`). The public advisory lists no patched release, and the npm registry still lists 3.0.3 as latest. Although the audit output suggests `>=3.0.4`, that version was not available at verification time.
+As of **2026-10-07**, `pnpm audit` reports [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm): deeply nested brace patterns can exhaust the stack in `braces <=3.0.3`. In this lockfile it is reached through the **ESLint development toolchain** (`eslint-config-next → @next/eslint-plugin-next → fast-glob → micromatch → braces`). The public advisory lists no patched release, and the npm registry still lists 3.0.3 as latest. Although the audit output suggests `>=3.0.4`, that version was not available at verification time.
 
-截至 **2026-10-06**，`pnpm audit` 报告上述高危告警：`braces <=3.0.3` 处理深层嵌套模式时可能耗尽调用栈。本锁文件中的依赖路径来自 **ESLint 开发工具链**（路径如上）。官方公告尚无修复版，npm 最新版仍为 3.0.3；审计输出虽然提示 `>=3.0.4`，但核实时该版本并不存在。
+截至 **2026-10-07**，`pnpm audit` 报告上述高危告警：`braces <=3.0.3` 处理深层嵌套模式时可能耗尽调用栈。本锁文件中的依赖路径来自 **ESLint 开发工具链**（路径如上）。官方公告尚无修复版，npm 最新版仍为 3.0.3；审计输出虽然提示 `>=3.0.4`，但核实时该版本并不存在。
 
 This advisory is **not suppressed or marked fixed**. Avoid supplying untrusted patterns to this tooling and run untrusted-repository checks in isolated, resource-limited CI workers. The app does not directly import this package, but a development-only dependency classification is not a guarantee of safety. Recheck the registry/advisory before upgrading and rerun the quality gate once a supported patch is published. Existing loopback deployment and repository protections remain in effect.
 
@@ -31,6 +31,28 @@ This advisory is **not suppressed or marked fixed**. Avoid supplying untrusted p
 The 2026-10-06 lockfile update pins affected `source-map-js` consumers to **1.2.2**, the patched release for [GHSA-68fv-2mgg-jv7q](https://github.com/advisories/GHSA-68fv-2mgg-jv7q) (malformed indexed source-map section offsets). Frozen-lockfile installation is verified; this resolves that advisory, not the separate `braces` finding above.
 
 2026-10-06 的锁文件更新将受影响的 `source-map-js` 依赖统一锁定到 **1.2.2**，修复上述“索引式 source map 非法分段偏移”告警，并验证冻结锁文件安装。该修复不包含前述独立的 `braces` 告警。
+
+The 2026-10-07 lockfile update also patches:
+
+- `shell-quote` **1.11.0**, reached through `concurrently`, for [GHSA-pqg4-j6r4-53mv](https://github.com/advisories/GHSA-pqg4-j6r4-53mv). The upstream command-injection condition requires a line terminator in a string after a comment token. PokerLab's development scripts use fixed repository commands; the advisory severity is not evidence of an exposed PokerLab command-execution endpoint.
+- `sharp` **0.35.5**, reached through Next.js, including prebuilt **librsvg 2.63.2**, for [GHSA-wq5f-xc86-pv6w](https://github.com/advisories/GHSA-wq5f-xc86-pv6w). The advisory describes runtime-dependent impact on glibc Linux; the shipped Alpine/musl image is still rebuilt and checked against the patched native library. Custom global libvips builds must also load patched librsvg.
+
+2026-10-07 的锁文件还修复以下依赖：
+
+- `concurrently` 引入的 `shell-quote` 升级至 **1.11.0**。上游命令注入条件是注释标记之后的字符串含换行符；PokerLab 开发脚本使用仓库中的固定命令，不能由公告严重级别推断项目存在已暴露的命令执行接口。
+- Next.js 引入的 `sharp` 升级至 **0.35.5**，预编译依赖包含 **librsvg 2.63.2**。公告影响取决于 glibc Linux 的运行条件；本项目仍重新构建并检查 Alpine/musl 镜像里的补丁版本。使用全局自编译 libvips 时，也必须确保实际加载的 librsvg 已修复。
+
+`pnpm test:dependencies` verifies the actual transitive copies and rejects unsafe shell-quoting cases without executing them. Native-image tests run in both the checkout and the final standalone container; they check loaded versions and actual PNG/WebP pixels. Version floors deliberately reject unknown/prerelease native versions. These are targeted regression guards, **not a comprehensive vulnerability scanner**. Rerun `pnpm audit` after dependency changes; the remaining braces warning is not suppressed.
+
+`pnpm test:dependencies` 验证实际间接依赖，对不安全的转义输入只检查拒绝行为，绝不执行它们。图像测试同时覆盖本地环境和最终独立部署容器，检查已加载版本与实际 PNG/WebP 像素。版本下限检查会主动拒绝未知或预发布原生版本。这些是定向回归保护，**并非完整漏洞扫描器**；依赖变更后仍应运行 `pnpm audit`，现存 braces 告警不屏蔽。
+
+The same update pins Alembic's transitive **Mako to 1.4.2** for [GHSA-5639-2j2p-m4mx](https://github.com/advisories/GHSA-5639-2j2p-m4mx), a Windows drive-letter template-URI traversal issue. PokerLab uses packaged migration templates, not user-controlled template paths. Regression tests check rejection under both POSIX and emulated Windows path semantics and render the actual migration template.
+
+同一更新将 Alembic 的间接依赖 **Mako 锁定至 1.4.2**，修复上述 Windows 盘符模板 URI 目录遍历问题。PokerLab 使用随包分发的迁移模板，不接受用户控制的模板路径。回归测试覆盖 POSIX 与模拟 Windows 路径语义下的拒绝行为，并渲染实际迁移模板。
+
+On 2026-10-07, `pip-audit` initially reported no known advisories while GitHub Dependabot identified Mako. We cross-checked the upstream advisory and patched it rather than trusting a single feed. The editable first-party `pokerlab-api` and `poker-core-rs` distributions are explicitly skipped by that Python audit; neither a clean feed nor these targeted guards establish that local code or every platform dependency is vulnerability-free.
+
+2026-10-07，`pip-audit` 起初报告未发现已知漏洞，但 GitHub Dependabot 标出了 Mako。我们核对上游公告并修复，而非只相信单一数据源。可编辑安装的本项目 `pokerlab-api` 与 `poker-core-rs` 被该 Python 审计明确跳过；单个数据源的清洁结果或上述定向检查，均不意味着本地代码和所有平台依赖绝无漏洞。
 
 ### Deployment / 部署
 
