@@ -4,6 +4,11 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Patch Next.js and eslint-config-next from 16.3.6 to 16.3.8 for six newly reported framework advisories. Document actual exposure and retain the unresolved braces development-toolchain warning; preserve poker mathematics, seeded results, and automatic engine fallback.
+- Add 14 final-image standalone HTTP regressions: patched runtime resolution, nine product routes with security headers, shipped JS/CSS, 404s, remote-image rejection, and production MCP exclusion. CI runs them on isolated loopback in the network-disabled, read-only production image, with bounded startup/requests and automatic shutdown.
+- Next.js 与 eslint-config-next 从 16.3.6 升至 16.3.8，修复六项新增框架告警；记录实际影响边界，保留尚未解决的 braces 开发工具链告警，不改动扑克数学、种子结果或自动引擎回退。
+- 新增 14 项最终镜像 HTTP 回归：实际补丁版本、九个产品路由及安全响应头、JS/CSS 资源、404、远程图片拒绝和生产环境不提供开发 MCP。CI 在禁网、只读生产镜像内通过隔离回环网络运行，限制启动/请求等待并自动关闭测试服务。
+
 - Patch the launcher's transitive `shell-quote` to 1.11.0 (GHSA-pqg4-j6r4-53mv) and Next.js's `sharp` to 0.35.5 with librsvg 2.63.2 (GHSA-wq5f-xc86-pv6w). Preserve frozen installs and leave poker mathematics, seeded behavior, and Rust/Python fallback unchanged.
 - Add dependency runtime regression tests for rejected post-comment line terminators, normal argument quoting, parallel command startup, security version floors, and real SVG/PNG/WebP decoding/encoding. Check the actual final standalone Docker image in network-disabled, read-only CI runs; add `pnpm test:dependencies` to the quality gate.
 - 启动器间接依赖 `shell-quote` 升级至 1.11.0，Next.js 的 `sharp` 升级至 0.35.5（含 librsvg 2.63.2），修复对应两项告警；保留冻结安装，不改动扑克数学、种子行为或 Rust/Python 回退。
