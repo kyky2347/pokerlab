@@ -120,7 +120,8 @@ docker build -f infra/web.Dockerfile -t pokerlab-web:verify .
 docker run --rm --network none --read-only --cap-drop ALL \
   --security-opt no-new-privileges \
   --mount "type=bind,source=${PWD}/scripts,target=/workspace/scripts,readonly" \
-  --entrypoint node pokerlab-web:verify --test scripts/image-runtime.test.mjs
+  --entrypoint node pokerlab-web:verify --test scripts/image-runtime.test.mjs \
+  scripts/deployment/standalone-runtime.test.mjs
 ```
 
 Tests are mounted read-only; they are not added to the production image. Missing
@@ -134,6 +135,22 @@ These targeted checks do not replace `pnpm audit`; see [known risks](../SECURITY
 像素不符或解码异常都会使检查失败。全局/自编译 libvips 使用的 librsvg 也需
 满足同一版本下限，未知或预发布版本会主动失败。安全更新后必须重新构建，
 `--no-build` 仍会运行旧二进制。这些定向检查不能替代 `pnpm audit`，已知风险见上述链接。
+
+The standalone suite also starts the real production server inside the container,
+requires Next.js 16.3.8 or newer, and checks all nine product routes and their
+security headers. It fetches the homepage's referenced JavaScript/CSS assets to
+catch incomplete runtime copies, checks 404 responses and remote-image rejection,
+and verifies that the development MCP endpoint is not served. Startup, requests,
+and shutdown are bounded; the server is stopped after the suite, including failures.
+There are no host port mappings, external requests, API calls, or database writes.
+Run this suite using the container command above, not directly in the checkout.
+
+独立部署测试还会在容器内启动真实生产服务器，要求 Next.js 至少为 16.3.8，
+检查九个产品路由及安全响应头，并获取首页引用的 JavaScript/CSS，发现运行镜像
+漏复制资源的问题；同时检查 404、远程图片拒绝和开发 MCP 端点不可用。
+启动、请求与关闭均有等待上限；无论成功或失败，测试后都会关闭服务器。
+不会映射宿主机端口、请求外网、调用 API 或写入数据库。请用上面的容器命令
+运行这组测试，不要在源码目录直接执行。
 
 ## Database upgrades and recovery / 数据库升级与恢复
 

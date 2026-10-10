@@ -83,9 +83,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: docker build -f infra/api.Dockerfile -t pokerlab-api:test .
       - run: docker build -f infra/web.Dockerfile -t pokerlab-web:test .
-      - name: Verify final image native dependencies / 验证最终镜像原生依赖
+      - name: Verify final image dependencies and HTTP / 验证最终镜像依赖与 HTTP
         run: >-
           docker run --rm --network none --read-only --cap-drop ALL
           --security-opt no-new-privileges
           --mount "type=bind,source=${{ github.workspace }}/scripts,target=/workspace/scripts,readonly"
           --entrypoint node pokerlab-web:test --test scripts/image-runtime.test.mjs
+          scripts/deployment/standalone-runtime.test.mjs

@@ -20,9 +20,9 @@ Include the affected commit, reproduction steps, impact, and any suggested mitig
 
 ### Known dependency advisories / 已知依赖告警
 
-As of **2026-10-07**, `pnpm audit` reports [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm): deeply nested brace patterns can exhaust the stack in `braces <=3.0.3`. In this lockfile it is reached through the **ESLint development toolchain** (`eslint-config-next → @next/eslint-plugin-next → fast-glob → micromatch → braces`). The public advisory lists no patched release, and the npm registry still lists 3.0.3 as latest. Although the audit output suggests `>=3.0.4`, that version was not available at verification time.
+As of **2026-10-10**, `pnpm audit` reports [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm): deeply nested brace patterns can exhaust the stack in `braces <=3.0.3`. In this lockfile it is reached through the **ESLint development toolchain** (`eslint-config-next → @next/eslint-plugin-next → fast-glob → micromatch → braces`). The public advisory lists no patched release, and the npm registry still lists 3.0.3 as latest. Although the audit output suggests `>=3.0.4`, that version was not available at verification time.
 
-截至 **2026-10-07**，`pnpm audit` 报告上述高危告警：`braces <=3.0.3` 处理深层嵌套模式时可能耗尽调用栈。本锁文件中的依赖路径来自 **ESLint 开发工具链**（路径如上）。官方公告尚无修复版，npm 最新版仍为 3.0.3；审计输出虽然提示 `>=3.0.4`，但核实时该版本并不存在。
+截至 **2026-10-10**，`pnpm audit` 报告上述高危告警：`braces <=3.0.3` 处理深层嵌套模式时可能耗尽调用栈。本锁文件中的依赖路径来自 **ESLint 开发工具链**（路径如上）。官方公告尚无修复版，npm 最新版仍为 3.0.3；审计输出虽然提示 `>=3.0.4`，但核实时该版本并不存在。
 
 This advisory is **not suppressed or marked fixed**. Avoid supplying untrusted patterns to this tooling and run untrusted-repository checks in isolated, resource-limited CI workers. The app does not directly import this package, but a development-only dependency classification is not a guarantee of safety. Recheck the registry/advisory before upgrading and rerun the quality gate once a supported patch is published. Existing loopback deployment and repository protections remain in effect.
 
@@ -53,6 +53,22 @@ The same update pins Alembic's transitive **Mako to 1.4.2** for [GHSA-5639-2j2p-
 On 2026-10-07, `pip-audit` initially reported no known advisories while GitHub Dependabot identified Mako. We cross-checked the upstream advisory and patched it rather than trusting a single feed. The editable first-party `pokerlab-api` and `poker-core-rs` distributions are explicitly skipped by that Python audit; neither a clean feed nor these targeted guards establish that local code or every platform dependency is vulnerability-free.
 
 2026-10-07，`pip-audit` 起初报告未发现已知漏洞，但 GitHub Dependabot 标出了 Mako。我们核对上游公告并修复，而非只相信单一数据源。可编辑安装的本项目 `pokerlab-api` 与 `poker-core-rs` 被该 Python 审计明确跳过；单个数据源的清洁结果或上述定向检查，均不意味着本地代码和所有平台依赖绝无漏洞。
+
+### Framework runtime update / 框架运行时更新
+
+The 2026-10-10 update pins **Next.js and eslint-config-next to 16.3.8**. This patches six newly reported advisories in the prior 16.3.6 dependency; it does not mean every issue was reachable in PokerLab:
+
+- [Image Optimization SSRF](https://github.com/advisories/GHSA-cjq9-62q9-8jv4): requires attacker-controlled allowlisted remote image hosts. PokerLab has no remote image allowlist.
+- [Pages Router cache poisoning](https://github.com/advisories/GHSA-4jqv-mc3x-m676) and [catch-all route cache poisoning](https://github.com/advisories/GHSA-mcj8-r9mp-w47p): PokerLab uses App Router with no root catch-all page.
+- [Draft Mode cache disclosure](https://github.com/advisories/GHSA-3w37-wq28-93x7): PokerLab does not enable Cache Components or Draft Mode previews.
+- [Metadata image disclosure](https://github.com/advisories/GHSA-f87g-xv8r-7p7x): PokerLab has no dynamic metadata image routes.
+- [Development MCP disclosure](https://github.com/advisories/GHSA-39w2-rjm5-chcv): affects development servers, not production. Restart running development servers after installing the patch.
+
+2026-10-10 将 **Next.js 与 eslint-config-next 锁定至 16.3.8**，修复旧版 16.3.6 新报告的六项告警；依赖受影响不等于本项目的所有路径都可利用。PokerLab 未配置远程图片白名单，使用 App Router 且没有根捕获全部路由，未启用 Cache Components 或草稿预览，也没有动态元数据图片路由。开发 MCP 告警只影响开发服务器，安装补丁后需重启正在运行的开发进程。
+
+Container CI now starts the actual standalone server and verifies the loaded Next.js version, all nine product routes, their security headers, referenced JavaScript/CSS assets, 404 behavior, rejection of non-allowlisted remote images, and absence of the development MCP endpoint. Tests use only loopback inside a network-disabled, read-only container with no host ports. They do not reproduce every upstream exploit or replace browser tests, audits, or authenticated deployment controls. See [reproduction commands](docs/deployment.md#dependency-runtime-checks--依赖运行时检查).
+
+容器 CI 现在会启动实际独立部署服务器，核对 Next.js 实际加载版本、九个产品路由及安全响应头、页面引用的 JavaScript/CSS、404 行为、非白名单远程图片拒绝，以及生产环境不提供开发 MCP 端点。测试仅使用禁网、只读容器内的回环网络，不发布宿主机端口。这些检查并未复现全部上游漏洞，也不能替代浏览器测试、漏洞审计或部署认证；复现命令见上述部署文档。
 
 ### Deployment / 部署
 
