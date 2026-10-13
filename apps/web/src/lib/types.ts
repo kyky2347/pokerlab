@@ -47,6 +47,21 @@ export type RangeResult = {
   hero_statistics: RangeStatistics;
   villain_statistics: RangeStatistics;
 };
+export type BayesianDistribution = {
+  method: string;
+  bin_count: number;
+  domain: [number, number];
+  bins: Array<{
+    left: number;
+    right: number;
+    prior_mass: number;
+    posterior_mass: number;
+    prior_density: number;
+    posterior_density: number;
+  }>;
+  density_units: string;
+  limitations: string;
+};
 export type BayesianResult = {
   prior: { alpha: number; beta: number; mean: number };
   posterior: {
@@ -57,6 +72,7 @@ export type BayesianResult = {
     credible_interval: [number, number];
   };
   density: Array<{ p: number; prior: number; posterior: number }>;
+  distribution?: BayesianDistribution;
   runtime_ms: number;
   experiment_id: string;
 };

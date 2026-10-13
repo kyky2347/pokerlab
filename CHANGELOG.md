@@ -4,6 +4,11 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Replace Bayesian point-sample plotting with versioned, API-computed bin-average densities on the full [0, 1] support. Preserve conjugate updates, legacy PDF fields, and historical records; disclose finite bin resolution and floating-point limits in English/Chinese. Use survival differences for upper-tail mass and inverse survival for high-coverage credible bounds.
+- Validate direct Bayesian inputs and require unambiguous JSON numeric types. Reject non-finite/unresolved results before storage, with no silent normalization. Add independent closed-form, tail/concentration, numerical fault, SQLite/PostgreSQL export, and UI geometry/locale regressions.
+- 贝叶斯图改用覆盖完整 [0,1] 的版本化后端区间平均密度，保留共轭更新、旧 PDF 字段与历史记录；双语说明分箱精度与浮点限制。上尾概率使用生存函数差，极端可信区间上界使用逆生存函数。
+- 校验贝叶斯领域输入并要求明确的 JSON 数值类型；非有限或无法可靠计算的结果在入库前拒绝，不强行归一化。新增闭式公式、尾部/窄峰、数值故障、SQLite/PostgreSQL 导出及前端几何/语言回归。
+
 - Patch Next.js and eslint-config-next from 16.3.6 to 16.3.8 for six newly reported framework advisories. Document actual exposure and retain the unresolved braces development-toolchain warning; preserve poker mathematics, seeded results, and automatic engine fallback.
 - Add 14 final-image standalone HTTP regressions: patched runtime resolution, nine product routes with security headers, shipped JS/CSS, 404s, remote-image rejection, and production MCP exclusion. CI runs them on isolated loopback in the network-disabled, read-only production image, with bounded startup/requests and automatic shutdown.
 - Next.js 与 eslint-config-next 从 16.3.6 升至 16.3.8，修复六项新增框架告警；记录实际影响边界，保留尚未解决的 braces 开发工具链告警，不改动扑克数学、种子结果或自动引擎回退。

@@ -4,8 +4,6 @@ import { useMutation } from "@tanstack/react-query";
 import { Bot, Clipboard, Download, FlaskConical, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
-  Area,
-  AreaChart,
   CartesianGrid,
   Line,
   LineChart,
@@ -25,6 +23,7 @@ import {
 } from "@/components/lab-ui";
 import { Button } from "@/components/ui/button";
 import { MonteCarloUncertainty } from "@/components/monte-carlo-uncertainty";
+import { BayesianDensity } from "@/components/bayesian-density";
 import {
   Card,
   CardContent,
@@ -196,7 +195,7 @@ export default function Research() {
               </CardHeader>
               <CardContent className="flex flex-col gap-7">
                 <Param
-                  label="Prior α"
+                  label={zh ? "先验 α" : "Prior α"}
                   value={alpha}
                   min={0.5}
                   max={20}
@@ -208,7 +207,7 @@ export default function Research() {
                   disabled={bayes.isPending}
                 />
                 <Param
-                  label="Prior β"
+                  label={zh ? "先验 β" : "Prior β"}
                   value={beta}
                   min={0.5}
                   max={20}
@@ -291,87 +290,16 @@ export default function Research() {
                   </CardTitle>
                   <CardDescription>
                     {zh
-                      ? "有限观察不会消除不确定性；阴影分布显示完整后验。"
-                      : "Finite observations do not erase uncertainty; the full posterior remains visible."}
+                      ? "从后端区间概率绘图，保留边界与窄峰的概率质量。"
+                      : "Built from API-computed bin probabilities, retaining mass at boundaries and narrow peaks."}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {bayes.data ? (
-                    <div className="h-[360px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart
-                          data={bayes.data.density}
-                          margin={{ top: 10, right: 10, left: -18, bottom: 0 }}
-                        >
-                          <defs>
-                            <linearGradient
-                              id="posteriorArea"
-                              x1="0"
-                              y1="0"
-                              x2="0"
-                              y2="1"
-                            >
-                              <stop
-                                offset="0"
-                                stopColor="var(--chart-2)"
-                                stopOpacity={0.4}
-                              />
-                              <stop
-                                offset="1"
-                                stopColor="var(--chart-2)"
-                                stopOpacity={0.02}
-                              />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid
-                            stroke="var(--border)"
-                            vertical={false}
-                          />
-                          <XAxis
-                            dataKey="p"
-                            tickFormatter={(v) => `${Math.round(v * 100)}%`}
-                            tick={{
-                              fill: "var(--muted-foreground)",
-                              fontSize: 10,
-                            }}
-                            axisLine={false}
-                            tickLine={false}
-                          />
-                          <YAxis
-                            tick={{
-                              fill: "var(--muted-foreground)",
-                              fontSize: 10,
-                            }}
-                            axisLine={false}
-                            tickLine={false}
-                          />
-                          <Tooltip
-                            contentStyle={{
-                              background: "var(--popover)",
-                              border: "1px solid var(--border)",
-                              borderRadius: 8,
-                            }}
-                            labelFormatter={(v) =>
-                              `p = ${(Number(v) * 100).toFixed(1)}%`
-                            }
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="prior"
-                            stroke="var(--chart-1)"
-                            dot={false}
-                            isAnimationActive={false}
-                          />
-                          <Area
-                            type="monotone"
-                            dataKey="posterior"
-                            stroke="var(--chart-2)"
-                            fill="url(#posteriorArea)"
-                            isAnimationActive={false}
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
+                    <BayesianDensity
+                      distribution={bayes.data.distribution}
+                      zh={zh}
+                    />
                   ) : null}
                 </CardContent>
               </Card>
@@ -379,22 +307,22 @@ export default function Research() {
                 <Card>
                   <CardHeader>
                     <CardTitle>
-                      Posterior Beta({bayes.data.posterior.alpha},{" "}
-                      {bayes.data.posterior.beta})
+                      {zh ? "后验" : "Posterior"} Beta(
+                      {bayes.data.posterior.alpha}, {bayes.data.posterior.beta})
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="grid gap-6 sm:grid-cols-3">
                     <Metric
-                      label="Prior mean"
+                      label={zh ? "先验均值" : "Prior mean"}
                       value={percent(bayes.data.prior.mean)}
                     />
                     <Metric
-                      label="Posterior mean"
+                      label={zh ? "后验均值" : "Posterior mean"}
                       value={percent(bayes.data.posterior.mean)}
                       accent="primary"
                     />
                     <Metric
-                      label="95% credible interval"
+                      label={`${percent(bayes.data.posterior.credible_level, 0)} ${zh ? "可信区间" : "credible interval"}`}
                       value={`${percent(bayes.data.posterior.credible_interval[0], 1)}–${percent(bayes.data.posterior.credible_interval[1], 1)}`}
                     />
                   </CardContent>
