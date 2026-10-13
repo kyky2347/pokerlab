@@ -9,6 +9,25 @@ from scipy.stats import beta as beta_distribution
 from scipy.stats import t as student_t
 
 
+def _beta_bin_masses(edges: np.ndarray, alpha: float, beta: float) -> np.ndarray:
+    cdf = beta_distribution.cdf(edges, alpha, beta)
+    survival = beta_distribution.sf(edges, alpha, beta)
+    # Use survival differences in the upper tail to avoid subtracting two
+    # CDF values rounded to 1. Do not normalize away a failed computation.
+    mass = np.where(cdf[:-1] <= 0.5, np.diff(cdf), -np.diff(survival))
+    if (
+        not np.all(np.isfinite(cdf))
+        or not np.all(np.isfinite(survival))
+        or not np.all(np.isfinite(mass))
+        or np.any(mass < 0)
+        or not math.isclose(math.fsum(mass), 1.0, rel_tol=0, abs_tol=1e-12)
+    ):
+        raise ValueError(
+            "Beta distribution cannot be resolved numerically / 无法可靠计算该 Beta 分布"
+        )
+    return mass
+
+
 def bayesian_update(
     alpha: float,
     beta: float,
@@ -16,11 +35,24 @@ def bayesian_update(
     passive_actions: int,
     credible_level: float,
 ) -> dict:
-    if alpha <= 0 or beta <= 0:
-        raise ValueError("Beta prior parameters must be positive")
-    if aggressive_actions < 0 or passive_actions < 0:
-        raise ValueError("Observed action counts cannot be negative")
-    if not 0.5 < credible_level < 1:
+    if any(
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not 0 < value <= 1000
+        or not math.isfinite(value)
+        for value in (alpha, beta)
+    ):
+        raise ValueError("Beta prior parameters must be finite and in (0, 1000]")
+    if any(
+        type(value) is not int or not 0 <= value <= 100_000
+        for value in (aggressive_actions, passive_actions)
+    ):
+        raise ValueError("Observed action counts must be integers between 0 and 100000")
+    if (
+        isinstance(credible_level, bool)
+        or not isinstance(credible_level, (int, float))
+        or not 0.5 < credible_level < 1
+    ):
         raise ValueError("Credible level must be between 0.5 and 1")
     posterior_alpha = alpha + aggressive_actions
     posterior_beta = beta + passive_actions
@@ -28,7 +60,23 @@ def bayesian_update(
     grid = np.linspace(0.001, 0.999, 120)
     prior = beta_distribution.pdf(grid, alpha, beta)
     posterior = beta_distribution.pdf(grid, posterior_alpha, posterior_beta)
-    interval = beta_distribution.ppf([tail, 1 - tail], posterior_alpha, posterior_beta).tolist()
+    interval = [
+        float(beta_distribution.ppf(tail, posterior_alpha, posterior_beta)),
+        float(beta_distribution.isf(tail, posterior_alpha, posterior_beta)),
+    ]
+    if (
+        not np.all(np.isfinite(prior))
+        or not np.all(np.isfinite(posterior))
+        or not all(math.isfinite(value) for value in interval)
+        or not 0 <= interval[0] <= interval[1] <= 1
+    ):
+        raise ValueError(
+            "Beta distribution cannot be resolved numerically / 无法可靠计算该 Beta 分布"
+        )
+    edges = np.linspace(0.0, 1.0, 201)
+    widths = np.diff(edges)
+    prior_mass = _beta_bin_masses(edges, alpha, beta)
+    posterior_mass = _beta_bin_masses(edges, posterior_alpha, posterior_beta)
     return {
         "prior": {"alpha": alpha, "beta": beta, "mean": alpha / (alpha + beta)},
         "posterior": {
@@ -42,6 +90,30 @@ def bayesian_update(
             {"p": float(x), "prior": float(y0), "posterior": float(y1)}
             for x, y0, y1 in zip(grid, prior, posterior, strict=True)
         ],
+        "distribution": {
+            "method": "beta-cdf-bins-v1",
+            "bin_count": 200,
+            "domain": [0.0, 1.0],
+            "bins": [
+                {
+                    "left": float(edges[index]),
+                    "right": float(edges[index + 1]),
+                    "prior_mass": float(prior_mass[index]),
+                    "posterior_mass": float(posterior_mass[index]),
+                    "prior_density": float(prior_mass[index] / widths[index]),
+                    "posterior_density": float(posterior_mass[index] / widths[index]),
+                }
+                for index in range(200)
+            ],
+            "density_units": "probability per unit p",
+            "limitations": (
+                "Bin-average densities, not pointwise PDF heights. Each bin spans 0.5 percentage "
+                "points; within-bin shape is unresolved. Very small tail probabilities may "
+                "underflow in floating point. Credible intervals use Beta quantiles independently. "
+                "Quantiles may round to 0 or 1; endpoint rounding is not certainty. "
+                "The legacy density field remains point-sampled and can miss narrow peaks."
+            ),
+        },
         "interpretation": "Beta prior updated by aggressive successes and passive opportunities.",
     }
 

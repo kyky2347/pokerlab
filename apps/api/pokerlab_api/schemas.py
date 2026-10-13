@@ -142,11 +142,11 @@ class SolverRequest(BaseModel):
 
 
 class BayesianRequest(BaseModel):
-    alpha: float = Field(default=2, gt=0, le=1000)
-    beta: float = Field(default=2, gt=0, le=1000)
-    aggressive_actions: int = Field(default=4, ge=0, le=100_000)
-    passive_actions: int = Field(default=3, ge=0, le=100_000)
-    credible_level: float = Field(default=0.95, gt=0.5, lt=1)
+    alpha: float = Field(default=2, gt=0, le=1000, strict=True)
+    beta: float = Field(default=2, gt=0, le=1000, strict=True)
+    aggressive_actions: int = Field(default=4, ge=0, le=100_000, strict=True)
+    passive_actions: int = Field(default=3, ge=0, le=100_000, strict=True)
+    credible_level: float = Field(default=0.95, gt=0.5, lt=1, strict=True)
 
 
 class AgentComparisonRequest(BaseModel):
