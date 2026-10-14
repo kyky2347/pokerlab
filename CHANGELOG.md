@@ -4,6 +4,11 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Reuse actual showdown results for repeated fixed-hand postflop runouts inside each Monte Carlo request. Bound caches to 990/44/1 entries on flop/turn/river; leave preflop uncached. Preserve every RNG draw, sample contribution, confidence interval, convergence point, export field and selected-engine behavior.
+- Add a frozen uncached reference, complete-output/draw-sequence parity checks, loss/tie/reversed-runout/concurrency/export regressions, and an output-checked benchmark with fresh request caches and uninstrumented timing. Document reproducible measurements and limits in English and Chinese.
+- 固定手牌蒙特卡洛在单次请求内复用重复补牌的真实摊牌结果；翻牌/转牌/河牌缓存最多 990/44/1 项，翻牌前不缓存。保留每次随机抽牌、样本贡献、置信区间、收敛点、导出字段及引擎选择行为。
+- 新增冻结的原算法参考、完整结果/抽牌序列核对，以及输牌/平局/反序补牌/并发/导出回归；基准每次使用全新请求缓存，计时不含评估计数包装器。中英文同步记录实测方法、复现命令与适用边界。
+
 - Replace Bayesian point-sample plotting with versioned, API-computed bin-average densities on the full [0, 1] support. Preserve conjugate updates, legacy PDF fields, and historical records; disclose finite bin resolution and floating-point limits in English/Chinese. Use survival differences for upper-tail mass and inverse survival for high-coverage credible bounds.
 - Validate direct Bayesian inputs and require unambiguous JSON numeric types. Reject non-finite/unresolved results before storage, with no silent normalization. Add independent closed-form, tail/concentration, numerical fault, SQLite/PostgreSQL export, and UI geometry/locale regressions.
 - 贝叶斯图改用覆盖完整 [0,1] 的版本化后端区间平均密度，保留共轭更新、旧 PDF 字段与历史记录；双语说明分箱精度与浮点限制。上尾概率使用生存函数差，极端可信区间上界使用逆生存函数。

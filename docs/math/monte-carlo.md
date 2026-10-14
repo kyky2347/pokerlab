@@ -16,6 +16,59 @@ Cards are sampled without replacement **within** a runout, but a runout can recu
 
 单次补牌内部**不放回**抽牌，但不同试验可重复同一补牌组合。随机接口接受整数种子；相同输入、种子和抽样器版本复现相同样本与估计。Rust 评估器和 Python 回退共用抽样流程；运行耗时不保证相同。
 
+## Request-local showdown reuse / 单次请求内的摊牌复用
+
+For fixed hands and a fixed postflop board, the showdown score is a deterministic
+function of the **unordered** remaining board cards. Reversed turn/river order
+does not change the final hand. Each simulation now evaluates a previously
+unseen runout once and reuses that score when the runout recurs, including losses
+(`0`) and ties (`0.5`). This is reuse of a real evaluator result, not a prediction
+or a precomputed equity table.
+
+固定双方手牌与翻牌后公共牌时，摊牌得分由剩余公共牌的**无序组合**确定；
+转牌与河牌顺序互换不改变最终牌力。每次模拟仅在首次遇到该补牌组合时评估，
+再次抽到时复用真实结果，包括输（`0`）与平（`0.5`）。这不是预测，也不使用
+预计算胜率表。
+
+**Every random draw still occurs, and every trial still contributes.** The RNG,
+deck order, draw sequence, accumulation order, sample count, variance, confidence
+bounds and convergence checkpoints are unchanged. Do not replace the sample
+denominator with the number of unique evaluated runouts, or deduplicate trials.
+Even if all possible runouts have been encountered, the result remains the same
+Monte Carlo estimate; it is not relabeled as exact enumeration.
+
+**每次随机抽牌照常发生，每次试验照常计入结果。** 随机数生成器、牌堆顺序、
+抽牌序列、累加顺序、样本数、方差、置信区间及收敛检查点均不变。分母仍是
+样本数，不能改成不同补牌的数量，也不能对试验去重。即使已遇到全部合法
+补牌，结果仍是原蒙特卡洛估计，不冒充精确枚举。
+
+The cache is created and discarded inside each request, never shared between
+hands, seeds, engines or concurrent calls. It stores at most 990 entries on the
+flop, 44 on the turn, and one on the river. Preflop sampling deliberately does
+not cache its much larger runout space. Sampling remains O(n); only repeated
+terminal evaluations are avoided. Exact equity, range equity and the automatic
+Rust-to-Python fallback are unchanged. Invalid or duplicate-card states are
+still rejected before sampling or cache use.
+
+缓存在单次请求内创建和释放，不跨手牌、种子、引擎或并发调用共享。翻牌最多
+990 项、转牌最多 44 项、河牌最多一项；翻牌前补牌空间较大，因此不缓存。
+抽样仍为 O(n)，仅省去重复终局评估。精确胜率、范围胜率和 Rust 到 Python 的
+自动回退保持不变；非法或重复牌仍在抽样及使用缓存前拒绝。
+
+Regression tests compare every non-runtime output against the frozen uncached
+loop, record complete seeded draw sequences, test reversed runouts and real split
+pots, and verify concurrent calls plus SQLite/PostgreSQL exports. Reproduce the
+output-checked timing comparison with:
+
+回归测试与冻结的原循环逐项核对除耗时外的全部输出，记录完整固定种子抽牌
+序列，覆盖顺序反转、真实平局、并发调用及 SQLite/PostgreSQL 导出。计时对照
+可通过以下命令复现；[实测结果及边界](../../research/benchmarks.md)单独记录：
+
+```bash
+cd apps/api
+uv run python -m pokerlab_api.monte_carlo_benchmark
+```
+
 ## Estimated standard error / 估计标准误
 
 For $n\ge2$, the unbiased sample variance and estimated standard error are:

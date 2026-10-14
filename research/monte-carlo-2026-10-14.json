@@ -1,0 +1,227 @@
+{
+  "environment": {
+    "platform": "macOS-26.5.2-arm64-arm-64bit",
+    "python": "3.12.13"
+  },
+  "workload": {
+    "hero": ["As", "Ks"],
+    "villain": ["Qh", "Qd"],
+    "samples": 10000,
+    "seed": 7,
+    "repeats": 3,
+    "warmup_runs_per_variant": 1,
+    "alternating_order": true,
+    "fresh_request_cache_per_run": true,
+    "evaluation_counts_from_warmup_only": true,
+    "cache_entry_bounds": {
+      "preflop": 0,
+      "flop": 990,
+      "turn": 44,
+      "river": 1
+    },
+    "baseline": "Uncached sampling loop frozen from 26720ac; same current evaluator",
+    "scope": "Validation, sampling, showdown, aggregation and result construction; no counting wrapper during timed runs. Excludes HTTP, database and UI. Preflop is an uncached control, not an optimized workload."
+  },
+  "results": [
+    {
+      "engine": "Python reference",
+      "stage": "preflop",
+      "board": [],
+      "times_ms": {
+        "uncached": [1003.1880419701338, 1000.4192078486085, 987.5903339125216],
+        "request_cache": [
+          995.0267500244081, 995.0230419635773, 998.9019581116736
+        ]
+      },
+      "median_ms": {
+        "uncached": 1000.4192078486085,
+        "request_cache": 995.0267500244081
+      },
+      "uncached_over_request_cache": 1.005419409904375,
+      "showdown_evaluations": {
+        "uncached": 10000,
+        "request_cache": 10000
+      },
+      "complete_result_match": true,
+      "result_sha256": "5449b4e9b2f866d80731fadfbb49599496b6471424fe42ac0ea69793f495f081",
+      "equity": 0.4591,
+      "ci_low": 0.44551898484259383,
+      "ci_high": 0.4726810151574062
+    },
+    {
+      "engine": "Python reference",
+      "stage": "flop",
+      "board": ["Js", "8s", "2c"],
+      "times_ms": {
+        "uncached": [973.2263749465346, 967.9463338106871, 975.9933329187334],
+        "request_cache": [
+          104.76354230195284, 104.4963332824409, 105.73012474924326
+        ]
+      },
+      "median_ms": {
+        "uncached": 973.2263749465346,
+        "request_cache": 104.76354230195284
+      },
+      "uncached_over_request_cache": 9.289742915922702,
+      "showdown_evaluations": {
+        "uncached": 10000,
+        "request_cache": 990
+      },
+      "complete_result_match": true,
+      "result_sha256": "c8021ae5c6332337717353ff0a4efc6b5d77988989cc87d8356b88079ebefd66",
+      "equity": 0.5392,
+      "ci_low": 0.5256189848425938,
+      "ci_high": 0.5527810151574062
+    },
+    {
+      "engine": "Python reference",
+      "stage": "turn",
+      "board": ["Js", "8s", "2c", "3d"],
+      "times_ms": {
+        "uncached": [953.486958052963, 968.191958963871, 953.4989157691598],
+        "request_cache": [
+          10.54129097610712, 10.468624997884035, 10.609209071844816
+        ]
+      },
+      "median_ms": {
+        "uncached": 953.4989157691598,
+        "request_cache": 10.54129097610712
+      },
+      "uncached_over_request_cache": 90.45371367988602,
+      "showdown_evaluations": {
+        "uncached": 10000,
+        "request_cache": 44
+      },
+      "complete_result_match": true,
+      "result_sha256": "1101919ddcd84fdaba81cfcda1c9d3a2cb5e0373856cbebe2da44ead4056ad3e",
+      "equity": 0.3431,
+      "ci_low": 0.32951898484259384,
+      "ci_high": 0.3566810151574062
+    },
+    {
+      "engine": "Python reference",
+      "stage": "river",
+      "board": ["Js", "8s", "2c", "3d", "4h"],
+      "times_ms": {
+        "uncached": [947.7636669762433, 958.6883750744164, 958.379624877125],
+        "request_cache": [
+          4.604999907314777, 4.626750014722347, 4.596792161464691
+        ]
+      },
+      "median_ms": {
+        "uncached": 958.379624877125,
+        "request_cache": 4.604999907314777
+      },
+      "uncached_over_request_cache": 208.11718657253263,
+      "showdown_evaluations": {
+        "uncached": 10000,
+        "request_cache": 1
+      },
+      "complete_result_match": true,
+      "result_sha256": "8e56f4ef170944fdd383b89a3bb86110c7d1b6034c815fd7d45e008343c8a2e4",
+      "equity": 0,
+      "ci_low": 0,
+      "ci_high": 0.013581015157406192
+    },
+    {
+      "engine": "Rust accelerated",
+      "stage": "preflop",
+      "board": [],
+      "times_ms": {
+        "uncached": [66.80608401075006, 66.69545779004693, 61.37770880013704],
+        "request_cache": [
+          62.89029074832797, 63.81504191085696, 63.40270861983299
+        ]
+      },
+      "median_ms": {
+        "uncached": 66.69545779004693,
+        "request_cache": 63.40270861983299
+      },
+      "uncached_over_request_cache": 1.0519338880292557,
+      "showdown_evaluations": {
+        "uncached": 10000,
+        "request_cache": 10000
+      },
+      "complete_result_match": true,
+      "result_sha256": "829c27743a0f656de648826f2c67e1adb6b8c6a3b91e3d04d3e9022530787783",
+      "equity": 0.4591,
+      "ci_low": 0.44551898484259383,
+      "ci_high": 0.4726810151574062
+    },
+    {
+      "engine": "Rust accelerated",
+      "stage": "flop",
+      "board": ["Js", "8s", "2c"],
+      "times_ms": {
+        "uncached": [49.115125089883804, 49.061999656260014, 49.0666669793427],
+        "request_cache": [
+          12.886624783277512, 12.913249898701906, 12.715416960418224
+        ]
+      },
+      "median_ms": {
+        "uncached": 49.0666669793427,
+        "request_cache": 12.886624783277512
+      },
+      "uncached_over_request_cache": 3.8075654257439595,
+      "showdown_evaluations": {
+        "uncached": 10000,
+        "request_cache": 990
+      },
+      "complete_result_match": true,
+      "result_sha256": "56d8d0dd862cf233297410ed1e56faef13767e257278ad817b97f25a9387502d",
+      "equity": 0.5392,
+      "ci_low": 0.5256189848425938,
+      "ci_high": 0.5527810151574062
+    },
+    {
+      "engine": "Rust accelerated",
+      "stage": "turn",
+      "board": ["Js", "8s", "2c", "3d"],
+      "times_ms": {
+        "uncached": [45.67224998027086, 45.68429198116064, 45.79466674476862],
+        "request_cache": [
+          6.5546659752726555, 6.617499981075525, 6.575917359441519
+        ]
+      },
+      "median_ms": {
+        "uncached": 45.68429198116064,
+        "request_cache": 6.575917359441519
+      },
+      "uncached_over_request_cache": 6.947211998576656,
+      "showdown_evaluations": {
+        "uncached": 10000,
+        "request_cache": 44
+      },
+      "complete_result_match": true,
+      "result_sha256": "81fd52803c03ba9577763158cd5662f031ea0083dfada076f1c53b3c1d2b0176",
+      "equity": 0.3431,
+      "ci_low": 0.32951898484259384,
+      "ci_high": 0.3566810151574062
+    },
+    {
+      "engine": "Rust accelerated",
+      "stage": "river",
+      "board": ["Js", "8s", "2c", "3d", "4h"],
+      "times_ms": {
+        "uncached": [44.7350419126451, 44.5704166777432, 44.54337479546666],
+        "request_cache": [
+          4.540667403489351, 4.549124743789434, 4.527457989752293
+        ]
+      },
+      "median_ms": {
+        "uncached": 44.5704166777432,
+        "request_cache": 4.540667403489351
+      },
+      "uncached_over_request_cache": 9.815829418268407,
+      "showdown_evaluations": {
+        "uncached": 10000,
+        "request_cache": 1
+      },
+      "complete_result_match": true,
+      "result_sha256": "e789ea4c120f6c5fed09f03f7621a5c1f353d1f46a59427a08397eb6915d33b7",
+      "equity": 0,
+      "ci_low": 0,
+      "ci_high": 0.013581015157406192
+    }
+  ]
+}
