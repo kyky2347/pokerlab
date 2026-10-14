@@ -240,6 +240,8 @@ Research regressions check policy thresholds, historical seeded values, an indep
 
 Fixed-hand Monte Carlo regressions enumerate multinomial outcome counts to check finite-sample coverage without random pass/fail thresholds. They also cover one-sample null moments, identical observations, historical seeded values on both engines, stored method metadata, bilingual explanations, and exact chart endpoints. / 固定手牌蒙特卡洛回归通过枚举多项分布结果次数验证有限样本覆盖率，不使用随机通过阈值；同时覆盖单样本空统计量、相同观察值、双引擎历史种子结果、方法元数据持久化、双语说明及图表端点。
 
+Fixed-hand postflop simulations now reuse previously evaluated runouts within each request (at most 990/44/1 cache entries on flop/turn/river; no preflop cache). Every random draw and sample contribution is preserved. Tests compare complete non-runtime results and draw sequences with the original loop, including reversed runouts, losses, real split pots, concurrent requests, and SQLite/PostgreSQL exports. [Why this preserves the estimate](docs/math/monte-carlo.md#request-local-showdown-reuse--单次请求内的摊牌复用). / 固定手牌的翻牌后模拟在单次请求内复用已评估补牌，缓存上限分别为翻牌 990 项、转牌 44 项、河牌 1 项，翻牌前不缓存；每次随机抽牌和样本贡献保持不变。测试完整核对原循环的非耗时结果与抽牌序列，覆盖反序补牌、输牌、真实平局、并发请求及 SQLite/PostgreSQL 导出。
+
 Turn-map regressions compare every legal turn with independent exact enumeration, verify split pots and player-swap symmetry, and cross-check Rust against Python. Both engines reject duplicate cards across players at the showdown boundary. / 转牌地图回归测试逐张对照独立精确枚举，验证平局、双方交换对称性及 Rust/Python 一致性；两个引擎均在摊牌入口拒绝双方持有重复牌的非法状态。
 
 Solver regressions compare full cached/uncached strategies and convergence traces on both engines. Real SQLite/PostgreSQL constraint failures verify rollback, original-error preservation, job status, and concurrency-slot release. / 求解回归测试在双引擎下对照缓存与未缓存的完整策略和收敛轨迹；通过真实 SQLite/PostgreSQL 约束错误验证回滚、原始异常保留、任务状态及并发名额释放。
@@ -257,6 +259,12 @@ These are reproducible observations from `pnpm benchmark`, not universal perform
 | CFR one-class iteration / 单类 CFR 迭代         | 34.10 iterations/s |
 
 Methodology and caveats / 方法与限制: [research/benchmarks.md](research/benchmarks.md)
+
+On 2026-10-14, a same-machine, three-repeat comparison of 10,000 fixed-hand flop samples measured **973.23 → 104.76 ms on Python (9.29×)** and **49.07 → 12.89 ms on Rust (3.81×)** by reusing repeated runout evaluations. Every draw and complete non-runtime result matched the original loop. Caches are request-local and bounded; preflop remains uncached. These are workload-specific core timings, not HTTP or whole-app speedups. [Full methodology, control workloads and raw measurements](research/benchmarks.md#fixed-hand-monte-carlo-showdown-reuse--固定手牌蒙特卡洛摊牌复用--2026-10-14).
+
+2026-10-14 同机三次对照中，10,000 次固定手牌翻牌模拟通过复用重复补牌评估，耗时中位数由 **Python 973.23 → 104.76 毫秒（9.29×）**、**Rust 49.07 → 12.89 毫秒（3.81×）**；每次抽牌及全部非耗时结果与原循环一致。缓存仅限单次请求且有固定上限，翻牌前不缓存。这些是指定核心工作负载的计时，不代表 HTTP 或整站加速。
+
+Reproduce / 复现：`cd apps/api && uv run python -m pokerlab_api.monte_carlo_benchmark`
 
 Weighted range sampling now builds its cumulative probability table once per request. In a separate 20-class, 5,000-sample benchmark on the same machine, median end-to-end time fell from 1,217 to 505 ms on Python and from 822 to 120 ms with Rust. The seeded result is unchanged. These are workload-specific measurements, not a promise for every calculation.
 

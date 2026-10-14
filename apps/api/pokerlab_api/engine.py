@@ -128,9 +128,22 @@ class PythonPokerEngine:
         sum_x2 = 0.0
         convergence: list[dict[str, float | int]] = []
         interval = max(1, samples // 80)
+        # Fixed hands + a fixed board give a deterministic outcome for each
+        # unordered runout. Cache only within this request, with at most
+        # 990 / 44 / 1 entries on flop / turn / river; never cache preflop.
+        outcomes: dict[tuple[Card, ...], float] | None = {} if missing <= 2 else None
         for index in range(1, samples + 1):
             runout = tuple(rng.sample(remaining, missing))
-            outcome = self.showdown(hero, villain, board + runout)
+            if outcomes is None:
+                outcome = self.showdown(hero, villain, board + runout)
+            else:
+                key = tuple(sorted(runout))
+                outcome = outcomes.get(key)
+                if outcome is None:  # A cached loss (0.0) is a valid result.
+                    outcome = self.showdown(hero, villain, board + runout)
+                    outcomes[key] = outcome
+            # Every draw still contributes, including repeated runouts. Preserve
+            # RNG calls, accumulation order, checkpoints and uncertainty exactly.
             counts.add(outcome)
             sum_x += outcome
             sum_x2 += outcome * outcome

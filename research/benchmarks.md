@@ -300,3 +300,77 @@ and load. The exact/Monte Carlo threshold and selected-engine fallback are uncha
 HTTP、数据库、原生内存和浏览器渲染。准备时间与空间仍为 $O(P)$，不代表整个
 应用或 CFR 加速，也不是常量内存采样；比率随硬件与负载变化。精确/蒙特卡洛
 阈值与引擎自动回退不变。
+
+## Fixed-hand Monte Carlo showdown reuse / 固定手牌蒙特卡洛摊牌复用 — 2026-10-14
+
+Environment: macOS 26.5.2 ARM64, CPython 3.12.13. Fixed hands `As Ks` versus
+`Qh Qd`, 10,000 samples, seed `7`. Boards are empty (preflop control), `Js 8s 2c`
+(flop), `Js 8s 2c 3d` (turn), and `Js 8s 2c 3d 4h` (river). The baseline is the
+uncached loop frozen from `26720ac`; both variants use the **same current
+showdown evaluator**. This compares orchestration algorithms, not separate
+releases or Python against Rust.
+
+环境为 macOS 26.5.2 ARM64、CPython 3.12.13。固定手牌 `As Ks` 对 `Qh Qd`，
+10,000 个样本，种子 `7`。公共牌依次为：空（翻牌前对照）、`Js 8s 2c`（翻牌）、
+`Js 8s 2c 3d`（转牌）、`Js 8s 2c 3d 4h`（河牌）。基线为从 `26720ac` 冻结的
+原无缓存循环；两种算法使用**相同的当前摊牌评估器**。这是调度算法对照，
+不是两个完整版本之间或 Python 对 Rust 的比较。
+
+Each variant has one counted warmup, followed by three **uninstrumented** timed
+runs in alternating order. Evaluation counters are removed during timing. Every
+call starts with a fresh request-local cache, including timed calls after warmup.
+Every non-runtime result must exactly match the original loop: probabilities,
+sample count, seed, moments, confidence metadata/bounds, engine label, and all
+convergence checkpoints. A mismatch aborts the benchmark. Timing includes state
+validation, sampling, evaluation, aggregation and result construction; it excludes
+engine initialization, output comparison, HTTP, database writes and the UI.
+
+每种算法先预热一次并统计评估次数，再交替顺序进行三次**不含计数包装器**的
+计时。每次调用都使用全新的请求缓存，预热不会替后续调用填充缓存。每次必须
+完整匹配原循环除耗时外的所有结果，包括概率、样本数、种子、统计量、置信区间
+元数据/边界、引擎名称及全部收敛检查点；不一致则立即失败。计时包含状态校验、
+抽样、评估、累加及结果构造，不含引擎初始化、结果对比、HTTP、数据库或界面。
+
+| Engine / 引擎    | Board / 阶段             | Uncached median / 原中位数 | Cached-path median / 新中位数 | Ratio / 加速比 | Measured evaluator calls / 实测评估次数 |
+| ---------------- | ------------------------ | -------------------------: | ----------------------------: | -------------: | --------------------------------------: |
+| Python reference | Preflop control / 翻牌前 |                1000.419 ms |                    995.027 ms |              — |                         10,000 → 10,000 |
+| Python reference | Flop / 翻牌              |                 973.226 ms |                    104.764 ms |          9.29× |                            10,000 → 990 |
+| Python reference | Turn / 转牌              |                 953.499 ms |                     10.541 ms |         90.45× |                             10,000 → 44 |
+| Python reference | River / 河牌             |                 958.380 ms |                      4.605 ms |        208.12× |                              10,000 → 1 |
+| Rust accelerated | Preflop control / 翻牌前 |                  66.695 ms |                     63.403 ms |              — |                         10,000 → 10,000 |
+| Rust accelerated | Flop / 翻牌              |                  49.067 ms |                     12.887 ms |          3.81× |                            10,000 → 990 |
+| Rust accelerated | Turn / 转牌              |                  45.684 ms |                      6.576 ms |          6.95× |                             10,000 → 44 |
+| Rust accelerated | River / 河牌             |                  44.570 ms |                      4.541 ms |          9.82× |                              10,000 → 1 |
+
+All individual timings, inputs, environment, actual engine names, measured call
+counts and complete-output SHA-256 checksums are retained in the
+[raw JSON record](monte-carlo-2026-10-14.json). The checksum includes the engine
+label, so matching mathematical results on different engines have different
+checksums. It complements, rather than replaces, the complete output comparison.
+
+全部逐次计时、输入、环境、实际引擎名称、评估次数和完整输出 SHA-256 都保留在
+上述原始 JSON 中。摘要包括引擎标签，因此不同引擎即使数学结果相同，摘要仍不同；
+摘要用于审计，不能代替完整结果对比。
+
+```bash
+cd apps/api
+uv run python -m pokerlab_api.monte_carlo_benchmark --repeats 3 --samples 10000 --seed 7
+```
+
+The Python reference always runs. Rust is included only when normal engine
+selection succeeds, and a fallback is never labeled Rust. Preflop is intentionally
+uncached: its small timing difference is a control observation, **not a claimed
+optimization**. Reuse saves repeated deterministic evaluations, not random draws
+or statistical samples. Cache bounds are 990/44/1 entries after flop/turn/river;
+sampling still takes O(n) work. The benefit depends on repetition rate, sample
+count, evaluator, hardware and load; low-sample workloads may see little benefit
+or lookup overhead. These measurements do not establish speedups for weighted
+ranges, CFR, exact enumeration or the whole application. See the
+[invariants and limitations](../docs/math/monte-carlo.md#request-local-showdown-reuse--单次请求内的摊牌复用).
+
+Python 参考引擎始终执行，Rust 仅在正常选择流程成功时加入；回退不会被标为 Rust。
+翻牌前故意不缓存，微小计时差只是对照观察，**不宣称为优化收益**。复用省去的是
+重复确定性评估，不是随机抽牌或统计样本。翻牌/转牌/河牌缓存上限为 990/44/1 项，
+抽样仍需 O(n) 工作量。收益取决于重复率、样本数、评估器、硬件和负载；低样本数
+场景可能收益很小或仅增加查找开销。本记录不代表加权范围、CFR、精确枚举或整站
+性能，数学不变量与限制见上述链接。
