@@ -61,7 +61,9 @@ class KuhnPokerCFR:
                 return 2.0 if higher else -2.0
 
         key = f"{cards[player]}{history}"
-        node = self.information_sets.setdefault(key, InformationSet(key, ("p", "b")))
+        node = self.information_sets.get(key)
+        if node is None:
+            node = self.information_sets[key] = InformationSet(key, ("p", "b"))
         strategy = node.strategy(p0 if player == 0 else p1)
         utilities = [0.0, 0.0]
         node_utility = 0.0
@@ -235,7 +237,9 @@ class RiverCFRSolver:
         cards = deal.oop.cards if player == 0 else deal.ip.cards
         actions = self._actions(history)
         key = f"{player}|{self._private_key(cards)}|{'/'.join(history)}"
-        node = self.information_sets.setdefault(key, InformationSet(key, actions))
+        node = self.information_sets.get(key)
+        if node is None:
+            node = self.information_sets[key] = InformationSet(key, actions)
         own_reach = p0 if player == 0 else p1
         strategy = node.strategy(own_reach * deal.chance_weight)
         utilities = [0.0] * len(actions)

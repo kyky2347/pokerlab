@@ -4,6 +4,11 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Allocate CFR information sets only on their first visit in both Kuhn and the finite river solver. Preserve all traversal, update order, state isolation, evaluator selection and solver limitations; avoid constructing throwaway nodes and arrays on revisits.
+- Add frozen-traversal complete-state regressions, continued-training/concurrency/durable API tests, and a reproducible benchmark with separate allocation counts and uninstrumented timings. Publish bilingual methods and raw measurements; recheck dependency advisories without suppressing the still-unpatched development-toolchain finding.
+- Kuhn 与有限河牌 CFR 的信息集仅在首次访问时创建，保留全部遍历、更新顺序、状态隔离、评估器选择与求解限制，避免后续访问重复构造并丢弃节点和数组。
+- 新增冻结遍历完整状态对照、连续训练/并发/持久化 API 回归及可复现基准；分配计数与无计数干扰的计时分开执行。同步发布中英文方法与原始实测，重新审计依赖并保留尚无修复版的开发工具链告警。
+
 - Reuse actual showdown results for repeated fixed-hand postflop runouts inside each Monte Carlo request. Bound caches to 990/44/1 entries on flop/turn/river; leave preflop uncached. Preserve every RNG draw, sample contribution, confidence interval, convergence point, export field and selected-engine behavior.
 - Add a frozen uncached reference, complete-output/draw-sequence parity checks, loss/tie/reversed-runout/concurrency/export regressions, and an output-checked benchmark with fresh request caches and uninstrumented timing. Document reproducible measurements and limits in English and Chinese.
 - 固定手牌蒙特卡洛在单次请求内复用重复补牌的真实摊牌结果；翻牌/转牌/河牌缓存最多 990/44/1 项，翻牌前不缓存。保留每次随机抽牌、样本贡献、置信区间、收敛点、导出字段及引擎选择行为。

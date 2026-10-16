@@ -19,6 +19,68 @@ These are observations, not promises. The CFR rate depends strongly on blocker-c
 
 以上是实测观察，而非性能承诺。CFR 速度强烈依赖合法范围组合对的数量及博弈树分支；Rust 加速终局牌力评估，调度与 CFR 仍由 Python 执行。
 
+## CFR information-set allocation / CFR 信息集分配 — 2026-10-16
+
+Environment: macOS 26.5.2 ARM64, CPython 3.12.13. Compare lazy node creation
+with the eager `_cfr` traversals frozen from `d8d4e15`. All other helpers,
+validation, showdown caching, evaluators and result generation use current code;
+this is an allocation-policy comparison, not two complete historical builds.
+Kuhn enumerates all six deals for 5,000 iterations. River uses board
+`Ah Kd 7s 3c 2d`, `AQo: 1` versus `KQo: 1`, pot/stack 100, bets 0.5/1 pot,
+61 legal deals and 500 iterations. Neither full-deal algorithm needs a seed.
+
+环境为 macOS 26.5.2 ARM64、CPython 3.12.13；对照按需构造与从 `d8d4e15`
+冻结的原 `_cfr` 遍历。其余辅助函数、校验、摊牌缓存、评估器与结果生成均使用
+当前代码；这是分配策略对照，不是两个完整历史版本对照。Kuhn 穷举六组手牌对，
+训练 5,000 轮；河牌公共牌为 `Ah Kd 7s 3c 2d`，范围 `AQo: 1` 对 `KQo: 1`，
+底池/筹码 100，下注为 0.5/1 倍底池，61 组合法手牌对、500 轮。两者完整枚举，
+不需要随机种子。
+
+Each variant has one instrumented warmup to count actual node constructions,
+then five uninstrumented timed runs with alternating order. Every run creates
+a fresh solver. Timing includes construction, range expansion, training and
+result generation, but excludes state comparison, HTTP, database and rendering.
+All non-runtime outputs and every node's insertion/action order, cumulative
+regrets, strategy sums and averages must match exactly; a mismatch fails the
+command. Output checksums supplement this complete comparison, not replace it.
+
+每种实现先预热一次并统计真实节点构造次数，再以交替顺序执行五次无计数包装器的
+计时。每次创建新求解器；计时包含构造、范围展开、训练及结果生成，不含状态核对、
+HTTP、数据库或渲染。全部非耗时输出及每个节点的插入/动作顺序、累计遗憾、策略
+和与平均策略必须精确一致，否则命令失败。输出摘要只是完整比较的补充。
+
+| Workload / 场景 | Eager constructions / 原构造数 | Lazy constructions / 新构造数 | Eager median / 原中位数 | Lazy median / 新中位数 | Ratio / 比率 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Kuhn, 5,000 iterations / 轮 | 120,000 | 12 | 127.75 ms | 103.36 ms | 1.24× |
+| River, Python evaluator / 河牌 Python 评估器 | 183,000 | 54 | 496.74 ms | 466.08 ms | 1.07× |
+| River, Rust evaluator / 河牌 Rust 评估器 | 183,000 | 54 | 496.30 ms | 467.13 ms | 1.06× |
+
+[Raw measurements / 原始实测](cfr-allocations-2026-10-16.json) include every
+individual timing, environment, input, count, checksum and complete public
+result. Python always runs; Rust appears only if normal engine selection can
+load it. Kuhn has no Hold'em evaluator; river CFR orchestration remains Python
+for both evaluators. Existing automatic fallback is unchanged.
+
+原始记录包含逐次耗时、环境、输入、计数、摘要与完整公开结果。Python 始终测试，
+Rust 仅在正常引擎选择能够加载时加入；Kuhn 不使用德州扑克评估器，河牌 CFR
+调度在两种评估器下均为 Python。现有自动回退不变。
+
+```bash
+cd apps/api
+uv run python -m pokerlab_api.cfr_allocation_benchmark
+```
+
+The structural reduction removes temporary nodes and two arrays per redundant
+construction; it does **not** reduce retained node count, prove a peak-memory
+reduction, improve convergence, or strengthen the finite solver's guarantees.
+Wall-clock gains vary with workload/hardware/load. The roughly 6% river gain
+is separate from prior showdown-cache gains; do not multiply historical ratios.
+See [CFR mathematics](../docs/math/cfr.md) and [solver limits](../docs/solver-limitations.md).
+
+确定减少的是临时节点及每次冗余构造的两组数组，**不是**常驻节点数量，也不能据此
+宣称内存峰值下降、收敛改善或有限求解器保证增强。耗时收益随场景、硬件和负载变化。
+河牌约 6% 的耗时改善独立于此前摊牌缓存优化，不能把历史比率直接相乘。
+
 ## Weighted range sampling / 加权范围采样 — 2026-09-18
 
 On macOS 26.5.2 ARM64, CPython 3.12.13, three sequential runs per engine. The workload is identical before and after optimization: 20 hand classes per player, board `2c 7d 9h`, seed `7`, 5,000 samples, 12,270 blocker-compatible pairs. Wall time includes expansion, sampling, terminal evaluation, and result statistics. No API, network, or database overhead is included.

@@ -20,6 +20,16 @@ Include the affected commit, reproduction steps, impact, and any suggested mitig
 
 ### Known dependency advisories / 已知依赖告警
 
+Rechecked on **2026-10-16**: the full npm audit and GitHub Dependabot still
+report only the `braces` finding below, with no published fixed version;
+`braces@3.0.4` remains unavailable. The production npm audit and Python package
+audit report no known advisories. The Python audit skips this repository's two
+local packages; these results are not a guarantee that the code is vulnerability-free.
+
+**2026-10-16 复核**：完整 npm 审计与 GitHub Dependabot 仍仅报告下述 `braces`
+告警，尚无正式修复版本，`braces@3.0.4` 仍不可用。生产 npm 依赖与 Python 包
+审计未报告已知告警；Python 审计跳过本仓库的两个本地包，这不代表代码绝无漏洞。
+
 As of **2026-10-10**, `pnpm audit` reports [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm): deeply nested brace patterns can exhaust the stack in `braces <=3.0.3`. In this lockfile it is reached through the **ESLint development toolchain** (`eslint-config-next → @next/eslint-plugin-next → fast-glob → micromatch → braces`). The public advisory lists no patched release, and the npm registry still lists 3.0.3 as latest. Although the audit output suggests `>=3.0.4`, that version was not available at verification time.
 
 截至 **2026-10-10**，`pnpm audit` 报告上述高危告警：`braces <=3.0.3` 处理深层嵌套模式时可能耗尽调用栈。本锁文件中的依赖路径来自 **ESLint 开发工具链**（路径如上）。官方公告尚无修复版，npm 最新版仍为 3.0.3；审计输出虽然提示 `>=3.0.4`，但核实时该版本并不存在。

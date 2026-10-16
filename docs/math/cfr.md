@@ -45,6 +45,42 @@ strategy. Zero representable chance mass is rejected before normalization.
 
 回归测试在双引擎下对照未缓存版本的完整策略及每个收敛检查点，覆盖加权范围与平局。非法评估结果不会进入策略计算；范围权重乘积下溢而使总质量为零时，在归一化之前拒绝该输入。
 
+## Information-set allocation / 信息集分配
+
+Each solver creates an information-set node only on its first visit. Subsequent
+visits reuse that node's existing regret and strategy arrays; they still compute
+the current strategy and update every value in the original order. Python's
+eager `setdefault(key, InformationSet(...))` previously constructed and discarded
+a fresh node even when the key already existed. Avoiding that default evaluation
+does not skip any deal, branch, iteration, or arithmetic operation.
+
+每个求解器只在首次访问时创建信息集节点。后续访问复用已有的遗憾与策略数组，
+仍重新计算当前策略，并按原顺序更新全部数值。此前的 `setdefault` 默认值表达式
+会在键已存在时仍创建并丢弃新节点；移除这一重复构造不跳过任何手牌对、分支、
+迭代或数学运算。
+
+Kuhn has 24 nonterminal visits per iteration and 12 distinct information sets;
+the river tree has six nonterminal visits per deal per iteration. Construction
+count is now the number of distinct visited information sets, rather than the
+number of visits. Retained state and asymptotic memory are unchanged; only
+temporary object/array churn is removed. No nodes or mutable arrays are shared
+across solver jobs. Continuing an existing solver retains its prior training.
+
+Kuhn 每轮访问 24 个非终局节点，只有 12 个不同的信息集；河牌树每组手牌对每轮
+有六次非终局访问。构造次数现在等于访问过的不同信息集数量，而不是总访问次数。
+常驻状态与渐近内存复杂度不变，只消除临时对象和数组的反复分配。不同求解任务
+不共享节点或可变数组；同一求解器继续训练时保留此前的累计状态。
+
+Tests compare full outputs, node insertion/action order, cumulative regrets,
+strategy sums and averages with the original eager traversals, including weighted
+ranges, stack-capped bets, split pots, both engines and continued training.
+The [reproducible benchmark](../../research/benchmarks.md#cfr-information-set-allocation--cfr-信息集分配--2026-10-16)
+checks the same complete state before reporting any timing.
+
+测试对照原来的重复构造遍历，逐项核对完整输出、节点插入/动作顺序、累计遗憾、
+策略和与平均策略，覆盖加权范围、筹码上限、平局、双引擎及连续训练。
+可复现基准也在报告耗时前核对相同的完整状态。
+
 ## Kuhn fixture / Kuhn 验证
 
 The implementation first solves canonical three-card Kuhn Poker by enumerating all six ordered deals. Its estimated player-zero value must approach the known value $-1/18$ and every information-set strategy must normalize to one before the Hold'em solver is accepted.
