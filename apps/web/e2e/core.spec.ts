@@ -8,7 +8,11 @@ test("home and primary labs form a working journey", async ({ page }) => {
 
   await page.getByRole("link", { name: "Open Equity Lab" }).click();
   await page.getByRole("button", { name: "Calculate equity" }).click();
-  await expect(page.getByText("Exact equity")).toBeVisible();
+  // Wait for both async results: the chart note also mentions "exact equity".
+  await expect(
+    page.getByText(/^Shading joins the checkpoint intervals\./),
+  ).toBeVisible();
+  await expect(page.getByText("Exact equity", { exact: true })).toBeVisible();
   await expect(page.getByText("Conditional turn explorer")).toBeVisible();
 
   await page.getByRole("button", { name: "A♥" }).click();

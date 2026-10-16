@@ -4,6 +4,9 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Stabilize the equity browser journey by waiting for the async chart note and matching the result label exactly. Prevent a strict-locator collision when both texts mention "exact equity"; no product copy, calculations, retries or timeouts are changed.
+- 修复胜率浏览器流程的偶发定位冲突：等待异步图表说明后精确匹配结果标签，避免两段文字同时包含“exact equity”时严格定位失败；不修改产品文案、计算、重试次数或超时。
+
 - Allocate CFR information sets only on their first visit in both Kuhn and the finite river solver. Preserve all traversal, update order, state isolation, evaluator selection and solver limitations; avoid constructing throwaway nodes and arrays on revisits.
 - Add frozen-traversal complete-state regressions, continued-training/concurrency/durable API tests, and a reproducible benchmark with separate allocation counts and uninstrumented timings. Publish bilingual methods and raw measurements; recheck dependency advisories without suppressing the still-unpatched development-toolchain finding.
 - Kuhn 与有限河牌 CFR 的信息集仅在首次访问时创建，保留全部遍历、更新顺序、状态隔离、评估器选择与求解限制，避免后续访问重复构造并丢弃节点和数组。
