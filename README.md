@@ -246,6 +246,8 @@ Turn-map regressions compare every legal turn with independent exact enumeration
 
 Solver regressions compare full cached/uncached strategies and convergence traces on both engines. Real SQLite/PostgreSQL constraint failures verify rollback, original-error preservation, job status, and concurrency-slot release. / 求解回归测试在双引擎下对照缓存与未缓存的完整策略和收敛轨迹；通过真实 SQLite/PostgreSQL 约束错误验证回滚、原始异常保留、任务状态及并发名额释放。
 
+CFR allocation regressions additionally compare every information set's action order, cumulative regrets, strategy sums and average strategy with frozen eager-allocation traversals. Continued training, concurrent job isolation and durable API results are covered. / CFR 分配回归进一步对照冻结的原遍历算法，逐个信息集核对动作顺序、累计遗憾、策略累加与平均策略，并覆盖连续训练、并发任务隔离及 API 结果持久化。
+
 ## Measured benchmark / 实测基准
 
 These are reproducible observations from `pnpm benchmark`, not universal performance claims. Recorded on macOS ARM with Python 3.12 using the Python reference path:
@@ -259,6 +261,12 @@ These are reproducible observations from `pnpm benchmark`, not universal perform
 | CFR one-class iteration / 单类 CFR 迭代         | 34.10 iterations/s |
 
 Methodology and caveats / 方法与限制: [research/benchmarks.md](research/benchmarks.md)
+
+On 2026-10-16, lazy CFR node creation reduced information-set constructions from **183,000 to 54** in a 61-deal, 500-iteration river job. Five-repeat medians improved from **496.74 to 466.08 ms (Python evaluator)** and **496.30 to 467.13 ms (Rust evaluator)**; CFR traversal itself remains Python. The 5,000-iteration Kuhn fixture improved from **127.75 to 103.36 ms**. Complete results and every node's accumulated state match the original traversal exactly. These are modest workload-specific timing gains, not reduced retained memory or stronger solving guarantees. [Method and raw evidence](research/benchmarks.md#cfr-information-set-allocation--cfr-信息集分配--2026-10-16).
+
+2026-10-16，CFR 节点按需创建使 61 组手牌对、500 轮河牌求解的信息集构造次数从 **183,000 降至 54**。同机五次耗时中位数由 **496.74 降至 466.08 毫秒（Python 评估器）**、**496.30 降至 467.13 毫秒（Rust 评估器）**；CFR 遍历本身仍为 Python。5,000 轮 Kuhn 验证由 **127.75 降至 103.36 毫秒**。完整输出和全部节点累计状态与原遍历精确一致。这是特定场景下的适度提速，不代表常驻内存减少或求解保证增强。
+
+Reproduce / 复现：`cd apps/api && uv run python -m pokerlab_api.cfr_allocation_benchmark`
 
 On 2026-10-14, a same-machine, three-repeat comparison of 10,000 fixed-hand flop samples measured **973.23 → 104.76 ms on Python (9.29×)** and **49.07 → 12.89 ms on Rust (3.81×)** by reusing repeated runout evaluations. Every draw and complete non-runtime result matched the original loop. Caches are request-local and bounded; preflop remains uncached. These are workload-specific core timings, not HTTP or whole-app speedups. [Full methodology, control workloads and raw measurements](research/benchmarks.md#fixed-hand-monte-carlo-showdown-reuse--固定手牌蒙特卡洛摊牌复用--2026-10-14).
 
