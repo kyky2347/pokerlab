@@ -8,9 +8,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   existsSync,
+  fstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readSync,
   readdirSync,
   rmSync,
   statSync,
@@ -362,8 +364,9 @@ test(
     await once(existing, "listening");
     t.after(() => new Promise((resolve) => existing.close(resolve)));
     const log = join(root, "collision.log");
-    const descriptor = openSync(log, "w");
+    const descriptor = openSync(log, "wx+", 0o600);
     let result;
+    let output;
     try {
       result = await runCommand(
         session,
@@ -376,11 +379,18 @@ test(
         ],
         { stdio: ["ignore", descriptor, descriptor] },
       );
+      // Read the same open file, never re-resolve a path after the child exits.
+      const bytes = Buffer.alloc(fstatSync(descriptor).size);
+      assert.equal(
+        readSync(descriptor, bytes, 0, bytes.length, 0),
+        bytes.length,
+      );
+      output = bytes.toString("utf8");
     } finally {
       closeSync(descriptor);
     }
     assert.equal(result, 1);
-    assert.match(readFileSync(log, "utf8"), /already used/);
+    assert.match(output, /already used/);
     assert.ok(requests > 0);
     assert.equal(existing.listening, true);
     assert.equal(existsSync(session.directory), false);
