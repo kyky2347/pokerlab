@@ -38,6 +38,8 @@ docker compose --env-file .pokerlab.env config --quiet # after ./pokerlab initia
 
 `make check` 包含使用工具替身的启动器回归测试，不会停止真实容器。API 测试使用临时数据库，不会写入你的实验台账。首次启动前检查 Compose 时，请按[部署说明](docs/deployment.md)手动配置 `.env`，并改用 `--env-file .env`。
 
+Browser tests also use isolated data and ports. `pnpm --filter web test:e2e` creates a private frontend snapshot, starts its own API/web servers and removes temporary data on completion; reports remain available per run. Do not invoke `playwright test` directly or point the suite at a shared deployment. See [browser verification](docs/browser-testing.md) for browser installation, filters, interruption behavior and limitations. / 浏览器测试同样隔离数据与端口；该命令创建私有前端快照、自行启动 API/Web，并在结束后移除临时数据，按次保留报告。不要直接调用 `playwright test`，也不要将测试指向共享部署；浏览器安装、筛选、中断行为及限制详见[验收指南](docs/browser-testing.md)。
+
 For visual changes, inspect desktop and mobile layouts in a real browser. For core changes, compare the Rust path against the Python reference and include a deterministic regression case.
 
 视觉变更需要在真实浏览器中检查桌面端和移动端；核心算法变更需要与 Python 参考实现交叉验证，并加入确定性的回归样例。

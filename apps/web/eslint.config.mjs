@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated browser evidence is retained across isolated test runs.
+    "playwright-report/**",
+    "test-results/**",
   ]),
 ]);
 

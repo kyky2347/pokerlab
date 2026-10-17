@@ -4,6 +4,11 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Isolate browser verification with automatically selected loopback ports, a fresh SQLite ledger, a private frontend source/build snapshot and per-run reports. Reject reuse of occupied services and direct unscoped Playwright runs; preserve the existing one-command workflow and real engine behavior.
+- Add harness regressions for environment overrides, cleanup, malformed sessions, port collisions, process failures and interruption. Keep reports while removing only the current run's temporary data; document setup, debugging and crash-cleanup limits in English and Chinese.
+- 浏览器验收改用自动回环端口、全新 SQLite 台账、私有前端源码/构建快照及按次报告；拒绝复用已占用服务和无隔离会话的直接运行，保留原有一条命令及真实引擎行为。
+- 新增环境覆盖、清理、非法会话、端口冲突、进程失败与中断回归；保留报告，仅移除本次运行的临时数据，并以中英文说明安装、调试与崩溃清理边界。
+
 - Stabilize the equity browser journey by waiting for the async chart note and matching the result label exactly. Prevent a strict-locator collision when both texts mention "exact equity"; no product copy, calculations, retries or timeouts are changed.
 - 修复胜率浏览器流程的偶发定位冲突：等待异步图表说明后精确匹配结果标签，避免两段文字同时包含“exact equity”时严格定位失败；不修改产品文案、计算、重试次数或超时。
 

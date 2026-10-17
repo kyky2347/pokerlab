@@ -198,7 +198,7 @@ Copy `.env.example` for native development when defaults are not suitable. For m
 
 ## Production checklist / 生产检查清单
 
-- Run `make check` and `pnpm --filter web test:e2e` against the release commit. / 对发布提交运行完整质量门禁与浏览器测试。
+- Run `make check` and `pnpm --filter web test:e2e` against the release commit. Browser tests create an isolated local stack; they do not target your live deployment. See [isolation details](browser-testing.md). / 对发布提交运行完整质量门禁与浏览器测试；浏览器测试创建独立本地环境，不会指向正在使用的部署，详见[隔离说明](browser-testing.md)。
 - Terminate TLS at a trusted reverse proxy or platform edge. / 在可信反向代理或平台边缘终止 TLS。
 - Put every API route behind authentication and authorization before any shared/public deployment; PokerLab does not provide built-in accounts, and CORS is not authentication. Keep the default loopback bindings, or use a private container network to reach a trusted gateway. / 共享或公开部署前，必须为全部 API 路由配置身份认证与授权；PokerLab 没有内置账号，CORS 不是身份认证。保持默认回环绑定，或通过私有容器网络连接可信网关。
 - Restrict `CORS_ORIGINS` to the deployed web origin. / 将 CORS 限制到实际 Web 域名。

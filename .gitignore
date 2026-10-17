@@ -17,3 +17,4 @@ apps/api/pokerlab.db
 apps/web/test-results/
 apps/web/playwright-report/
 .playwright-cli/
+/.pokerlab-e2e-*/
