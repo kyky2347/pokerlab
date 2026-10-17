@@ -48,6 +48,7 @@ jobs:
       - run: pnpm --filter web typecheck
       - run: pnpm --filter web test
       - run: pnpm test:dependencies
+      - run: pnpm test:e2e-harness
       - run: pnpm --filter web format:check
       - run: pnpm --filter web exec prettier --check ../../scripts
       - run: pnpm --filter web build

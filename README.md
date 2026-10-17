@@ -216,6 +216,8 @@ make check
 pnpm --filter web test:e2e
 ```
 
+Browser tests now launch an isolated local stack: automatic loopback ports, a fresh SQLite database, a private frontend source/build snapshot, and per-run reports. They do not reuse services already running on 3000/8000 or inherit your database/API URL. The runner cleans up its temporary data after completion or handled interruption; existing development builds and your ledger remain separate. [Setup, debugging and limits](docs/browser-testing.md). / 浏览器测试现在启动独立本地环境：自动回环端口、全新 SQLite 数据库、私有前端源码/构建快照及独立报告。不复用 3000/8000 上已有服务，也不继承个人数据库/API 地址；完成或正常处理中断后清理临时数据，开发构建与个人台账保持独立。[安装、调试与边界](docs/browser-testing.md)。
+
 The suite covers evaluator ordering, wheel straights, duplicate rejection, exact-equity symmetry, deterministic seeds, Monte Carlo statistical tolerance, weighted blockers, canonical range aliases, Rust/Python cross-checks, EV geometry, CFR strategy normalization, Kuhn convergence, structured API errors, component behavior, desktop workflows, and mobile overflow. Launcher regression tests cover concurrent credential initialization, private permissions, non-destructive error handling, and image reuse; API tests use isolated temporary databases.
 
 测试覆盖牌力排序、A2345 顺子、重复牌拒绝、精确胜率对称性、固定种子、蒙特卡洛统计容差、加权阻断、范围别名、Rust/Python 交叉验证、EV 几何、CFR 策略归一化、Kuhn 收敛、结构化 API 错误、组件交互、桌面流程与移动端溢出。启动器回归测试覆盖并发凭据初始化、私有权限、无破坏性报错与镜像复用；API 测试使用隔离的临时数据库。

@@ -7,6 +7,8 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 
 FROM dependencies AS builder
 COPY apps/web ./apps/web
+# Type-check Playwright's configuration against the same isolated runner as CI.
+COPY scripts/e2e ./scripts/e2e
 ARG NEXT_PUBLIC_API_URL=http://localhost:8000
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_TELEMETRY_DISABLED=1
