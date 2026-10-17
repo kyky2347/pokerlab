@@ -156,6 +156,22 @@ test("partial setup failure removes only the newly created snapshot", async (t) 
   );
 });
 
+test("a fresh checkout does not require the optional public directory", async (t) => {
+  const root = fixture(t);
+  rmSync(join(root, "apps/web/public"), { recursive: true });
+  const session = await createSession(root);
+  t.after(session.cleanup);
+  assert.equal(existsSync(join(session.webDirectory, "public")), false);
+  assert.equal(
+    readFileSync(join(session.webDirectory, "src/page.tsx"), "utf8"),
+    "source snapshot",
+  );
+  assert.equal(
+    readSession(sessionEnvironment(session), root).directory,
+    session.directory,
+  );
+});
+
 test(
   "ambiguous SQLite URL paths fail closed without leaving test data",
   { skip: process.platform === "win32" },

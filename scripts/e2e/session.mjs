@@ -1,6 +1,7 @@
 import { createServer } from "node:net";
 import {
   cpSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -82,6 +83,8 @@ export async function createSession(root = repositoryRoot) {
     mkdirSync(session.webDirectory);
     const web = join(root, "apps/web");
     for (const name of sourceFiles) {
+      // Next's public/ directory is optional; Git omits an empty one on clone.
+      if (name === "public" && !existsSync(join(web, name))) continue;
       cpSync(join(web, name), join(session.webDirectory, name), {
         recursive: true,
       });

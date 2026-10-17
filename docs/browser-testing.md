@@ -35,13 +35,16 @@ interpret it as a query delimiter; ordinary spaces in paths are supported.
 
 The runner copies an explicit source allowlist; it does not copy the web root's
 `.env` files, existing build output or developer database. Installed Node packages
-are linked, not reinstalled. The API uses the existing Python environment and
+are linked, not reinstalled. The optional `public/` directory is copied only when
+present, so fresh clones do not require an untracked empty directory.
+The API uses the existing Python environment and
 source checkout, with an explicit temporary database URL. Normal Rust selection
 and automatic Python fallback are unchanged.
 
 运行器只复制明确列出的源码目录/配置，不复制前端根目录的 `.env`、已有构建产物
 或开发数据库。Node 依赖通过链接复用，不重复安装；API 使用已有 Python 环境
 与源码，但数据库明确指向临时文件。Rust 选择与 Python 自动回退保持不变。
+可选的 `public/` 目录仅在存在时复制，新克隆无需依赖未被 Git 保存的空目录。
 
 This is **test-data and generated-file isolation, not a security sandbox**.
 Tests still execute repository code with your account's permissions. Do not run
