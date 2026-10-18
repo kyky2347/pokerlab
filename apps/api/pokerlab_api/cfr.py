@@ -8,6 +8,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from itertools import permutations
 
+from .controls import validate_positive_integer
 from .domain import Card, showdown
 from .ranges import WeightedCombo, combo_class, expand_weighted_range
 
@@ -85,6 +86,7 @@ class KuhnPokerCFR:
         return node_utility
 
     def train(self, iterations: int = 20_000) -> dict:
+        validate_positive_integer(iterations, "Solver iterations")
         utility = 0.0
         deals = tuple(permutations((1, 2, 3), 2))
         for _ in range(iterations):
@@ -278,8 +280,7 @@ class RiverCFRSolver:
         return result
 
     def solve(self, iterations: int) -> dict:
-        if isinstance(iterations, bool) or not isinstance(iterations, int) or iterations < 1:
-            raise ValueError("Solver iterations must be a positive integer")
+        validate_positive_integer(iterations, "Solver iterations")
         started = time.perf_counter()
         convergence: list[dict[str, float | int]] = []
         checkpoint = max(10, iterations // 40)

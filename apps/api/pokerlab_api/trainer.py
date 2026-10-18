@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
+from .controls import validate_seed
 from .database import TrainerAnswer, TrainerQuestion
 from .domain import Card
 from .engine import PokerEngine
@@ -51,6 +52,7 @@ def weaknesses(db: Session) -> list[dict[str, float | str | int]]:
 
 
 def create_question(seed: int, engine: PokerEngine, db: Session) -> dict:
+    validate_seed(seed)
     stats = {row["category"]: row["average_error"] for row in weaknesses(db)}
     weights = [1.0 + 10.0 * stats.get(scenario.category, 0.0) for scenario in SCENARIOS]
     rng = random.Random(seed)
