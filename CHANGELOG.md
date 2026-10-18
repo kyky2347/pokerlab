@@ -4,6 +4,13 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Reject boolean, string and floating-point seeds/counts before computation or persistence; share strict seed/count guards across direct Python engines, range equity, training, research and CFR. Preserve valid integer results, defaults, engine fallback and historical records.
+- Add SQLite/PostgreSQL no-side-effect and exact 64-bit round-trip tests, direct-call and solver-state regressions, and bilingual OpenAPI/compatibility documentation. No schema migration or higher workload limit.
+- Preserve the exact signed 64-bit seed maximum in published OpenAPI JSON instead of a rounded floating-point bound.
+- 种子/次数拒绝布尔值、字符串和浮点数，在计算或入库前完成校验；Python 引擎、范围胜率、训练、研究与 CFR 统一使用严格校验，保留合法整数结果、默认值、引擎回退及历史记录。
+- 新增 SQLite/PostgreSQL 无副作用和精确 64 位往返、直接调用与求解状态回归，并同步双语 OpenAPI/兼容性说明；不迁移数据库或提高工作量限制。
+- 修复公开 OpenAPI JSON 中种子上限的浮点舍入，保留精确有符号 64 位整数边界。
+
 - Isolate browser verification with automatically selected loopback ports, a fresh SQLite ledger, a private frontend source/build snapshot and per-run reports. Reject reuse of occupied services and direct unscoped Playwright runs; preserve the existing one-command workflow and real engine behavior.
 - Add harness regressions for environment overrides, cleanup, malformed sessions, port collisions, process failures and interruption. Keep reports while removing only the current run's temporary data; document setup, debugging and crash-cleanup limits in English and Chinese.
 - 浏览器验收改用自动回环端口、全新 SQLite 台账、私有前端源码/构建快照及按次报告；拒绝复用已占用服务和无隔离会话的直接运行，保留原有一条命令及真实引擎行为。

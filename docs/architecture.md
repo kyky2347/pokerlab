@@ -34,6 +34,8 @@ Every normal Rust test run exhaustively compares **all 2,598,960 physical five-c
 
 ## Failure behavior / 故障行为
 
+Experiment seeds and run counts are strict integer controls at both the HTTP and direct Python boundaries. Invalid values are rejected before random draws, pair-table construction, trainer history access or solver updates. HTTP schema validation also precedes calculation/job insertion; defaults and valid seeded outputs are unchanged. See [the input and precision contract](experiment-controls.md). / 实验种子与运行次数在 HTTP 和直接 Python 边界均严格要求整数，非法值在随机抽样、组合表构建、训练历史访问及求解状态更新前拒绝；HTTP 模型校验也先于计算/任务写入。默认值与合法种子输出不变，详见[输入与精度契约](experiment-controls.md)。
+
 The API tries `RustPokerEngine` at startup. Import or runtime failure selects `PythonPokerEngine`, records that choice in diagnostics, and never substitutes fabricated results. `DATABASE_URL` defaults to SQLite; any remote Postgres URL remains optional.
 
 API 启动时优先加载 `RustPokerEngine`。若导入或运行失败，则显式切换到 `PythonPokerEngine` 并在诊断页展示；绝不伪造结果。`DATABASE_URL` 默认使用 SQLite，远程 Postgres 完全可选。

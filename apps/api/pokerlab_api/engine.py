@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from itertools import combinations
 from typing import Protocol
 
+from .controls import validate_positive_integer, validate_seed
 from .domain import Card, full_deck, showdown, validate_holdem_state, validate_showdown_state
 from .uncertainty import (
     CONFIDENCE_LEVEL,
@@ -115,9 +116,9 @@ class PythonPokerEngine:
         samples: int,
         seed: int,
     ) -> dict:
+        validate_positive_integer(samples, "Sample count")
+        validate_seed(seed)
         validate_holdem_state(hero, villain, board)
-        if samples < 1:
-            raise ValueError("Sample count must be positive")
         started = time.perf_counter()
         rng = random.Random(seed)
         known = set(hero + villain + board)

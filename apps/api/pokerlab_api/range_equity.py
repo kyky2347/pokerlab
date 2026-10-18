@@ -7,6 +7,7 @@ from array import array
 from collections.abc import Callable, Sequence
 from itertools import accumulate, combinations
 
+from .controls import validate_positive_integer, validate_seed
 from .domain import SUIT_CHARS, Card, full_deck, showdown
 from .ranges import WeightedCombo, expand_weighted_range, range_statistics
 
@@ -45,12 +46,12 @@ def calculate_range_equity(
     samples: int,
     evaluator: Callable[[tuple[Card, Card], tuple[Card, Card], tuple[Card, ...]], float] = showdown,
 ) -> dict:
+    validate_positive_integer(samples, "Sample count")
+    validate_seed(seed)
     if len(board) not in {0, 3, 4, 5}:
         raise ValueError("Board must contain 0, 3, 4, or 5 cards")
     if len(set(board)) != len(board):
         raise ValueError("Duplicate cards are not permitted")
-    if samples < 1:
-        raise ValueError("Sample count must be positive")
     started = time.perf_counter()
     hero_combos = expand_weighted_range(hero_weights, board)
     villain_combos = expand_weighted_range(villain_weights, board)

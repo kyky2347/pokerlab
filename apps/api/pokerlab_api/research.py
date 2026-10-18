@@ -8,6 +8,8 @@ import numpy as np
 from scipy.stats import beta as beta_distribution
 from scipy.stats import t as student_t
 
+from .controls import validate_seed
+
 
 def _beta_bin_masses(edges: np.ndarray, alpha: float, beta: float) -> np.ndarray:
     cdf = beta_distribution.cdf(edges, alpha, beta)
@@ -122,8 +124,7 @@ def compare_agents(episodes: int, seed: int) -> dict:
     """Evaluate fixed policies on shared synthetic decisions, not poker matches."""
     if type(episodes) is not int or not 2 <= episodes <= 10_000:
         raise ValueError("Episode count must be an integer between 2 and 10000")
-    if type(seed) is not int or not 0 <= seed <= 2**63 - 1:
-        raise ValueError("Seed must be an integer between 0 and 2^63 - 1")
+    validate_seed(seed)
     started = time.perf_counter()
     rng = random.Random(seed)
     names = ("RandomAgent", "TightThresholdAgent", "PotOddsAgent", "SoftmaxAgent")

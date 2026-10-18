@@ -5,7 +5,25 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from .controls import MAX_SEED
+
 CardToken = Annotated[str, Field(pattern=r"^[2-9TJQKA][cdhs]$")]
+INTEGER_CONTROL_DESCRIPTION = (
+    "JSON integer only; booleans, strings and floating-point values are rejected. / "
+    "仅接受 JSON 整数，不接受布尔值、字符串或浮点数。"
+)
+Seed = Annotated[
+    int,
+    Field(
+        strict=True,
+        ge=0,
+        le=MAX_SEED,
+        description=(
+            f"{INTEGER_CONTROL_DESCRIPTION} "
+            f"Inclusive seed range / 种子范围（含端点）: 0–{MAX_SEED}."
+        ),
+    ),
+]
 
 
 class ErrorDetail(BaseModel):
@@ -32,8 +50,10 @@ class FixedEquityRequest(BaseModel):
 
 
 class MonteCarloRequest(FixedEquityRequest):
-    samples: int = Field(default=50_000, ge=1, le=500_000)
-    seed: int = Field(default=20250902, ge=0, le=2**63 - 1)
+    samples: int = Field(
+        default=50_000, ge=1, le=500_000, strict=True, description=INTEGER_CONTROL_DESCRIPTION
+    )
+    seed: Seed = 20250902
 
 
 class TurnMapRequest(FixedEquityRequest):
@@ -44,8 +64,10 @@ class RangeEquityRequest(BaseModel):
     hero_range: dict[str, float]
     villain_range: dict[str, float]
     board: Annotated[list[CardToken], Field(max_length=5)] = Field(default_factory=list)
-    seed: int = Field(default=20250902, ge=0, le=2**63 - 1)
-    samples: int = Field(default=20_000, ge=100, le=100_000)
+    seed: Seed = 20250902
+    samples: int = Field(
+        default=20_000, ge=100, le=100_000, strict=True, description=INTEGER_CONTROL_DESCRIPTION
+    )
 
     @field_validator("hero_range", "villain_range")
     @classmethod
@@ -81,7 +103,7 @@ class RangeStatisticsRequest(BaseModel):
 
 
 class TrainerQuestionRequest(BaseModel):
-    seed: int = Field(default=20250902, ge=0, le=2**63 - 1)
+    seed: Seed = 20250902
 
 
 class TrainerAnswerRequest(BaseModel):
@@ -115,7 +137,9 @@ class SolverRequest(BaseModel):
     effective_stack: float = Field(default=100, gt=0, le=100_000)
     bet_small: float = Field(default=0.5, gt=0, le=1)
     bet_large: float = Field(default=1.0, gt=0, le=2)
-    iterations: int = Field(default=2_000, ge=100, le=100_000)
+    iterations: int = Field(
+        default=2_000, ge=100, le=100_000, strict=True, description=INTEGER_CONTROL_DESCRIPTION
+    )
 
     @field_validator("oop_range", "ip_range")
     @classmethod
@@ -150,5 +174,15 @@ class BayesianRequest(BaseModel):
 
 
 class AgentComparisonRequest(BaseModel):
-    episodes: Literal[100, 1000, 10000] = 1000
-    seed: int = Field(default=20250902, ge=0, le=2**63 - 1)
+    episodes: Literal[100, 1000, 10000] = Field(
+        default=1000, description=INTEGER_CONTROL_DESCRIPTION
+    )
+    seed: Seed = 20250902
+
+    @field_validator("episodes", mode="before")
+    @classmethod
+    def integer_episodes(cls, value: int) -> int:
+        # Literal's enum check alone also accepts equal floating-point values.
+        if type(value) is not int:
+            raise ValueError("Episode count must be an integer / 实验局数必须是整数")
+        return value

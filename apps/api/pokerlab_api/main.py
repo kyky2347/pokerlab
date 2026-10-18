@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from .cfr import RiverCFRSolver, verify_kuhn
 from .config import get_settings
+from .controls import MAX_SEED
 from .database import Experiment, SolverJob, active_database_name, get_db, initialize_database
 from .domain import Card, parse_cards, validate_holdem_state
 from .engine import PokerEngine, select_engine
@@ -69,6 +70,26 @@ app = FastAPI(
     ),
     lifespan=lifespan,
 )
+
+
+def exact_seed_openapi() -> dict:
+    # Preserve FastAPI's normal metadata/routes/cache. Its intermediate Schema
+    # model coerces numeric bounds to float, rounding the signed 64-bit maximum.
+    # Restore only our shared seed contract after that conversion, before JSON.
+    document = FastAPI.openapi(app)
+    for model in (
+        MonteCarloRequest,
+        RangeEquityRequest,
+        TrainerQuestionRequest,
+        AgentComparisonRequest,
+    ):
+        seed = document["components"]["schemas"][model.__name__]["properties"]["seed"]
+        seed["minimum"] = 0
+        seed["maximum"] = MAX_SEED
+    return document
+
+
+app.openapi = exact_seed_openapi
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.origins,

@@ -209,6 +209,8 @@ Duplicate cards are rejected at the domain boundary. Monte Carlo samples legal r
 
 ## Validation / 验证
 
+Seeds and run counts now require explicit JSON integers: booleans, numeric strings and floating-point values are rejected before calculation or storage. Valid seeded results, defaults and historical records remain unchanged. See the [bilingual experiment-control contract](docs/experiment-controls.md) for limits, 64-bit precision and client migration. / 种子与运行次数现在要求明确的 JSON 整数，布尔值、数字字符串和浮点数在计算或写入前即被拒绝；合法种子结果、默认值和历史记录保持不变。范围、64 位精度及客户端迁移详见[双语参数契约](docs/experiment-controls.md)。
+
 Run the complete local quality gate / 运行完整本地质量门禁:
 
 ```bash
