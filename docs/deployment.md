@@ -181,6 +181,25 @@ Training questions created after this update remain answerable for 24 hours acro
 
 本次更新后创建的训练题在 24 小时内可跨进程和 API 重启提交。领取题目评分权与写入成绩处于同一事务：重复提交不会产生重复成绩，写入失败后仍可重试。题目保存实际牌面、种子、引擎和自适应权重；自适应抽样除种子外还依赖答题历史。出题响应不会泄露正确胜率。升级前尚未提交的内存题目需重新生成，已保存成绩不受影响。浏览器整页刷新可能重新出题；此保证针对已签发的题目 ID，不代表恢复浏览器表单状态。
 
+### Training feedback and retry boundaries / 训练反馈与重试边界
+
+Scoring claims the question, inserts and explicitly flushes the answer, queries weaknesses, and prepares the complete response **before** committing the same transaction. A pre-commit insertion or feedback failure rolls back both the answer and the claim; retry the same question ID while it is unexpired. There are no response-building database reads after commit. This also supports direct Python sessions with `autoflush=False` or `expire_on_commit=True`. Feedback includes the current answer and preserves historical scores; tied mean errors are ordered by category. Concurrent answers to other questions may commit after the feedback query, so this is a transaction-time view, not a permanently current leaderboard.
+
+评分依次领取题目、插入并明确 flush 答案、查询薄弱项，然后在同一事务提交**之前**准备完整响应。提交前的写入或反馈失败会同时回滚成绩与题目领取状态；在未过期时可使用同一题目 ID 重试。成功提交后不再为响应读取数据库，也支持 `autoflush=False` 或 `expire_on_commit=True` 的直接 Python 会话。反馈包含当前答案且保留历史成绩；平均误差相同时按类别排序。其他题目的并发答案可能在反馈查询后提交，因此反馈是事务期间的视图，不是永久最新的排行榜。
+
+This is **not** exactly-once HTTP delivery or automatic replay of a successful response. If the commit succeeds but its acknowledgement or the HTTP response is lost, the answer may already be saved and a retry can return “already answered.” Inspect `/trainer/weaknesses` for the aggregate history; it does not recover a particular lost round's response. Do not manually clear the claim or delete the score to retry. There is no new migration, scoring rule, question lifetime, seed selection rule, or engine-selection behavior in this change.
+
+这**不是** HTTP 响应恰好送达一次或成功响应自动重放的保证。如果数据库提交成功但确认信息或 HTTP 响应丢失，成绩可能已保存，重试可能返回“已提交”。`/trainer/weaknesses` 可查看汇总历史，但不能恢复某一轮丢失的响应；不要手动清空领取标记或删除成绩来重试。本次不新增迁移，不改变评分规则、题目有效期、种子选题规则或引擎选择行为。
+
+Regression coverage / 回归验证:
+
+```bash
+cd apps/api
+uv run pytest tests/test_trainer_transactions.py tests/test_trainer.py
+```
+
+Set `POKERLAB_TEST_POSTGRES_URL` to a disposable PostgreSQL database to run the same cases against both backends. Tests cover rollback/retry after injected insert, feedback and pre-commit failures, eight concurrent claimants with one failed feedback query, explicit transaction order, session options, stable ties and real HTTP-handler recovery. / 将 `POKERLAB_TEST_POSTGRES_URL` 指向临时 PostgreSQL 数据库可同时验证两种后端；测试覆盖写入、反馈、提交前故障后的回滚重试，八路并发领取中的单次反馈失败，明确的事务顺序、会话选项、稳定并列排序与真实 HTTP 处理器恢复。
+
 ## Configuration / 配置
 
 Copy `.env.example` for native development when defaults are not suitable. For manual Compose usage, copy it to `.env`, replace the placeholder database password, and pass `--env-file .env`. The launcher handles this automatically for normal use.
