@@ -27,7 +27,7 @@ PokerLab 是一套可审查的研究系统，而不是赌场风格外壳或互�
 
 - **One source of mathematical truth / 单一数学真值源** — Python reference evaluator plus a cross-checked Rust/PyO3 accelerator.
 - **Reproducible by construction / 从设计上可复现** — stochastic runs store their seed, parameters, engine, runtime, and result.
-- **Durable training / 可持续训练** — issued questions survive API restarts for 24 hours, with atomic one-time scoring across workers and data-preserving database upgrades. / 已出题目在 24 小时有效期内可跨 API 重启提交；多进程评分具备原子去重，数据库升级保留已有记录。
+- **Durable training / 可持续训练** — issued questions survive API restarts for 24 hours. One transaction claims the question, saves the score and prepares feedback; pre-commit feedback failures allow retry without duplicate scores. [Retry boundaries / 重试边界](docs/deployment.md#training-feedback-and-retry-boundaries--训练反馈与重试边界). / 已出题目在 24 小时有效期内可跨 API 重启提交；领取题目、保存评分与准备反馈在同一事务完成，提交前反馈失败可重试，不重复计分。
 - **Real finite solving / 真实有限求解** — CFR+ is implemented in this repository and verified against Kuhn Poker; no third-party solver is used.
 - **Honest limits / 坦诚展示边界** — the river solver’s no-raise abstraction is visible in the UI and documentation.
 - **Auditable policy comparisons / 可核验策略比较** — named fixed policies, editable seeds, approximate mean-EV intervals, and versioned JSON/CSV exports. This synthetic benchmark does not train CFR agents or measure real poker winnings. / 明确的固定策略、可编辑种子、平均 EV 近似区间与带方法版本的 JSON/CSV 导出；此合成基准不训练 CFR 代理，也不衡量实际扑克盈利。详见 [research methods / 研究方法](docs/research-methods.md)。

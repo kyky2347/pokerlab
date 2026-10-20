@@ -47,7 +47,7 @@ def weaknesses(db: Session) -> list[dict[str, float | str | int]]:
     ).all()
     return [
         {"category": category, "average_error": float(error), "answers": int(count)}
-        for category, error, count in sorted(rows, key=lambda row: row[1], reverse=True)
+        for category, error, count in sorted(rows, key=lambda row: (-row[1], row[0]))
     ]
 
 
@@ -95,8 +95,9 @@ def score_answer(question_id: str, answer: float, db: Session) -> dict:
     if not 0 <= answer <= 1:
         raise ValueError("Equity answer must be between 0 and 1")
     now = datetime.now(UTC)
-    # Claim and record the answer in one transaction. Concurrent workers cannot
-    # score the same question twice, and failed commits leave it answerable.
+    # Claim, record and prepare feedback in one transaction. Concurrent workers
+    # cannot score the same question twice. A failed pre-commit read or write
+    # leaves it answerable; no response-building database reads follow commit.
     try:
         question = db.scalars(
             update(TrainerQuestion)
@@ -125,16 +126,20 @@ def score_answer(question_id: str, answer: float, db: Session) -> dict:
             score=score,
         )
         db.add(record)
+        # Explicit flush also supports direct callers with autoflush disabled.
+        # The aggregate must include this answer, while still being rollbackable.
+        db.flush()
+        result = {
+            "answer": answer,
+            "true_equity": true_equity,
+            "absolute_error": error,
+            "score": score,
+            "category": record.category,
+            "scoring": "100 × max(0, 1 - (absolute_error / 0.25)²)",
+            "weaknesses": weaknesses(db),
+        }
         db.commit()
     except Exception:
         db.rollback()
         raise
-    return {
-        "answer": answer,
-        "true_equity": true_equity,
-        "absolute_error": error,
-        "score": score,
-        "category": record.category,
-        "scoring": "100 × max(0, 1 - (absolute_error / 0.25)²)",
-        "weaknesses": weaknesses(db),
-    }
+    return result

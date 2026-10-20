@@ -20,15 +20,17 @@ Include the affected commit, reproduction steps, impact, and any suggested mitig
 
 ### Known dependency advisories / 已知依赖告警
 
-Rechecked on **2026-10-16**: the full npm audit and GitHub Dependabot still
-report only the `braces` finding below, with no published fixed version;
-`braces@3.0.4` remains unavailable. The production npm audit and Python package
-audit report no known advisories. The Python audit skips this repository's two
-local packages; these results are not a guarantee that the code is vulnerability-free.
+Rechecked on **2026-10-20**: new audit findings prompted targeted upgrades to
+Vite **8.2.4** and certifi **2026.10.19** (details below). After patching, the full
+npm audit reports only the existing `braces` finding, still without a published
+fixed version. The production npm audit and Python package audit report no known
+advisories. The Python audit skips this repository's two local packages; these
+results are not a guarantee that the code is vulnerability-free.
 
-**2026-10-16 复核**：完整 npm 审计与 GitHub Dependabot 仍仅报告下述 `braces`
-告警，尚无正式修复版本，`braces@3.0.4` 仍不可用。生产 npm 依赖与 Python 包
-审计未报告已知告警；Python 审计跳过本仓库的两个本地包，这不代表代码绝无漏洞。
+**2026-10-20 复核**：针对新发现的告警定向升级 Vite 至 **8.2.4**、certifi 至
+**2026.10.19**（详见下文）。修复后完整 npm 审计仅剩既有且尚无正式补丁的
+`braces` 告警；生产 npm 依赖与 Python 包审计未报告已知告警。Python 审计跳过
+本仓库的两个本地包；这些结果不代表代码绝无漏洞。
 
 As of **2026-10-10**, `pnpm audit` reports [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm): deeply nested brace patterns can exhaust the stack in `braces <=3.0.3`. In this lockfile it is reached through the **ESLint development toolchain** (`eslint-config-next → @next/eslint-plugin-next → fast-glob → micromatch → braces`). The public advisory lists no patched release, and the npm registry still lists 3.0.3 as latest. Although the audit output suggests `>=3.0.4`, that version was not available at verification time.
 
@@ -63,6 +65,22 @@ The same update pins Alembic's transitive **Mako to 1.4.2** for [GHSA-5639-2j2p-
 On 2026-10-07, `pip-audit` initially reported no known advisories while GitHub Dependabot identified Mako. We cross-checked the upstream advisory and patched it rather than trusting a single feed. The editable first-party `pokerlab-api` and `poker-core-rs` distributions are explicitly skipped by that Python audit; neither a clean feed nor these targeted guards establish that local code or every platform dependency is vulnerability-free.
 
 2026-10-07，`pip-audit` 起初报告未发现已知漏洞，但 GitHub Dependabot 标出了 Mako。我们核对上游公告并修复，而非只相信单一数据源。可编辑安装的本项目 `pokerlab-api` 与 `poker-core-rs` 被该 Python 审计明确跳过；单个数据源的清洁结果或上述定向检查，均不意味着本地代码和所有平台依赖绝无漏洞。
+
+### October 20 toolchain updates / 10 月 20 日工具链更新
+
+The lockfile updates Vite **8.2.2 → 8.2.4** for its bundled editor-launch code:
+
+- [Windows percent escaping](https://github.com/vitejs/launch-editor/security/advisories/GHSA-698v-4r3x-3vcv).
+- [Editor CLI flag interpretation](https://github.com/vitejs/launch-editor/security/advisories/GHSA-r825-w8mm-5pxw).
+- [Windows path existence-check bypass](https://github.com/vitejs/launch-editor/security/advisories/GHSA-587h-7wmj-h5pm).
+
+PokerLab reaches Vite through **Vitest and its mocker**, not its Next.js production server. These advisories have Windows/WSL and editor-specific preconditions; the lockfile finding is not evidence of an exposed PokerLab editor-launch endpoint. Runtime guards check both consumers' actual Vite resolution and transform a fixed TypeScript fixture without starting a server or editor. The guard deliberately stays on the patched 8.2 branch: an unqualified `>=8.2.4` check would incorrectly allow affected 8.3.0–8.3.2. This does not emulate Windows command execution or replace audits.
+
+锁文件将 Vite 从 **8.2.2 升至 8.2.4**，修复随包编辑器启动代码的上述三项问题。PokerLab 通过 **Vitest 及其 mocker** 引入 Vite，而非 Next.js 生产服务；公告具有 Windows/WSL 和特定编辑器等前提，依赖告警不代表项目暴露了可利用的编辑器启动接口。回归检查两个消费者实际解析到的 Vite，并转换固定 TypeScript 示例，不启动服务器或编辑器。版本保护限定已修复的 8.2 分支，因为仅检查 `>=8.2.4` 会误放行受影响的 8.3.0–8.3.2；此验证不模拟 Windows 命令执行，也不替代审计。
+
+The Python lockfile updates certifi **2026.7.22 → 2026.10.19** for [GHSA-6q48-6c7w-9gw2](https://github.com/certifi/python-certifi/security/advisories/GHSA-6q48-6c7w-9gw2), concerning compromised intermediate keys under the `emSign ECC Root CA - G3` trust root. In this project certifi is reached through the development HTTP client. Tests load the actual certifi bundle with OpenSSL, verify that root is absent, and keep certificate and hostname verification enabled. This updates the locked project environment, **not** the host/system CA store or unrelated Python environments. Custom deployments that vendor certifi must also update/rebuild their own copy; the normal API image excludes development dependencies.
+
+Python 锁文件将 certifi 从 **2026.7.22 升至 2026.10.19**，处理上述 `emSign ECC Root CA - G3` 下中间证书私钥泄露的信任风险。本项目通过开发 HTTP 客户端引入 certifi。测试使用 OpenSSL 加载实际 certifi 证书库，核对受影响根证书已移除，并确认仍开启证书与主机名校验。此更新仅针对锁定的项目环境，**不修改**宿主机/系统信任库或其他 Python 环境；自行随包分发 certifi 的部署也需升级并重建对应副本，标准 API 镜像不安装开发依赖。
 
 ### Framework runtime update / 框架运行时更新
 

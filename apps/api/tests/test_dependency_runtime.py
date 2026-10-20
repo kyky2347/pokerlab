@@ -1,15 +1,40 @@
-"""Mako's cross-platform URI guard and our actual migration template."""
+"""Loaded trust-store contents, Mako URI guards and our migration template."""
 
 import ast
 import ntpath
 import os
 import posixpath
+import ssl
 from importlib import metadata, resources
 
+import certifi
 import pytest
 from alembic.util import format_as_comma
 from mako import exceptions, template
 from packaging.version import Version
+
+
+def test_certifi_security_floor():
+    version = Version(metadata.version("certifi"))
+    assert not version.is_prerelease
+    assert version >= Version("2026.10.19")
+
+
+def test_certifi_bundle_distrusts_affected_emsign_root():
+    # Inspect the bundle OpenSSL actually loads, not a comment or version alone.
+    # No network access, custom CA installation or TLS verification bypass.
+    context = ssl.create_default_context(cafile=certifi.where())
+    common_names = {
+        value
+        for certificate in context.get_ca_certs()
+        for rdn in certificate["subject"]
+        for key, value in rdn
+        if key == "commonName"
+    }
+    assert common_names
+    assert "emSign ECC Root CA - G3" not in common_names
+    assert context.verify_mode == ssl.CERT_REQUIRED
+    assert context.check_hostname
 
 
 @pytest.fixture(params=[posixpath, ntpath], ids=["posix", "windows-paths"])

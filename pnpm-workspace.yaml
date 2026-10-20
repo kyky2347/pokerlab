@@ -14,6 +14,8 @@ overrides:
   "shell-quote@>=1.8.4 <1.11.0": "1.11.0"
   # GHSA-wq5f-xc86-pv6w: patched prebuilt librsvg in Next.js image processing.
   "sharp@<0.35.5": "0.35.5"
+  # Patch launch-editor advisories bundled into the Vitest Vite 8.2 toolchain.
+  "vite@>=8.2.0 <8.2.4": "8.2.4"
 
 allowBuilds:
   unrs-resolver: set this to true or false

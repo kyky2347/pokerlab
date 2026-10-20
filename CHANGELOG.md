@@ -4,6 +4,16 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Patch the Vitest toolchain's Vite 8.2.2 to 8.2.4 for three editor-launch advisories added to the advisory database on October 20. Verify both Vitest/mocker resolution and a real TypeScript transform, preserving the Next.js production framework; retain the separate unpatched `braces` disclosure.
+- 针对 10 月 20 日公告库新增的三项编辑器启动告警，将 Vitest 工具链 Vite 从 8.2.2 定向升级至 8.2.4；验证 Vitest/mocker 的实际依赖解析和真实 TypeScript 转换，保持 Next.js 生产框架不变，继续披露独立且暂无补丁的 `braces` 告警。
+- Update the development HTTP client's certifi to 2026.10.19 for GHSA-6q48-6c7w-9gw2. Inspect the OpenSSL-loaded bundle to ensure the affected emSign root is absent, without disabling TLS verification or modifying system trust stores.
+- 开发 HTTP 客户端的 certifi 升至 2026.10.19；检查 OpenSSL 实际加载的证书库中受影响 emSign 根证书已移除，不关闭 TLS 验证，不修改系统信任库。
+
+- Prepare trainer feedback inside the scoring transaction, explicitly flushing the answer before reading aggregates. Roll back insert/feedback failures and errors before a commit is applied without consuming the question; build no response data from the database after commit, including for direct callers with expiring sessions.
+- Break tied weakness rankings by category for stable output. Add SQLite/PostgreSQL fault-injection, concurrent-retry, transaction-order, session-option and API recovery regressions; document transport/commit-acknowledgement limits. Preserve scoring mathematics, adaptive weights, engine fallback and historical data, with no schema migration.
+- 训练反馈纳入评分事务，明确写入当前答案后再查询汇总；提交前的写入、反馈或提交失败会回滚，不消耗题目。提交成功后不再为响应读取数据库，也兼容直接调用时提交后过期的会话。
+- 薄弱项误差相同时按类别稳定排序；新增 SQLite/PostgreSQL 故障注入、并发重试、事务顺序、会话选项与 API 恢复回归，并说明网络传输及提交确认的边界。评分数学、自适应权重、引擎回退和历史数据保持不变，无需数据库迁移。
+
 - Reject boolean, string and floating-point seeds/counts before computation or persistence; share strict seed/count guards across direct Python engines, range equity, training, research and CFR. Preserve valid integer results, defaults, engine fallback and historical records.
 - Add SQLite/PostgreSQL no-side-effect and exact 64-bit round-trip tests, direct-call and solver-state regressions, and bilingual OpenAPI/compatibility documentation. No schema migration or higher workload limit.
 - Preserve the exact signed 64-bit seed maximum in published OpenAPI JSON instead of a rounded floating-point bound.
