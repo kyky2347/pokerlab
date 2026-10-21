@@ -4,6 +4,13 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Harden the trainer's English/Chinese loading, offline, retry and next-round flows. Keep the last confirmed feedback and weakness snapshot until a new question succeeds; freeze submissions, guard rapid clicks, and explicitly avoid automatic POST retries/reconnect replay. Show the actual question engine and distinguish page-visit totals from database-wide history, including uncertain/lost responses.
+- Replace growing client-side answer histories with running totals; show unavailable averages as “—”. Fix scalar slider thumb counts and forward accessible names to real inputs. Add recovery, concurrency, locale and slider regressions without changing poker calculations, scoring or storage.
+- 完善训练器中英文加载、离线、重试与切题流程；新题成功前保留上一轮已确认反馈及薄弱项快照，提交时锁定输入、防止快速重复点击，不自动重试 POST 或联网后补发。展示题目实际引擎，明确本次页面统计与数据库历史的区别，并说明响应丢失时的未知结果。
+- 将不断增长的浏览器答题数组改为累计统计，未作答时的平均值显示“—”；修复单值滑块数量和实际输入控件的无障碍名称。新增恢复、并发交互、双语与滑块回归，不改变扑克计算、评分或存储。
+- Keep the three poker-table card rows separate on narrow screens with a minimum table height, verified at 320 px and 390 px. / 为牌桌设置最小高度，避免窄屏上的三排牌面重叠，并在 320 px 与 390 px 宽度验收。
+- Match slider styles to Base UI's actual `data-orientation` attributes, restoring the visible track and a 44 px interaction area. / 滑块样式改为匹配 Base UI 实际的 `data-orientation` 属性，恢复可见轨道与 44 px 操作区域。
+
 - Patch the Vitest toolchain's Vite 8.2.2 to 8.2.4 for three editor-launch advisories added to the advisory database on October 20. Verify both Vitest/mocker resolution and a real TypeScript transform, preserving the Next.js production framework; retain the separate unpatched `braces` disclosure.
 - 针对 10 月 20 日公告库新增的三项编辑器启动告警，将 Vitest 工具链 Vite 从 8.2.2 定向升级至 8.2.4；验证 Vitest/mocker 的实际依赖解析和真实 TypeScript 转换，保持 Next.js 生产框架不变，继续披露独立且暂无补丁的 `braces` 告警。
 - Update the development HTTP client's certifi to 2026.10.19 for GHSA-6q48-6c7w-9gw2. Inspect the OpenSSL-loaded bundle to ensure the affected emSign root is absent, without disabling TLS verification or modifying system trust stores.
