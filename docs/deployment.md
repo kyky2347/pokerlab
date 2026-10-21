@@ -183,6 +183,20 @@ Training questions created after this update remain answerable for 24 hours acro
 
 ### Training feedback and retry boundaries / 训练反馈与重试边界
 
+The trainer offers explicit **Retry scenario**, **Retry answer**, and **Start a new scenario** actions. A failed question request reuses its requested seed on retry; adaptive sampling still depends on the database history, so a seed alone does not guarantee the same scenario if that history changes. A failed answer preserves the estimate. Submissions lock the slider and rapid clicks cannot launch overlapping requests in this page. Mutations attempt the local API even if the browser reports offline, fail visibly if unreachable, and do not automatically retry or queue a write for reconnection.
+
+训练页提供明确的**重试出题**、**重试提交答案**及**开始新题**操作。出题失败后重试使用原请求种子；自适应抽样仍依赖数据库历史，因此历史变化时，仅相同种子不能保证相同牌局。提交失败保留估计值，提交期间锁定滑块，本页面的快速点击不会触发重叠请求。即使浏览器报告离线，仍尝试访问本地 API；无法访问时明确报错，不自动重试或在网络恢复后补发写入。
+
+The previous confirmed round remains visible while the next question loads or fails; it clears only after the replacement arrives. Page progress uses running totals of successfully received answers, starts with unavailable averages rather than a fictitious zero error, and resets on navigation/reload. Weaknesses are a **database-wide snapshot from the latest confirmed answer**, retained across rounds, not a separate user account or a live query. A lost response may already have saved a score but is not counted in this page's confirmed totals. No per-user authentication or response-replay guarantee is added.
+
+下一题加载中或失败时，保留上一轮已确认结果，收到新题后才清除。页面进度累计成功收到的答案反馈，未作答时平均值显示“—”而非虚假的零误差；离开或刷新页面后重置。薄弱项是**最近一次已确认答案返回的全数据库快照**，跨题保留，不代表独立用户账号或实时查询。响应丢失时成绩可能已保存，但不计入本页面已确认统计。本次不新增用户认证或成功响应重放保证。
+
+Frontend recovery regressions / 前端恢复回归：
+
+```bash
+pnpm --filter web exec vitest run src/app/trainer/page.test.tsx src/components/ui/slider.test.tsx
+```
+
 Scoring claims the question, inserts and explicitly flushes the answer, queries weaknesses, and prepares the complete response **before** committing the same transaction. A pre-commit insertion or feedback failure rolls back both the answer and the claim; retry the same question ID while it is unexpired. There are no response-building database reads after commit. This also supports direct Python sessions with `autoflush=False` or `expire_on_commit=True`. Feedback includes the current answer and preserves historical scores; tied mean errors are ordered by category. Concurrent answers to other questions may commit after the feedback query, so this is a transaction-time view, not a permanently current leaderboard.
 
 评分依次领取题目、插入并明确 flush 答案、查询薄弱项，然后在同一事务提交**之前**准备完整响应。提交前的写入或反馈失败会同时回滚成绩与题目领取状态；在未过期时可使用同一题目 ID 重试。成功提交后不再为响应读取数据库，也支持 `autoflush=False` 或 `expire_on_commit=True` 的直接 Python 会话。反馈包含当前答案且保留历史成绩；平均误差相同时按类别排序。其他题目的并发答案可能在反馈查询后提交，因此反馈是事务期间的视图，不是永久最新的排行榜。

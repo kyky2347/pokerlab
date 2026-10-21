@@ -14,7 +14,7 @@ export function PokerTable({
   villainLabel?: string;
 }) {
   return (
-    <div className="probability-grid relative mx-auto flex aspect-[1.45] w-full max-w-3xl items-center justify-center overflow-hidden rounded-[45%] border border-primary/25 bg-felt-deep shadow-[inset_0_0_80px_rgb(0_0_0/45%),0_28px_70px_rgb(0_0_0/28%)]">
+    <div className="probability-grid relative mx-auto flex min-h-72 w-full max-w-3xl items-center justify-center overflow-hidden rounded-[45%] border border-primary/25 bg-felt-deep shadow-[inset_0_0_80px_rgb(0_0_0/45%),0_28px_70px_rgb(0_0_0/28%)] sm:aspect-[1.45]">
       <div className="absolute inset-4 rounded-[45%] border border-white/5" />
       <div className="absolute top-4 flex flex-col items-center gap-2 sm:top-7">
         <span className="font-data text-[9px] tracking-[0.18em] text-white/55">
