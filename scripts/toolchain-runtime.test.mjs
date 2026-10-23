@@ -14,6 +14,27 @@ const mockerRequire = createRequire(
   vitestRequire.resolve("@vitest/mocker/package.json"),
 );
 
+test("Vitest resolves its patched matching mocker on the supported 4.1 branch", () => {
+  const { version } = webRequire("vitest/package.json");
+  assert.match(version, /^4\.1\.\d+$/);
+  assertVersionAtLeast(version, "4.1.12", "Vitest");
+  assert.equal(vitestRequire("@vitest/mocker/package.json").version, version);
+});
+
+test("web and ESLint resolve the patched stable Next.js release together", () => {
+  const { version } = webRequire("next/package.json");
+  assertVersionAtLeast(version, "16.4.1", "Next.js");
+  // eslint-config-next exports dist/index.js, but not its package.json subpath.
+  const eslintRequire = createRequire(webRequire.resolve("eslint-config-next"));
+  const configPackage = eslintRequire("../package.json");
+  assert.equal(configPackage.name, "eslint-config-next");
+  assert.equal(configPackage.version, version);
+  assert.equal(
+    eslintRequire("@next/eslint-plugin-next/package.json").version,
+    version,
+  );
+});
+
 for (const [consumer, consumerRequire] of [
   ["vitest", vitestRequire],
   ["@vitest/mocker", mockerRequire],

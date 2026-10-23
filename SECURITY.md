@@ -20,15 +20,17 @@ Include the affected commit, reproduction steps, impact, and any suggested mitig
 
 ### Known dependency advisories / 已知依赖告警
 
-Rechecked on **2026-10-20**: new audit findings prompted targeted upgrades to
-Vite **8.2.4** and certifi **2026.10.19** (details below). After patching, the full
+Rechecked on **2026-10-23**: new audit findings prompted a targeted upgrade to
+Next.js and eslint-config-next **16.4.1** and Vitest/mocker **4.1.12**, retaining Vite **8.2.4** and certifi
+**2026.10.19** (details below). After patching, the full
 npm audit reports only the existing `braces` finding, still without a published
 fixed version. The production npm audit and Python package audit report no known
 advisories. The Python audit skips this repository's two local packages; these
 results are not a guarantee that the code is vulnerability-free.
 
-**2026-10-20 复核**：针对新发现的告警定向升级 Vite 至 **8.2.4**、certifi 至
-**2026.10.19**（详见下文）。修复后完整 npm 审计仅剩既有且尚无正式补丁的
+**2026-10-23 复核**：针对新发现的告警定向升级 Next.js 与 eslint-config-next 至
+**16.4.1**、Vitest/mocker 至 **4.1.12**，保留 Vite **8.2.4**、certifi **2026.10.19**（详见下文）。
+修复后完整 npm 审计仅剩既有且尚无正式补丁的
 `braces` 告警；生产 npm 依赖与 Python 包审计未报告已知告警。Python 审计跳过
 本仓库的两个本地包；这些结果不代表代码绝无漏洞。
 
@@ -66,6 +68,25 @@ On 2026-10-07, `pip-audit` initially reported no known advisories while GitHub D
 
 2026-10-07，`pip-audit` 起初报告未发现已知漏洞，但 GitHub Dependabot 标出了 Mako。我们核对上游公告并修复，而非只相信单一数据源。可编辑安装的本项目 `pokerlab-api` 与 `poker-core-rs` 被该 Python 审计明确跳过；单个数据源的清洁结果或上述定向检查，均不意味着本地代码和所有平台依赖绝无漏洞。
 
+### October 23 test-toolchain update / 10 月 23 日测试工具链更新
+
+Vitest and its actual `@vitest/mocker` dependency are pinned to **4.1.12** for
+[manual mock code injection](https://github.com/vitest-dev/vitest/security/advisories/GHSA-qxg6-89mg-rqv8)
+and [Windows redirect traversal](https://github.com/vitest-dev/vitest/security/advisories/GHSA-xp26-3454-mjgp).
+These findings concern a reachable Vite mock-interceptor server, not the Next.js
+production server. PokerLab uses local jsdom tests and does not expose that
+interceptor as a product service. Runtime guards verify matching patched
+Vitest/mocker versions; the full component suite exercises real mocking behavior.
+Vite's separate 8.2.4 floor remains enforced. Do not expose development/test
+servers to untrusted networks; this verification does not emulate Windows.
+
+Vitest 与其实际 `@vitest/mocker` 依赖统一锁定至 **4.1.12**，修复手动 mock
+代码注入与 Windows 重定向路径穿越两项告警。这些问题涉及可访问的 Vite mock
+拦截服务，而非 Next.js 生产服务；本项目使用本地 jsdom 测试，不将该拦截器作为
+产品服务公开。运行时保护核对 Vitest/mocker 补丁版本一致，完整组件测试覆盖实际
+mock 行为，独立的 Vite 8.2.4 下限继续生效。不要将开发/测试服务暴露到不可信
+网络；此验证不模拟 Windows 系统。
+
 ### October 20 toolchain updates / 10 月 20 日工具链更新
 
 The lockfile updates Vite **8.2.2 → 8.2.4** for its bundled editor-launch code:
@@ -83,6 +104,37 @@ The Python lockfile updates certifi **2026.7.22 → 2026.10.19** for [GHSA-6q48-
 Python 锁文件将 certifi 从 **2026.7.22 升至 2026.10.19**，处理上述 `emSign ECC Root CA - G3` 下中间证书私钥泄露的信任风险。本项目通过开发 HTTP 客户端引入 certifi。测试使用 OpenSSL 加载实际 certifi 证书库，核对受影响根证书已移除，并确认仍开启证书与主机名校验。此更新仅针对锁定的项目环境，**不修改**宿主机/系统信任库或其他 Python 环境；自行随包分发 certifi 的部署也需升级并重建对应副本，标准 API 镜像不安装开发依赖。
 
 ### Framework runtime update / 框架运行时更新
+
+The 2026-10-23 update pins **Next.js and eslint-config-next to 16.4.1** for three
+advisories added to the public advisory database on October 22:
+
+- [SVG Image Optimization RCE](https://github.com/vercel/next.js/security/advisories/GHSA-2464-fhr4-w9xw): the upstream native-library issue has glibc/Linux prerequisites. PokerLab already pinned sharp 0.35.5 and checks loaded librsvg 2.63.2; the default container uses Alpine/musl. The framework upgrade also incorporates the upstream dependency floor.
+- [Typed-array Cache Component RCE](https://github.com/vercel/next.js/security/advisories/GHSA-673q-mjm6-r5xr): requires Cache Components and a `use cache` function returning multiple typed arrays. PokerLab does not enable Cache Components; the patched framework is still required.
+- [Server Action CPU exhaustion](https://github.com/vercel/next.js/security/advisories/GHSA-p3m5-59mp-jv5r): requires App Router with a Server Action. PokerLab currently has no Server Actions; its interactive calculations call the separate FastAPI service.
+
+2026-10-23 将 **Next.js 与 eslint-config-next 升至 16.4.1**，处理 10 月 22 日
+公共公告库新增的三项告警：SVG 图片优化的原生库问题具有 glibc/Linux 前提，项目
+此前已锁定 sharp 0.35.5 并检查实际 librsvg 2.63.2，默认容器为 Alpine/musl；
+类型化数组问题需要 Cache Components 及特定 `use cache` 返回值，项目未启用
+该功能；CPU 耗尽问题需要 Server Action，项目目前不使用它，交互计算通过独立的
+FastAPI 服务完成。这些边界不是跳过框架补丁的理由，也不是已遭攻击的证据。
+
+Checkout tests verify the framework, ESLint configuration and plugin resolve to
+the same patched stable version. Final-image tests inspect the built
+configuration and action manifest: SVG/local-IP opt-ins and remote image hosts
+remain disabled, Cache Components remain off, and Node/Edge Server Action maps
+remain empty. If these product features are intentionally enabled later, review
+and update the security boundary and its tests together. These checks do not
+execute RCE payloads or claim exploit reproduction. Rebuild containers with
+`./pokerlab start --no-open` (without `--no-build`) and restart development
+servers; changing the lockfile alone cannot patch an already running process.
+
+本地测试核对框架、ESLint 配置与插件实际解析到同一修复后的稳定版；最终镜像
+测试检查构建配置与动作清单，确保仍未开放 SVG/本地 IP 图片或远程图片源，
+Cache Components 保持关闭，Node/Edge Server Action 映射为空。将来有意启用
+这些功能时，应同步复核安全边界与测试。这些检查不执行 RCE 载荷，也不宣称
+复现了全部漏洞。请通过 `./pokerlab start --no-open` 重建容器（不加
+`--no-build`），并重启开发服务；仅修改锁文件无法修复已运行的旧进程。
 
 The 2026-10-10 update pins **Next.js and eslint-config-next to 16.3.8**. This patches six newly reported advisories in the prior 16.3.6 dependency; it does not mean every issue was reachable in PokerLab:
 

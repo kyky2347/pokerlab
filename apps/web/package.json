@@ -21,7 +21,7 @@
     "clsx": "2.1.1",
     "framer-motion": "13.1.1",
     "lucide-react": "1.38.0",
-    "next": "16.3.8",
+    "next": "16.4.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "recharts": "3.10.1",
@@ -38,13 +38,13 @@
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.5",
     "eslint": "9.39.5",
-    "eslint-config-next": "16.3.8",
+    "eslint-config-next": "16.4.1",
     "jsdom": "30.0.1",
     "prettier": "3.9.6",
     "prettier-plugin-tailwindcss": "0.8.1",
     "tailwindcss": "4.3.3",
     "typescript": "5.9.3",
-    "vitest": "4.1.11"
+    "vitest": "4.1.12"
   },
   "packageManager": "pnpm@11.19.0"
 }

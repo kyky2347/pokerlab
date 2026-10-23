@@ -4,6 +4,13 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Update Vitest and its actual mocker to 4.1.12 for manual-mock code injection and Windows redirect-traversal advisories; verify matching runtime versions and retain Vite's independent 8.2.4 floor. / Vitest 与实际 mocker 升至 4.1.12，处理手动 mock 代码注入与 Windows 重定向路径穿越告警；检查运行时版本一致，保留 Vite 独立的 8.2.4 补丁下限。
+
+- Upgrade Next.js and its ESLint configuration from 16.3.8 to 16.4.1 for three framework advisories added to the public database on October 22. Raise checkout/final-image version guards and verify the deployed image, cache and Server Action exposure boundaries. Keep existing native-library patches and disclose the separate unpatched development-only `braces` finding.
+- Reuse one real 20,000-iteration Kuhn self-test per API worker startup across the solver page and diagnostics. Preserve complete solver output, show failed checks unchanged, recompute on restart, and retain live database diagnostics. Add real-result parity, concurrent-read, dual-engine and lifecycle regressions; no poker math, river-job behavior or schema changes.
+- Next.js 与配套 ESLint 配置从 16.3.8 升至 16.4.1，处理 10 月 22 日公共公告库新增的三项框架告警；提高本地与最终镜像的版本保护下限，并检查部署后的图片、缓存与 Server Action 暴露边界。保留已有原生库补丁，继续披露独立且暂无补丁的开发依赖 `braces` 告警。
+- 求解器页面与诊断接口复用每个 API 工作进程启动时真实计算的 20,000 轮 Kuhn 自检；保留完整结果及失败状态，重启后重新计算，数据库诊断仍实时执行。新增真实结果一致性、并发读取、双引擎及生命周期回归，不改变扑克数学、河牌任务行为或数据库结构。
+
 - Harden the trainer's English/Chinese loading, offline, retry and next-round flows. Keep the last confirmed feedback and weakness snapshot until a new question succeeds; freeze submissions, guard rapid clicks, and explicitly avoid automatic POST retries/reconnect replay. Show the actual question engine and distinguish page-visit totals from database-wide history, including uncertain/lost responses.
 - Replace growing client-side answer histories with running totals; show unavailable averages as “—”. Fix scalar slider thumb counts and forward accessible names to real inputs. Add recovery, concurrency, locale and slider regressions without changing poker calculations, scoring or storage.
 - 完善训练器中英文加载、离线、重试与切题流程；新题成功前保留上一轮已确认反馈及薄弱项快照，提交时锁定输入、防止快速重复点击，不自动重试 POST 或联网后补发。展示题目实际引擎，明确本次页面统计与数据库历史的区别，并说明响应丢失时的未知结果。
