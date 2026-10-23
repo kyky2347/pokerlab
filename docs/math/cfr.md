@@ -85,4 +85,30 @@ checks the same complete state before reporting any timing.
 
 The implementation first solves canonical three-card Kuhn Poker by enumerating all six ordered deals. Its estimated player-zero value must approach the known value $-1/18$ and every information-set strategy must normalize to one before the Hold'em solver is accepted.
 
+The API runs the public **20,000-iteration** fixture once during each worker's
+startup, before serving requests. `/solver/kuhn-verification` and the
+`kuhn_verification` field of `/diagnostics` return the same complete result,
+not a hard-coded success or a fresh training run.
+The diagnostics fixture previously used 5,000 iterations; its numerical values
+now match the solver page. The solver endpoint's result shape and 20,000-iteration
+calculation are unchanged. No experiment or solver-job records are created.
+
+API 在每个工作进程启动、接收请求之前运行一次 **20,000 轮**公开验证样例。
+`/solver/kuhn-verification` 与 `/diagnostics` 的 `kuhn_verification` 字段返回
+同一份完整结果，不是硬编码的成功状态，也不是每次读取都重新训练。诊断自检此前
+为 5,000 轮，现在数值与求解器页面一致；求解器接口的结果结构与 20,000 轮计算
+保持不变，不写入实验或求解任务记录。
+
+The additional startup work replaces repeated request-time computation. The
+snapshot is process-local, bounded to one fixture, and recomputed on restart;
+multiple workers each compute their own. A failed numerical check is returned
+unchanged, and a calculation exception aborts startup rather than substituting an
+old result. Reading this snapshot does not exercise the solver again or certify
+subsequent river jobs. `/diagnostics` still checks the database on every request.
+
+新增启动计算取代请求阶段的重复计算。快照仅属于当前进程、只保留一份固定样例，
+每次重启重新计算，多工作进程各自计算。数值检查失败会原样返回；计算抛出异常
+会终止启动，而不是使用旧结果替代。读取快照不会再次执行求解器，也不为后续
+河牌任务提供正确性认证；`/diagnostics` 仍会在每次请求时检查数据库。
+
 收敛曲线只能说明有限抽象内的遗憾与平均策略变化正在减小；它不能证明完整无限注德州扑克的 GTO，也不报告未经严格计算的 exploitability。

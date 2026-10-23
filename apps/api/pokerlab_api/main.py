@@ -54,8 +54,9 @@ solver_slots = threading.BoundedSemaphore(settings.pokerlab_max_concurrent_solve
 async def lifespan(app: FastAPI):
     initialize_database()
     app.state.engine = select_engine()
-    # Deterministic self-test: run once per process startup, not on every poll.
-    app.state.kuhn_verification = verify_kuhn(5_000)
+    # Compute the full public fixture before accepting requests. Both consumers
+    # share this result; concurrent reads never start additional CFR traversals.
+    app.state.kuhn_verification = verify_kuhn(20_000)
     logger.info(json.dumps({"event": "startup", "engine": app.state.engine.name}))
     yield
 
@@ -445,8 +446,9 @@ def get_solver_job(job_id: str, db: Session = Depends(get_db)) -> dict:
 
 
 @app.get("/solver/kuhn-verification", tags=["solver"])
-def kuhn_verification() -> dict:
-    return verify_kuhn()
+def kuhn_verification(request: Request) -> dict:
+    """Read this worker's startup self-test / 读取当前工作进程的启动自检。"""
+    return request.app.state.kuhn_verification
 
 
 @app.post("/research/monte-carlo", tags=["research"])

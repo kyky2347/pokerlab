@@ -101,8 +101,22 @@ after(async () => {
 
 test("standalone server resolves a patched stable Next.js", (context) => {
   const { version } = runtimeRequire("next/package.json");
-  assertVersionAtLeast(version, "16.3.8", "Next.js");
+  assertVersionAtLeast(version, "16.4.1", "Next.js");
   context.diagnostic(`Next.js=${version}`);
+});
+
+test("deployed configuration retains the documented framework exposure boundaries", () => {
+  const { config } = runtimeRequire("./.next/required-server-files.json");
+  assert.equal(config.images.dangerouslyAllowSVG, false);
+  assert.equal(config.images.dangerouslyAllowLocalIP, false);
+  assert.deepEqual(config.images.remotePatterns, []);
+  assert.deepEqual(config.images.domains, []);
+  assert.equal(config.cacheComponents, false);
+  const actions = runtimeRequire(
+    "./.next/server/server-reference-manifest.json",
+  );
+  assert.deepEqual(Object.keys(actions.node), []);
+  assert.deepEqual(Object.keys(actions.edge), []);
 });
 
 for (const path of [

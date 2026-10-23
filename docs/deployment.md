@@ -137,17 +137,20 @@ These targeted checks do not replace `pnpm audit`; see [known risks](../SECURITY
 `--no-build` 仍会运行旧二进制。这些定向检查不能替代 `pnpm audit`，已知风险见上述链接。
 
 The standalone suite also starts the real production server inside the container,
-requires Next.js 16.3.8 or newer, and checks all nine product routes and their
+requires Next.js 16.4.1 or newer, and checks all nine product routes and their
 security headers. It fetches the homepage's referenced JavaScript/CSS assets to
 catch incomplete runtime copies, checks 404 responses and remote-image rejection,
-and verifies that the development MCP endpoint is not served. Startup, requests,
+and verifies that the development MCP endpoint is not served. It also inspects
+the built image/cache configuration and empty Server Action manifests against
+the documented exposure boundaries. Startup, requests,
 and shutdown are bounded; the server is stopped after the suite, including failures.
 There are no host port mappings, external requests, API calls, or database writes.
 Run this suite using the container command above, not directly in the checkout.
 
-独立部署测试还会在容器内启动真实生产服务器，要求 Next.js 至少为 16.3.8，
+独立部署测试还会在容器内启动真实生产服务器，要求 Next.js 至少为 16.4.1，
 检查九个产品路由及安全响应头，并获取首页引用的 JavaScript/CSS，发现运行镜像
-漏复制资源的问题；同时检查 404、远程图片拒绝和开发 MCP 端点不可用。
+漏复制资源的问题；同时检查 404、远程图片拒绝和开发 MCP 端点不可用，并对照
+已公开的暴露边界检查构建后的图片/缓存配置与空 Server Action 清单。
 启动、请求与关闭均有等待上限；无论成功或失败，测试后都会关闭服务器。
 不会映射宿主机端口、请求外网、调用 API 或写入数据库。请用上面的容器命令
 运行这组测试，不要在源码目录直接执行。
@@ -237,7 +240,7 @@ Copy `.env.example` for native development when defaults are not suitable. For m
 - Restrict `CORS_ORIGINS` to the deployed web origin. / 将 CORS 限制到实际 Web 域名。
 - Persist the database and back it up before upgrades. / 持久化数据库并在升级前备份。
 - Keep compute safety limits and request timeouts enabled. / 保留计算上限与请求超时。
-- Use `/health` for liveness and `/diagnostics` for a live database check, the selected engine, and the Kuhn self-test result computed at this process's startup. Repeated diagnostic polls do not rerun the solver. / 用 `/health` 检查进程存活，用 `/diagnostics` 检查实时数据库连通性、实际引擎与本次进程启动时计算的 Kuhn 自检结果；重复轮询不会重新运行求解器。
+- Use `/health` for liveness and `/diagnostics` for a live database check, the selected engine, and the 20,000-iteration Kuhn self-test computed at this worker's startup. `/solver/kuhn-verification` reads that same complete snapshot: neither repeated nor concurrent reads rerun CFR. Each worker recomputes on restart; this is not live verification of subsequent river jobs. / 用 `/health` 检查进程存活，用 `/diagnostics` 检查实时数据库连通性、实际引擎与当前工作进程启动时计算的 20,000 轮 Kuhn 自检；`/solver/kuhn-verification` 读取同一份完整快照，重复及并发读取均不会重新运行 CFR。每个工作进程重启后重新计算；这不是对后续河牌任务的实时验证。
 - Do not describe the finite river abstraction as a full-game GTO solver. / 不要把有限河牌抽象描述为完整牌局 GTO 求解器。
 
 The Python engine remains an automatic runtime fallback if the compiled Rust extension cannot load. This preserves availability, while diagnostics and every experiment record continue to expose the selected engine.

@@ -34,7 +34,7 @@ def test_diagnostics_reuses_startup_verification_but_checks_database_each_time()
             assert first.json()["kuhn_verification"] == second.json()["kuhn_verification"]
             assert first.json()["kuhn_verification"]["passed"] is True
             assert queries.count("SELECT 1") == 2
-            verify.assert_called_once_with(5_000)
+            verify.assert_called_once_with(20_000)
 
 
 @pytest.mark.parametrize(
