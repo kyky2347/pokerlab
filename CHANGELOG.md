@@ -4,6 +4,13 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Return private, traceable bilingual JSON for unexpected API request failures; keep CORS on those responses and expose bounded safe request IDs. Preserve HTTP status/4xx detail/protocol headers, sanitize explicit 5xx details, publish the 500 OpenAPI schema, and log route templates plus exception types instead of raw exceptions, SQL binds or private path values.
+- Add database-failure recovery, concurrent request-ID isolation, safe-header, privacy and HTTP compatibility regressions. No poker calculation, persistence schema, automatic retry or idempotency changes; document post-commit and streaming limits.
+- API 未预期请求错误改为安全、可追踪的中英文 JSON；保留 CORS，公开长度受限的安全请求编号。保持 HTTP 状态、4xx detail 与协议响应头，隐藏显式 5xx 细节，发布 500 OpenAPI 模型；日志仅保留路由模板与异常类型，不记录异常正文、SQL 参数或具体资源路径。
+- 新增数据库故障恢复、并发编号隔离、安全响应头、隐私与 HTTP 兼容性回归；不改变扑克计算、数据库结构、自动重试或幂等行为，明确提交后失败与流式响应边界。
+- Pin development undici to 8.12.2 and Zod to 4.6.6 for four advisories; test actual consumer versions, bounded-array early rejection and case-insensitive SRI with network-disabled mocks. Update the prior braces disclosure: its advisory was withdrawn upstream on October 23, not patched or suppressed here.
+- 开发依赖 undici 锁定至 8.12.2、Zod 至 4.6.6，修复四项告警；验证实际依赖副本、超限数组提前拒绝，以及禁网 mock 下大小写不敏感的 SRI 校验。更新此前 braces 披露：该告警于 10 月 23 日被上游撤回，并非本项目修复或屏蔽。
+
 - Update Vitest and its actual mocker to 4.1.12 for manual-mock code injection and Windows redirect-traversal advisories; verify matching runtime versions and retain Vite's independent 8.2.4 floor. / Vitest 与实际 mocker 升至 4.1.12，处理手动 mock 代码注入与 Windows 重定向路径穿越告警；检查运行时版本一致，保留 Vite 独立的 8.2.4 补丁下限。
 
 - Upgrade Next.js and its ESLint configuration from 16.3.8 to 16.4.1 for three framework advisories added to the public database on October 22. Raise checkout/final-image version guards and verify the deployed image, cache and Server Action exposure boundaries. Keep existing native-library patches and disclose the separate unpatched development-only `braces` finding.

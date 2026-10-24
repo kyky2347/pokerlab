@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import threading
 import time
 from contextlib import asynccontextmanager
@@ -15,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .cfr import RiverCFRSolver, verify_kuhn
 from .config import get_settings
@@ -29,6 +31,7 @@ from .research import bayesian_update, compare_agents
 from .schemas import (
     AgentComparisonRequest,
     BayesianRequest,
+    ErrorResponse,
     EVRequest,
     FixedEquityRequest,
     MonteCarloRequest,
@@ -70,6 +73,7 @@ app = FastAPI(
         "an integer seed. The river solver uses a finite no-raise educational abstraction."
     ),
     lifespan=lifespan,
+    responses={500: {"model": ErrorResponse, "description": "Safe server error / 安全服务端错误"}},
 )
 
 
@@ -91,48 +95,112 @@ def exact_seed_openapi() -> dict:
 
 
 app.openapi = exact_seed_openapi
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
+
+def server_error_response(
+    request: Request, status_code: int = 500, headers: dict[str, str] | None = None
+) -> JSONResponse:
+    response = JSONResponse(
+        status_code=status_code,
+        headers=headers,
+        content={
+            "error": {
+                "code": "internal_server_error",
+                "message": (
+                    "The server could not complete the request. "
+                    "Check the result before retrying. / "
+                    "服务未能完成请求，请先核对结果再重试。"
+                ),
+                "request_id": request.state.request_id,
+            }
+        },
+    )
+    response.headers["cache-control"] = "no-store"
+    return response
+
+
+def log_route(request: Request) -> str:
+    # Never log caller-controlled path parameters or unmatched paths/query text.
+    return getattr(request.scope.get("route"), "path", "<unmatched>")
 
 
 @app.middleware("http")
 async def request_context(request: Request, call_next):
     supplied_request_id = request.headers.get("x-request-id", "").strip()
-    request_id = supplied_request_id if 0 < len(supplied_request_id) <= 128 else str(uuid4())
+    request_id = (
+        supplied_request_id
+        if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}", supplied_request_id)
+        else str(uuid4())
+    )
     request.state.request_id = request_id
     started = time.perf_counter()
     try:
         response = await call_next(request)
-    except Exception:
-        logger.exception(
+    except Exception as exc:
+        # Exception text/tracebacks can contain SQL binds, private inputs and
+        # credentials. Keep only a correlation ID, route template and type.
+        logger.error(
             json.dumps(
                 {
                     "event": "request_error",
                     "request_id": request_id,
-                    "path": request.url.path,
+                    "path": log_route(request),
                     "error_category": "unhandled",
+                    "error_type": type(exc).__name__,
                 }
             )
         )
-        raise
+        response = server_error_response(request)
     response.headers["x-request-id"] = request_id
     logger.info(
         json.dumps(
             {
                 "event": "request_complete",
                 "request_id": request_id,
-                "path": request.url.path,
+                "path": log_route(request),
                 "status": response.status_code,
                 "runtime_ms": round((time.perf_counter() - started) * 1000, 3),
             }
         )
     )
     return response
+
+
+# CORS must wrap the request boundary, including its safe 500 responses.
+# Preflight remains handled by Starlette before entering the application.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["x-request-id"],
+)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_error_handler(request: Request, exc: StarletteHTTPException) -> Response:
+    if exc.status_code >= 500:
+        return server_error_response(request, exc.status_code, exc.headers)
+    if exc.status_code in {204, 304}:
+        return Response(status_code=exc.status_code, headers=exc.headers)
+    code, message = {
+        404: ("not_found", "The requested resource was not found. / 未找到请求的资源。"),
+        405: ("method_not_allowed", "This HTTP method is not allowed. / 不支持此请求方法。"),
+        429: (
+            "workload_limit",
+            "Compute capacity is busy. Try later. / 计算资源繁忙，请稍后重试。",
+        ),
+    }.get(exc.status_code, ("http_error", "The request could not be completed. / 请求未能完成。"))
+    return JSONResponse(
+        status_code=exc.status_code,
+        headers=exc.headers,
+        content={
+            # Keep FastAPI's existing public detail field for API clients.
+            "detail": exc.detail,
+            "error": {"code": code, "message": message, "request_id": request.state.request_id},
+        },
+    )
 
 
 @app.exception_handler(ValueError)
