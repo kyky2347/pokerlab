@@ -20,27 +20,46 @@ Include the affected commit, reproduction steps, impact, and any suggested mitig
 
 ### Known dependency advisories / 已知依赖告警
 
-Rechecked on **2026-10-23**: new audit findings prompted a targeted upgrade to
-Next.js and eslint-config-next **16.4.1** and Vitest/mocker **4.1.12**, retaining Vite **8.2.4** and certifi
-**2026.10.19** (details below). After patching, the full
-npm audit reports only the existing `braces` finding, still without a published
-fixed version. The production npm audit and Python package audit report no known
-advisories. The Python audit skips this repository's two local packages; these
-results are not a guarantee that the code is vulnerability-free.
+Rechecked on **2026-10-24**: targeted development-toolchain updates pin undici
+**8.12.2** and Zod **4.6.6**, retaining earlier Next.js, Vitest, Vite, native-image
+and Python patches. Full/production npm audits and the Python package audit report
+no known advisories. Python skips this repository's two local distributions;
+these results do not audit every runtime, host or first-party code path.
 
-**2026-10-23 复核**：针对新发现的告警定向升级 Next.js 与 eslint-config-next 至
-**16.4.1**、Vitest/mocker 至 **4.1.12**，保留 Vite **8.2.4**、certifi **2026.10.19**（详见下文）。
-修复后完整 npm 审计仅剩既有且尚无正式补丁的
-`braces` 告警；生产 npm 依赖与 Python 包审计未报告已知告警。Python 审计跳过
-本仓库的两个本地包；这些结果不代表代码绝无漏洞。
+**2026-10-24 复核**：定向将开发工具链 undici 升至 **8.12.2**、Zod 升至
+**4.6.6**，保留此前 Next.js、Vitest、Vite、原生图像库与 Python 补丁。
+完整/生产 npm 审计和 Python 包审计未报告已知告警；Python 跳过本仓库两个
+本地项目包。这不等于审计了每个运行时、宿主机或本项目代码路径。
 
-As of **2026-10-10**, `pnpm audit` reports [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm): deeply nested brace patterns can exhaust the stack in `braces <=3.0.3`. In this lockfile it is reached through the **ESLint development toolchain** (`eslint-config-next → @next/eslint-plugin-next → fast-glob → micromatch → braces`). The public advisory lists no patched release, and the npm registry still lists 3.0.3 as latest. Although the audit output suggests `>=3.0.4`, that version was not available at verification time.
+The previously disclosed [braces advisory GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)
+was withdrawn by the advisory publisher on **2026-10-23**, with the stated reason
+that it is not practically exploitable. The locked ESLint dependency remains
+braces 3.0.3: PokerLab did **not** patch it, suppress it, or dismiss an alert to
+obtain a clean audit. Earlier dated changelog entries describe the findings at
+that time. Continue isolating untrusted development tooling and do not treat a
+withdrawn advisory or clean feed as proof that software is vulnerability-free.
 
-截至 **2026-10-10**，`pnpm audit` 报告上述高危告警：`braces <=3.0.3` 处理深层嵌套模式时可能耗尽调用栈。本锁文件中的依赖路径来自 **ESLint 开发工具链**（路径如上）。官方公告尚无修复版，npm 最新版仍为 3.0.3；审计输出虽然提示 `>=3.0.4`，但核实时该版本并不存在。
+此前披露的上述 `braces` 告警由发布方于 **2026-10-23 撤回**，给出的理由是
+不具实际可利用性。ESLint 工具链仍锁定 braces 3.0.3；本项目**没有**修复该包、
+屏蔽告警或手动关闭告警来获得清洁审计。早期带日期的更新记录保留当时的发现。
+仍应隔离不可信开发工具；告警撤回或审计清洁都不是“软件绝无漏洞”的证明。
 
-This advisory is **not suppressed or marked fixed**. Avoid supplying untrusted patterns to this tooling and run untrusted-repository checks in isolated, resource-limited CI workers. The app does not directly import this package, but a development-only dependency classification is not a guarantee of safety. Recheck the registry/advisory before upgrading and rerun the quality gate once a supported patch is published. Existing loopback deployment and repository protections remain in effect.
+### October 24 development dependencies / 10 月 24 日开发依赖
 
-本项目**没有屏蔽告警，也不宣称已修复**。不要向此工具链传入不可信模式；检查不可信仓库时应使用隔离、受资源限制的 CI。应用未直接导入此包，但“仅开发依赖”并不代表没有风险。升级前应重新核实公告和注册表，正式补丁发布后再升级并重跑质量门禁。现有回环部署与仓库保护继续生效。
+- jsdom's actual undici copy is **8.12.2**, covering [EventSource retained-state exhaustion](https://github.com/nodejs/undici/security/advisories/GHSA-4qv8-2p9j-2685), [case-insensitive integrity verification](https://github.com/nodejs/undici/security/advisories/GHSA-f72v-6w45-q472), and [excessive content-encoding handling](https://github.com/nodejs/undici/security/advisories/GHSA-xjj6-f33q-929c). Tests use a network-disabled MockAgent to verify accepted matching digests and rejected mismatches for SHA-256/384/512 with lower, upper and mixed-case tokens. They do not launch a memory-exhaustion attack or emulate every upstream exploit.
+- ESLint's React Hooks validator and `zod-validation-error` both resolve **Zod 4.6.6** for [oversized constrained collections](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5). Small fixtures verify `.max()` and `.length()` reject before element parsing while valid arrays still parse. [Upstream scope](https://github.com/colinhacks/zod/pull/6652): unbounded schemas remain unbounded.
+
+- jsdom 实际加载的 undici 升至 **8.12.2**，修复上述 EventSource 保留状态耗尽、大小写不敏感完整性校验及过量内容编码处理问题。测试使用禁网 MockAgent 核对 SHA-256/384/512 三种算法及大小写变体的正确摘要接受与错误摘要拒绝，不执行内存耗尽攻击，也不模拟全部上游漏洞。
+- ESLint 的 React Hooks 验证器及 `zod-validation-error` 均解析到 **Zod 4.6.6**。小型用例确认 `.max()`、`.length()` 在解析元素前拒绝超限数组，并保留合法数组行为；未设置长度约束的模式仍无界，详见上游补丁范围。
+
+These are development dependencies, not new production services. The override
+updates the locked npm copies only, **not Node.js's built-in fetch/undici or other
+projects**. Keep Node.js, container images and independent installations patched
+separately. A development-only classification is not a security guarantee.
+
+这些是开发依赖，不是新增生产服务。覆盖规则仅更新本项目锁定的 npm 副本，
+**不更新 Node.js 内置 fetch/undici 或其他项目**；Node.js、容器基础镜像和独立
+安装需分别维护。“仅开发依赖”不代表没有安全风险。
 
 The 2026-10-06 lockfile update pins affected `source-map-js` consumers to **1.2.2**, the patched release for [GHSA-68fv-2mgg-jv7q](https://github.com/advisories/GHSA-68fv-2mgg-jv7q) (malformed indexed source-map section offsets). Frozen-lockfile installation is verified; this resolves that advisory, not the separate `braces` finding above.
 
@@ -56,9 +75,9 @@ The 2026-10-07 lockfile update also patches:
 - `concurrently` 引入的 `shell-quote` 升级至 **1.11.0**。上游命令注入条件是注释标记之后的字符串含换行符；PokerLab 开发脚本使用仓库中的固定命令，不能由公告严重级别推断项目存在已暴露的命令执行接口。
 - Next.js 引入的 `sharp` 升级至 **0.35.5**，预编译依赖包含 **librsvg 2.63.2**。公告影响取决于 glibc Linux 的运行条件；本项目仍重新构建并检查 Alpine/musl 镜像里的补丁版本。使用全局自编译 libvips 时，也必须确保实际加载的 librsvg 已修复。
 
-`pnpm test:dependencies` verifies the actual transitive copies and rejects unsafe shell-quoting cases without executing them. Native-image tests run in both the checkout and the final standalone container; they check loaded versions and actual PNG/WebP pixels. Version floors deliberately reject unknown/prerelease native versions. These are targeted regression guards, **not a comprehensive vulnerability scanner**. Rerun `pnpm audit` after dependency changes; the remaining braces warning is not suppressed.
+`pnpm test:dependencies` verifies the actual transitive copies and rejects unsafe shell-quoting cases without executing them. Native-image tests run in both the checkout and the final standalone container; they check loaded versions and actual PNG/WebP pixels. Version floors deliberately reject unknown/prerelease native versions. These are targeted regression guards, **not a comprehensive vulnerability scanner**. Rerun `pnpm audit` after dependency changes; no advisory is suppressed by these checks.
 
-`pnpm test:dependencies` 验证实际间接依赖，对不安全的转义输入只检查拒绝行为，绝不执行它们。图像测试同时覆盖本地环境和最终独立部署容器，检查已加载版本与实际 PNG/WebP 像素。版本下限检查会主动拒绝未知或预发布原生版本。这些是定向回归保护，**并非完整漏洞扫描器**；依赖变更后仍应运行 `pnpm audit`，现存 braces 告警不屏蔽。
+`pnpm test:dependencies` 验证实际间接依赖，对不安全的转义输入只检查拒绝行为，绝不执行它们。图像测试同时覆盖本地环境和最终独立部署容器，检查已加载版本与实际 PNG/WebP 像素。版本下限检查会主动拒绝未知或预发布原生版本。这些是定向回归保护，**并非完整漏洞扫描器**；依赖变更后仍应运行 `pnpm audit`，这些检查不会屏蔽告警。
 
 The same update pins Alembic's transitive **Mako to 1.4.2** for [GHSA-5639-2j2p-m4mx](https://github.com/advisories/GHSA-5639-2j2p-m4mx), a Windows drive-letter template-URI traversal issue. PokerLab uses packaged migration templates, not user-controlled template paths. Regression tests check rejection under both POSIX and emulated Windows path semantics and render the actual migration template.
 

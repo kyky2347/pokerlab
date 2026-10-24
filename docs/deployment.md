@@ -155,6 +155,67 @@ Run this suite using the container command above, not directly in the checkout.
 不会映射宿主机端口、请求外网、调用 API 或写入数据库。请用上面的容器命令
 运行这组测试，不要在源码目录直接执行。
 
+## API errors / API 错误
+
+Application request failures before response headers are sent use JSON with an
+`error` object containing `code`, `message` and `request_id`. Unexpected failures
+return HTTP 500, a generic English/Chinese message and `Cache-Control: no-store`;
+they never return an exception string or SQL bind values. Explicit 5xx errors
+also hide their detail but retain their status and protocol headers such as
+`Retry-After`. Existing 4xx HTTP `detail` fields and headers such as `Allow`
+remain available; 422 poker/schema validation keeps its existing contract.
+
+应用在发送响应头之前发生的请求错误使用 JSON，其中 `error` 包含 `code`、
+`message` 和 `request_id`。未预期错误返回 HTTP 500、中英文通用提示及
+`Cache-Control: no-store`，不返回异常正文或 SQL 参数。显式 5xx 同样隐藏细节，
+保留状态码与 `Retry-After` 等协议响应头；既有 4xx HTTP `detail` 字段及
+`Allow` 响应头仍可用，422 牌局/请求校验接口保持原有约定。
+
+For correlation, supply an opaque `X-Request-ID` using 1–128 ASCII characters:
+start with a letter/digit, then use letters, digits, `.`, `_`, `:` or `-`.
+Surrounding whitespace is stripped. Missing or invalid IDs are replaced by a
+fresh UUID; the accepted/generated ID appears in the response header and error
+body. Trusted `CORS_ORIGINS` can read that header in JavaScript, including on
+500 responses. CORS preflight remains Starlette-managed and does not enter this
+request-ID boundary. An ID is **not authentication or an idempotency key** and
+must not contain credentials or private data.
+
+可发送不含隐私的 `X-Request-ID` 关联请求：去除首尾空白后为 1–128 个 ASCII
+字符，以字母/数字开头，后续允许字母、数字及 `.`、`_`、`:`、`-`。缺失或非法
+编号将替换为新 UUID；响应头与错误正文使用相同编号。可信 `CORS_ORIGINS`
+可在 JavaScript 中读取该响应头，包括 500 响应。CORS 预检仍由 Starlette
+处理，不进入此请求编号边界。编号**不是身份认证或幂等键**，不得放入凭据或隐私。
+
+```bash
+curl -i -H 'X-Request-ID: support-check-1' \
+  http://localhost:8000/experiments/nonexistent-example
+```
+
+Structured `pokerlab` request logs retain the ID, route template, status, timing
+and (for unexpected errors) exception class. They omit exception text/tracebacks,
+query strings, request bodies and concrete path parameters. Use the ID and route
+to investigate privately; don't publish full databases or logs. Uvicorn access
+logs, reverse-proxy logs and third-party instrumentation are independent and
+must be configured separately—never put secrets in URLs or request IDs.
+
+`pokerlab` 结构化请求日志保留编号、路由模板、状态、耗时，以及未预期错误的
+异常类型；不记录异常正文/堆栈、查询字符串、请求体或具体路径参数。用编号与
+路由进行私下排查，不公开完整数据库或日志。Uvicorn 访问日志、反向代理日志及
+第三方监控独立运行，需另行配置；不要把秘密放进 URL 或请求编号。
+
+A 500 or lost response **does not establish whether a write committed**. Check
+the experiment/job ledger before repeating a write; trainer answer recovery is
+described below. This boundary does not add automatic retries, transactional
+idempotency or solver changes. Streaming/background failures after headers are
+sent cannot be replaced with this JSON response; process startup failures are
+also outside the request boundary. Tests cover SQLite/PostgreSQL failure and
+recovery, request-ID isolation, privacy, HTTP compatibility and CORS.
+
+500 或响应丢失**不能证明写入是否已提交**。重试写操作前先核对实验/任务记录；
+训练答题恢复见下文。此次不新增自动重试、事务幂等或求解器变更。响应头发出后
+的流式/后台失败不能替换为此 JSON，进程启动失败也不属于请求边界。测试覆盖
+SQLite/PostgreSQL 故障恢复、编号隔离、隐私、HTTP 兼容性与 CORS。
+
 ## Database upgrades and recovery / 数据库升级与恢复
 
 The API runs packaged Alembic migrations before serving requests. Fresh databases are initialized automatically; the original three-table PokerLab layout is recognized and brought under version control without recreating its tables. Existing versioned databases are upgraded normally. Incomplete or unfamiliar unversioned layouts are rejected for manual investigation. `/diagnostics` exposes the live `schema_revision`.
