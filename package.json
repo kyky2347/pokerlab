@@ -34,6 +34,6 @@
     "format:check": "pnpm --filter web format:check && pnpm --filter web exec prettier --check ../../scripts && cd apps/api && uv run ruff format --check . && cd ../.. && cargo fmt --manifest-path packages/poker-core/Cargo.toml --check"
   },
   "devDependencies": {
-    "concurrently": "10.0.5"
+    "concurrently": "10.0.6"
   }
 }
