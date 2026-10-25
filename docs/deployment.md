@@ -216,6 +216,47 @@ recovery, request-ID isolation, privacy, HTTP compatibility and CORS.
 的流式/后台失败不能替换为此 JSON，进程启动失败也不属于请求边界。测试覆盖
 SQLite/PostgreSQL 故障恢复、编号隔离、隐私、HTTP 兼容性与 CORS。
 
+### Browser recovery / 浏览器恢复
+
+The shared JSON client rejects empty, truncated, malformed, interrupted or scalar
+success bodies rather than treating them as an empty result. Error bodies may be
+HTML, `null` or unexpected JSON: the client preserves the HTTP status and uses a
+generic bilingual message when no non-empty public message/detail string exists.
+Parser exception text and raw failed bodies are not displayed. A safe request ID
+from the response header takes precedence over the error envelope's ID; invalid
+IDs are ignored. Existing error alerts show the accepted ID for private support.
+
+共享 JSON 客户端拒绝空白、截断、损坏、中断或标量成功响应，不再把它们当作空结果。
+错误正文即使是 HTML、`null` 或异常 JSON 结构，也保留 HTTP 状态；没有非空的公开
+消息/detail 字符串时，使用中英文通用提示，不显示解析器异常正文或失败的原始响应。
+安全的响应头请求编号优先于错误正文编号，非法编号忽略；现有错误提示显示有效编号，
+方便私下排查。
+
+For client code, `ApiError.kind` distinguishes `http`, `invalid_response` and
+`timeout`; `status` retains the received HTTP status (even 200 for invalid JSON),
+except client timeouts retain the existing synthetic 408. `requestId` is optional.
+Caller cancellation—including a custom abort reason—remains cancellation, and
+the shared three-minute deadline covers both headers and body reads. The client
+does not retry requests itself; existing page/query retry settings still apply.
+Trainer writes require manual recovery and count only a readable successful
+response. A failed read does not establish whether the server committed a write.
+
+客户端 `ApiError.kind` 区分 `http`、`invalid_response`、`timeout`；`status` 保留
+收到的 HTTP 状态（无效 JSON 也可能是 200），客户端超时沿用合成状态 408；
+`requestId` 可选。主动取消（含自定义原因）仍保持取消语义，统一三分钟时限覆盖
+等待响应头和读取正文。客户端本身不重试请求，既有页面/query 重试设置仍有效。
+训练写操作由用户手动恢复，只有可读取的成功响应才计入统计；读取失败不证明
+服务端写入没有提交。
+
+This boundary accepts JSON objects/lists; it does not validate every endpoint's
+fields, enforce a MIME type, or recompute canonical results. Successful text
+exports bypass JSON parsing so 64-bit seeds remain exact. Tests exercise the
+real client through English/Chinese trainer recovery as well as transport errors.
+
+此边界接受 JSON 对象/列表，不验证每个接口字段、不强制 MIME 类型，也不重新
+计算标准结果。成功的文本导出绕过 JSON 解析，保留 64 位种子的精确文本。
+测试通过真实客户端覆盖英文/中文训练恢复及传输错误。
+
 ## Database upgrades and recovery / 数据库升级与恢复
 
 The API runs packaged Alembic migrations before serving requests. Fresh databases are initialized automatically; the original three-table PokerLab layout is recognized and brought under version control without recreating its tables. Existing versioned databases are upgraded normally. Incomplete or unfamiliar unversioned layouts are rejected for manual investigation. `/diagnostics` exposes the live `schema_revision`.
