@@ -100,11 +100,81 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   onlineManager.setOnline(true);
   clients.splice(0).forEach((client) => client.clear());
 });
 
 describe("trainer recovery", () => {
+  it.each(["en", "zh"] as const)(
+    "recovers from malformed real transport responses without counting an unconfirmed score (%s)",
+    async (locale) => {
+      useLabStore.setState({ locale });
+      const { postJson: actualPostJson } =
+        await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
+      vi.mocked(postJson).mockImplementation(actualPostJson);
+      const fetch = vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response("<html>private proxy details</html>", {
+            headers: { "x-request-id": "scenario-response-1" },
+          }),
+        )
+        .mockResolvedValueOnce(Response.json(scenario))
+        .mockResolvedValueOnce(
+          new Response('{"score":', {
+            headers: { "x-request-id": "answer-response-1" },
+          }),
+        )
+        .mockResolvedValueOnce(Response.json(feedback));
+      vi.stubGlobal("fetch", fetch);
+      const zh = locale === "zh";
+      const user = mount();
+      const scenarioError = await screen.findByRole("alert");
+      expect(scenarioError).toHaveTextContent("scenario-response-1");
+      expect(scenarioError).not.toHaveTextContent("private proxy details");
+      expect(fetch).toHaveBeenCalledTimes(1);
+      await user.click(
+        screen.getByRole("button", {
+          name: zh ? "重试出题" : "Retry scenario",
+        }),
+      );
+      await screen.findByText(/Python reference/);
+      expect(fetch.mock.calls[1][1].body).toBe(fetch.mock.calls[0][1].body);
+      fireEvent.change(
+        screen.getByRole("slider", {
+          name: zh ? "胜率估计" : "Equity estimate",
+        }),
+        { target: { value: "62.5" } },
+      );
+      await user.click(
+        screen.getByRole("button", { name: zh ? "锁定答案" : "Lock answer" }),
+      );
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "answer-response-1",
+      );
+      expect(metric(zh ? "已答题数" : "Questions")).toHaveTextContent("0");
+      expect(metric(zh ? "平均得分" : "Average score")).toHaveTextContent("—");
+      expect(
+        screen.queryByText(zh ? "实际胜率" : "Actual equity"),
+      ).not.toBeInTheDocument();
+      expect(fetch).toHaveBeenCalledTimes(3);
+      await user.click(
+        screen.getByRole("button", {
+          name: zh ? "重试提交答案" : "Retry answer",
+        }),
+      );
+      await screen.findByText(zh ? "实际胜率" : "Actual equity");
+      expect(fetch).toHaveBeenCalledTimes(4);
+      expect(fetch.mock.calls[3][1].body).toBe(fetch.mock.calls[2][1].body);
+      expect(metric(zh ? "已答题数" : "Questions")).toHaveTextContent("1");
+      expect(metric(zh ? "平均得分" : "Average score")).toHaveTextContent(
+        "99.0",
+      );
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    },
+  );
+
   it("requests once under Strict Mode and never invents an empty-session error average", async () => {
     mount();
     await ready();

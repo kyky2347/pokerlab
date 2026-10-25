@@ -4,6 +4,12 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Reject malformed, empty, interrupted and scalar JSON success responses in the browser instead of converting them to `{}`. Keep HTTP error status, validate public error-message types, and show bounded safe request IDs for support. Preserve custom cancellation reasons, bilingual three-minute timeouts and lossless export text; add no automatic write retries.
+- Add transport and bilingual trainer integration regressions: an unreadable scenario/answer stays recoverable, does not update session statistics, and only counts after a successful manual retry. This checks JSON transport shape, not every endpoint field or poker mathematics.
+- 浏览器拒绝损坏、空白、中断或标量 JSON 成功响应，不再转换为 `{}` 继续处理；保留 HTTP 错误状态，检查公开错误消息类型，并显示长度受限的安全请求编号。保留自定义取消原因、双语三分钟超时提示及原文导出，不增加写请求自动重试。
+- 新增传输层及双语训练页集成回归：题目/答案响应不可读时保持可恢复状态，不更新会话统计，手动重试成功后才计数。此处检查 JSON 传输形态，不替代各接口字段或扑克数学的验证。
+- Let alert content shrink and wrap long identifiers within mobile layouts without truncating the request ID. / 提示内容可在移动端布局中收缩并折行长编号，完整保留请求编号。
+
 - Return private, traceable bilingual JSON for unexpected API request failures; keep CORS on those responses and expose bounded safe request IDs. Preserve HTTP status/4xx detail/protocol headers, sanitize explicit 5xx details, publish the 500 OpenAPI schema, and log route templates plus exception types instead of raw exceptions, SQL binds or private path values.
 - Add database-failure recovery, concurrent request-ID isolation, safe-header, privacy and HTTP compatibility regressions. No poker calculation, persistence schema, automatic retry or idempotency changes; document post-commit and streaming limits.
 - API 未预期请求错误改为安全、可追踪的中英文 JSON；保留 CORS，公开长度受限的安全请求编号。保持 HTTP 状态、4xx detail 与协议响应头，隐藏显式 5xx 细节，发布 500 OpenAPI 模型；日志仅保留路由模板与异常类型，不记录异常正文、SQL 参数或具体资源路径。
