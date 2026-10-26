@@ -63,6 +63,46 @@ select the Python reference engine, whose identity is exposed in API results.
 
 牌对象必须使用 2–14 的整数点数和 `c/d/h/s` 中的单字符花色。两个摊牌引擎均要求每人两张手牌、五张公共牌，且全部九张牌互不重复，而非仅检查各人的七张牌。非法状态在评估前即被拒绝；Rust 无法加载或启动自检失败时仍自动回退至 Python，API 如实返回所用引擎名称。
 
+### Evaluator output contract / 评估器输出契约
+
+Every completed showdown must return a built-in Python `int` or `float` equal
+to **0 (loss), 0.5 (tie), or 1 (win)**. Booleans, complex numbers, strings,
+collections, `None`, NaN, infinities and other fractions are invalid. There is
+no conversion, rounding or default-to-loss behavior. Fixed-hand counts, both
+range-equity branches and river CFR use the same check before consuming an
+outcome; request/job caches only receive validated outcomes.
+
+每次完整摊牌必须返回 Python 内置 `int` 或 `float`，值严格为 **输 0、平 0.5、赢 1**。
+布尔值、复数、字符串、集合、`None`、NaN、无穷及其他小数均非法；不进行转换、
+四舍五入或默认判输。固定手牌计数、范围胜率的两条路径和河牌 CFR 在使用结果前
+共享同一检查，请求/任务缓存只接收校验通过的结果。
+
+A violation raises `InvalidShowdownOutcome`, an internal `RuntimeError`, not an
+invalid-input `ValueError`. HTTP requests return the existing safe bilingual 500
+with a request ID. No successful experiment or trainer question is stored from
+that calculation. A solver whose running job was already committed follows the
+normal failed-job path and releases its slot. Fix the evaluator before retrying;
+runtime failures do not silently switch engines or reuse a partial solver state.
+Startup Rust loading/smoke-test fallback remains unchanged.
+
+违约时抛出内部运行错误 `InvalidShowdownOutcome`，而不是表示输入有误的 `ValueError`。
+HTTP 请求沿用带编号的安全双语 500 响应，此次计算不保存成功实验或训练题目。
+若求解器已提交运行中任务，则进入既有失败记录流程并释放并发名额。重试前需修复
+评估器；运行时错误不静默切换引擎，也不复用部分求解状态。启动时的 Rust 加载/
+自检失败自动回退保持不变。
+
+Valid results retain their exact accumulation order, sampling draws, seeds,
+tie weight and solver updates. Tests inject failures before and after valid
+evaluations, check SQLite/PostgreSQL persistence and recovery, and retain the
+independent enumeration, cross-engine, seeded-stream and complete-strategy
+comparisons. This is an output-domain check: a wrong but admissible 0/0.5/1 still
+requires the evaluator's mathematical tests to detect.
+
+合法结果的累加顺序、抽样、种子、平局权重和求解更新不变。测试在首个及后续评估
+注入故障，核对 SQLite/PostgreSQL 持久化与恢复，并保留独立枚举、双引擎、完整
+随机序列和完整策略对照。这是输出值域检查；若评估器返回合法但算错的 0/0.5/1，
+仍需由数学正确性测试识别。
+
 ## Range equity / 范围胜率
 
 For weighted ranges $R_H,R_V$, an ordered combo pair $(h,v)$ is included only if

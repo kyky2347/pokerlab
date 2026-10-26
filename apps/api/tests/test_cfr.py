@@ -60,7 +60,7 @@ def test_solver_rejects_invalid_evaluator_outputs(outcome):
     solver = RiverCFRSolver(
         BOARD, {"AQo": 1}, {"KQo": 1}, 100, 100, 0.5, 1, Mock(return_value=outcome)
     )
-    with pytest.raises(ValueError, match="Showdown outcome"):
+    with pytest.raises(RuntimeError, match="Showdown outcome"):
         solver.solve(1)
 
 
