@@ -10,7 +10,14 @@ from itertools import combinations
 from typing import Protocol
 
 from .controls import validate_positive_integer, validate_seed
-from .domain import Card, full_deck, showdown, validate_holdem_state, validate_showdown_state
+from .domain import (
+    Card,
+    full_deck,
+    showdown,
+    validate_holdem_state,
+    validate_showdown_outcome,
+    validate_showdown_state,
+)
 from .uncertainty import (
     CONFIDENCE_LEVEL,
     CONFIDENCE_METHOD,
@@ -30,6 +37,7 @@ class EquityCounts:
         return self.wins + self.ties + self.losses
 
     def add(self, outcome: float) -> None:
+        validate_showdown_outcome(outcome)
         if outcome == 1:
             self.wins += 1
         elif outcome == 0.5:
@@ -142,6 +150,7 @@ class PythonPokerEngine:
                 outcome = outcomes.get(key)
                 if outcome is None:  # A cached loss (0.0) is a valid result.
                     outcome = self.showdown(hero, villain, board + runout)
+                    validate_showdown_outcome(outcome)
                     outcomes[key] = outcome
             # Every draw still contributes, including repeated runouts. Preserve
             # RNG calls, accumulation order, checkpoints and uncertainty exactly.

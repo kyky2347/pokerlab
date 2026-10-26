@@ -57,6 +57,19 @@ class Card:
 HandRank = tuple[int, ...]
 
 
+class InvalidShowdownOutcome(RuntimeError):
+    """An evaluator violated its output contract, not a caller's poker input."""
+
+
+def validate_showdown_outcome(outcome: float) -> None:
+    # Booleans and complex values can compare equal to 0/1. Do not coerce them,
+    # round arbitrary fractions, or classify an unknown value as a loss.
+    if type(outcome) not in (int, float) or outcome not in (0.0, 0.5, 1.0):
+        raise InvalidShowdownOutcome(
+            "Showdown outcome must be the number 0, 0.5, or 1 / 摊牌结果必须为数字 0、0.5 或 1"
+        )
+
+
 def full_deck() -> tuple[Card, ...]:
     return tuple(Card(rank, suit) for rank in range(2, 15) for suit in SUIT_CHARS)
 

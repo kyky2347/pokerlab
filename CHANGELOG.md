@@ -4,6 +4,11 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Validate showdown outputs consistently before equity aggregation or caching: only built-in numeric 0/0.5/1 are accepted, never booleans, non-finite scores or arbitrary values defaulted to losses. River CFR now classifies invalid evaluator output as an internal failure, not a user input error.
+- Add failure-injection regressions for exact/Monte Carlo equity, turn maps, weighted ranges, training and solver jobs, including SQLite/PostgreSQL recovery and rejection after valid draws. Preserve valid seeded results, weighting, traversal, mathematical tests and startup Rust-to-Python fallback.
+- 胜率累加及缓存前统一校验摊牌输出，仅接受内置数字 0/0.5/1；拒绝布尔值、非有限值，不再把未知结果默认当作输。河牌 CFR 将非法评估器输出归为内部故障，而非用户输入错误。
+- 新增精确/蒙特卡洛胜率、转牌地图、加权范围、训练及求解任务故障注入回归，覆盖 SQLite/PostgreSQL 恢复及合法抽样之后的异常拒绝；保持合法种子结果、权重、遍历、数学测试和启动时 Rust 自动回退不变。
+
 - Reject malformed, empty, interrupted and scalar JSON success responses in the browser instead of converting them to `{}`. Keep HTTP error status, validate public error-message types, and show bounded safe request IDs for support. Preserve custom cancellation reasons, bilingual three-minute timeouts and lossless export text; add no automatic write retries.
 - Add transport and bilingual trainer integration regressions: an unreadable scenario/answer stays recoverable, does not update session statistics, and only counts after a successful manual retry. This checks JSON transport shape, not every endpoint field or poker mathematics.
 - 浏览器拒绝损坏、空白、中断或标量 JSON 成功响应，不再转换为 `{}` 继续处理；保留 HTTP 错误状态，检查公开错误消息类型，并显示长度受限的安全请求编号。保留自定义取消原因、双语三分钟超时提示及原文导出，不增加写请求自动重试。

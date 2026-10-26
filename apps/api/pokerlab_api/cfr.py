@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from itertools import permutations
 
 from .controls import validate_positive_integer
-from .domain import Card, showdown
+from .domain import Card, showdown, validate_showdown_outcome
 from .ranges import WeightedCombo, combo_class, expand_weighted_range
 
 
@@ -200,8 +200,7 @@ class RiverCFRSolver:
         outcome = self._showdown_cache.get(deal)
         if outcome is None:
             outcome = self.evaluator(deal.oop.cards, deal.ip.cards, self.board)
-            if outcome not in (0.0, 0.5, 1.0):
-                raise ValueError("Showdown outcome must be 0, 0.5, or 1")
+            validate_showdown_outcome(outcome)
             self._showdown_cache[deal] = outcome
         return outcome
 

@@ -8,7 +8,7 @@ from collections.abc import Callable, Sequence
 from itertools import accumulate, combinations
 
 from .controls import validate_positive_integer, validate_seed
-from .domain import SUIT_CHARS, Card, full_deck, showdown
+from .domain import SUIT_CHARS, Card, full_deck, showdown, validate_showdown_outcome
 from .ranges import WeightedCombo, expand_weighted_range, range_statistics
 
 
@@ -78,6 +78,7 @@ def calculate_range_equity(
             deck = tuple(card for card in available_deck if card not in blocked)
             for runout in combinations(deck, missing):
                 outcome = evaluator(hero.cards, villain.cards, board + runout)
+                validate_showdown_outcome(outcome)
                 total_weight += pair_weight
                 if outcome == 1:
                     win_weight += pair_weight
@@ -100,6 +101,7 @@ def calculate_range_equity(
             deck = tuple(card for card in available_deck if card not in blocked)
             runout = tuple(rng.sample(deck, missing))
             outcome = evaluator(hero.cards, villain.cards, board + runout)
+            validate_showdown_outcome(outcome)
             total_weight += 1
             if outcome == 1:
                 win_weight += 1
