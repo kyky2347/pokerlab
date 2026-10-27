@@ -4,6 +4,11 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Reuse job-local river information-set lookups keyed only by actor, own cards and public history; preserve canonical keys, every traversal/update and all mutable strategy state. Add O(information sets) lookup references without sharing nodes across jobs.
+- Add complete-state, continued-training, identity/isolation and benchmark-failure regressions. Publish a bilingual reproducible benchmark: 61 deals × 500 rounds reduce private-key formatting from 183,000 to 54; observed five-run medians fall 9.5% with Python evaluation and 12.6% with Rust. These are workload-specific timings, not whole-app or stronger-solving claims.
+- 河牌信息集复用任务内查找表，身份仅含行动者、自身手牌和公开历史；保留规范键、全部遍历/更新及可变策略状态。增加 O(信息集数) 的查找引用，不跨任务共享节点。
+- 新增完整状态、连续训练、节点身份/隔离和基准故障回归，发布双语可复现基准：61 个手牌对 × 500 轮将私牌键格式化从 183,000 次降至 54 次，五次中位耗时在 Python/Rust 评估路径分别下降 9.5%/12.6%。此为特定场景实测，不代表全系统或求解能力提升。
+
 - Validate showdown outputs consistently before equity aggregation or caching: only built-in numeric 0/0.5/1 are accepted, never booleans, non-finite scores or arbitrary values defaulted to losses. River CFR now classifies invalid evaluator output as an internal failure, not a user input error.
 - Add failure-injection regressions for exact/Monte Carlo equity, turn maps, weighted ranges, training and solver jobs, including SQLite/PostgreSQL recovery and rejection after valid draws. Preserve valid seeded results, weighting, traversal, mathematical tests and startup Rust-to-Python fallback.
 - 胜率累加及缓存前统一校验摊牌输出，仅接受内置数字 0/0.5/1；拒绝布尔值、非有限值，不再把未知结果默认当作输。河牌 CFR 将非法评估器输出归为内部故障，而非用户输入错误。

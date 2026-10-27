@@ -29,7 +29,7 @@ $s(d)\in\{0,\tfrac12,1\}$ does not depend on betting history or iteration.
 Check/check utility is $(2s(d)-1)P/2$; a called bet of size $b$ has utility
 $(2s(d)-1)(P/2+b)$ for OOP. Fold utilities do not require a showdown.
 
-PokerLab caches only $s(d)$, evaluated by the selected Rust or Python engine,
+For terminal evaluation, PokerLab caches only $s(d)$, evaluated by the selected Rust or Python engine,
 inside that solver instance. It does not cache or approximate regrets, reach
 probabilities, strategies, or utilities with different bet sizes. The current
 tree has five showdown terminals, so $D$ legal deals over $T$ iterations now
@@ -62,13 +62,13 @@ does not skip any deal, branch, iteration, or arithmetic operation.
 Kuhn has 24 nonterminal visits per iteration and 12 distinct information sets;
 the river tree has six nonterminal visits per deal per iteration. Construction
 count is now the number of distinct visited information sets, rather than the
-number of visits. Retained state and asymptotic memory are unchanged; only
+number of visits. This allocation change preserves retained state and asymptotic memory; only
 temporary object/array churn is removed. No nodes or mutable arrays are shared
 across solver jobs. Continuing an existing solver retains its prior training.
 
 Kuhn 每轮访问 24 个非终局节点，只有 12 个不同的信息集；河牌树每组手牌对每轮
 有六次非终局访问。构造次数现在等于访问过的不同信息集数量，而不是总访问次数。
-常驻状态与渐近内存复杂度不变，只消除临时对象和数组的反复分配。不同求解任务
+这一分配优化保持常驻状态与渐近内存复杂度不变，只消除临时对象和数组的反复分配。不同求解任务
 不共享节点或可变数组；同一求解器继续训练时保留此前的累计状态。
 
 Tests compare full outputs, node insertion/action order, cumulative regrets,
@@ -80,6 +80,42 @@ checks the same complete state before reporting any timing.
 测试对照原来的重复构造遍历，逐项核对完整输出、节点插入/动作顺序、累计遗憾、
 策略和与平均策略，覆盖加权范围、筹码上限、平局、双引擎及连续训练。
 可复现基准也在报告耗时前核对相同的完整状态。
+
+## River node lookup / 河牌节点查找
+
+Each river solver also keeps a job-local lookup from `(actor, own cards, public
+history)` to the existing information-set node. Its canonical text key is built
+on first access, preserving insertion order and the public result format.
+Opponent cards and chance weights are excluded from the lookup identity: deals
+that are indistinguishable to the acting player must still update the same node.
+Seats and histories remain separate, even when the private cards are identical.
+
+每个河牌求解器还保存任务内的 `(行动者、自身手牌、公开历史)` 到已有信息集节点
+的查找表。规范文本键仅在首次访问时构造，保留插入顺序与公开结果格式。查找身份
+不包含对手手牌或机会权重：行动者无法区分的发牌仍必须更新同一节点；不同座位和
+公开历史保持分离，即使自身手牌相同。
+
+The lookup holds node references, not cached strategies or regret values. Every
+visit recomputes the current strategy and performs the original arithmetic in
+the original order. Generated deals add one lookup entry per visited information
+set; continuing training does not grow it with iterations. This **adds O(I)
+memory** for I information sets. It is not a memory-saving optimization, a new
+solver algorithm, or a stronger convergence guarantee. Instances share no nodes.
+
+查找表保存节点引用，不缓存策略或遗憾数值。每次访问仍重新计算当前策略，并按
+原顺序执行数学运算。正常生成的发牌每个已访问信息集增加一个查找条目，继续训练
+不会随轮数增加条目。这会为 I 个信息集**增加 O(I) 内存**，不是节省内存、新求解
+算法或更强收敛保证；不同实例不共享节点。
+
+Regression tests compare complete results, all node arrays and insertion/action
+order with the pre-lookup traversal, including continued training, weighted
+ranges, capped bets, split pots, both engines and reversed private-card order.
+The [benchmark and raw evidence](../../research/benchmarks.md#river-node-lookup--河牌节点查找--2026-10-27)
+include a single-iteration control and refuse to report any mismatched result.
+
+回归逐项对照优化前遍历的完整结果、全部节点数组与插入/动作顺序，覆盖连续训练、
+加权范围、筹码上限、平局、双引擎和手牌顺序反转。基准包含单轮对照，遇到任何
+结果差异即中止，不报告该次性能结果。
 
 ## Kuhn fixture / Kuhn 验证
 

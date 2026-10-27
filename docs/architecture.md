@@ -54,6 +54,10 @@ The river solver uses a finite educational tree: OOP may check or make one of tw
 
 河牌求解采用有限、无加注的教学博弈树。信息集由玩家、精确物理手牌组合和公开行动历史标识，终局收益为零和。任务内缓存复用每组固定牌面的真实摊牌结果，不改变遍历顺序或策略更新。
 
+A separate per-job node lookup avoids rebuilding canonical text keys on repeated visits. It references the existing information sets using only actor, own cards and public history, never opponent cards or chance weights. Strategies and regrets are still updated on every visit; the lookup adds O(information sets) memory and shares nothing across jobs. See [node identity and benchmark boundaries](math/cfr.md#river-node-lookup--河牌节点查找).
+
+另一个任务内节点查找表避免在重复访问时重建规范文本键，仅以行动者、自身手牌和公开历史引用既有信息集，不纳入对手手牌或机会权重。策略与遗憾仍在每次访问时更新；查找表增加 O(信息集数) 内存，任务间不共享状态，详见[节点身份与基准边界](math/cfr.md#river-node-lookup--河牌节点查找)。
+
 Solver requests validate the game before inserting a job. Once the initial `running` record commits, computation or completion-write failures roll back the session before attempting a separate `failed` update. Failure-record errors are logged by type without replacing the original error; the concurrency slot is released in all paths. This follows SQLAlchemy's requirement for [explicit rollback after failed flushes](https://docs.sqlalchemy.org/en/20/orm/session_basics.html#flushing).
 
 求解请求先验证牌局再写入任务。初始 `running` 记录提交后，计算或完成结果写入失败会先回滚会话，再独立尝试记录 `failed`。失败状态自身若无法写入，仅记录错误类型且不覆盖原始异常；所有退出路径均释放并发名额。这遵循 SQLAlchemy 对失败 flush 后显式回滚的要求。

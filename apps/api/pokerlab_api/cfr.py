@@ -163,6 +163,10 @@ class RiverCFRSolver:
         # A solver instance has one fixed board and evaluator. Cache only real
         # terminal outcomes, never strategies or regrets, and never across jobs.
         self._showdown_cache: dict[RiverDeal, float] = {}
+        # Look up the same node without rebuilding its display/export key on
+        # every visit. Opponent cards and chance weights are deliberately absent:
+        # an information set depends only on actor, own cards and public history.
+        self._node_lookup: dict[tuple[int, tuple[Card, Card], tuple[str, ...]], InformationSet] = {}
 
     @staticmethod
     def _player(history: tuple[str, ...]) -> int:
@@ -237,10 +241,14 @@ class RiverCFRSolver:
         player = self._player(history)
         cards = deal.oop.cards if player == 0 else deal.ip.cards
         actions = self._actions(history)
-        key = f"{player}|{self._private_key(cards)}|{'/'.join(history)}"
-        node = self.information_sets.get(key)
+        lookup = (player, cards, history)
+        node = self._node_lookup.get(lookup)
         if node is None:
-            node = self.information_sets[key] = InformationSet(key, actions)
+            key = f"{player}|{self._private_key(cards)}|{'/'.join(history)}"
+            node = self.information_sets.get(key)
+            if node is None:
+                node = self.information_sets[key] = InformationSet(key, actions)
+            self._node_lookup[lookup] = node
         own_reach = p0 if player == 0 else p1
         strategy = node.strategy(own_reach * deal.chance_weight)
         utilities = [0.0] * len(actions)
