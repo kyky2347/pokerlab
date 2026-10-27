@@ -3,6 +3,8 @@
 Run with: uv run python -m pokerlab_api.cfr_allocation_benchmark
 The reference traversals are frozen from d8d4e15. Shared helpers, evaluators,
 validation, and result generation remain current; this is not a commit benchmark.
+Current traversal also includes node lookup reuse; cfr_lookup_benchmark isolates
+that later change against the pre-lookup lazy traversal.
 This offline module is never imported by the API.
 """
 

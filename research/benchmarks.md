@@ -19,7 +19,67 @@ These are observations, not promises. The CFR rate depends strongly on blocker-c
 
 以上是实测观察，而非性能承诺。CFR 速度强烈依赖合法范围组合对的数量及博弈树分支；Rust 加速终局牌力评估，调度与 CFR 仍由 Python 执行。
 
+## River node lookup / 河牌节点查找 — 2026-10-27
+
+Same-machine comparison on macOS ARM64, CPython 3.12.13. The reference `_cfr`
+traversal is frozen from `e2e3985`, already using lazy node creation and the
+showdown cache. Both algorithms use the current constructor, evaluator,
+validation and result generation. This isolates node lookup, not an old/new
+commit or HTTP comparison. CFR traversal remains Python for both engines.
+
+同机 macOS ARM64、CPython 3.12.13 对照。参考 `_cfr` 遍历冻结自 `e2e3985`，
+已经包含按需节点构造和摊牌缓存；两种算法共享当前构造器、评估器、校验与结果
+生成。此处比较节点查找，不是整个旧/新提交或 HTTP 性能，双引擎 CFR 遍历均为 Python。
+
+Workload: board `Ah Kd 7s 3c 2d`, OOP `AQo: 1`, IP `KQo: 1`, pot/stack 100,
+bets 0.5/1 pot: 61 compatible deals and 54 information sets. One instrumented
+warmup counts private-key formatting; five **uninstrumented** runs alternate
+algorithm order, each with a fresh solver. Timings include constructor and solve,
+but exclude state comparison, JSON serialization, HTTP and storage. Every run
+must exactly match complete results, node order, actions, regret arrays and
+strategy sums/averages; only runtime is excluded from equality.
+
+场景为上述公共牌、范围，底池/有效筹码 100，下注为 0.5/1 倍底池，共 61 个合法
+手牌对和 54 个信息集。一次带计数器预热统计私牌键格式化；之后五次**无插桩**
+计时交替算法顺序，每次新建求解器。耗时包含构造与求解，不含状态比较、JSON、
+HTTP 或存储。每次运行须精确匹配完整结果、节点顺序、动作、遗憾数组及策略和/
+平均值，仅排除运行时间。
+
+| Evaluator / 评估器 | Iterations / 轮数 | String lookup median / 字符串查找中位数 | Cached lookup median / 缓存查找中位数 | Key formatting / 键格式化次数 |
+| --- | ---: | ---: | ---: | ---: |
+| Python | 1 | 7.04 ms | 6.92 ms | 366 → 54 |
+| Python | 500 | 461.98 ms | 418.17 ms | 183,000 → 54 |
+| Rust | 1 | 3.27 ms | 3.13 ms | 366 → 54 |
+| Rust | 500 | 453.57 ms | 396.58 ms | 183,000 → 54 |
+
+The 500-iteration medians decreased by 9.5% and 12.6%. Single-iteration timings
+are a startup-cost control, not a stable speedup claim. The new lookup retains
+54 additional entries in this workload, **O(information sets) extra memory**;
+node/strategy arrays are not duplicated. Speed depends on ranges, iterations,
+machine load and evaluator. There is no whole-app, memory-saving or stronger
+solving claim. Existing solver limitations and startup engine fallback remain.
+
+500 轮中位耗时分别下降 9.5% 和 12.6%；单轮是启动成本对照，不据此承诺稳定提速。
+此场景额外保留 54 个查找条目，**增加 O(信息集数) 内存**，不复制节点/策略数组。
+实际收益取决于范围、轮数、机器负载与评估器，不代表全系统提速、节省内存或更强
+求解能力。既有求解限制和启动时引擎回退保留。
+
+[Raw measurements / 原始实测](cfr-lookup-2026-10-27.json) include individual
+timings, counts, workload, engine identity and a full-state SHA-256 fingerprint.
+
+```bash
+cd apps/api
+uv run python -m pokerlab_api.cfr_lookup_benchmark --iterations 500 --repeats 5
+```
+
 ## CFR information-set allocation / CFR 信息集分配 — 2026-10-16
+
+Historical measurements below remain unchanged. Rerunning the older allocation
+benchmark against current code also includes later node-lookup improvements;
+use the October 27 benchmark above to isolate the lookup change.
+
+以下历史实测保持不变；用当前代码重跑旧分配基准还会包含后续的节点查找优化。
+单独衡量查找优化时，请使用上方 10 月 27 日基准。
 
 Environment: macOS 26.5.2 ARM64, CPython 3.12.13. Compare lazy node creation
 with the eager `_cfr` traversals frozen from `d8d4e15`. All other helpers,
