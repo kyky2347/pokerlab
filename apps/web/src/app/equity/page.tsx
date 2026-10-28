@@ -28,6 +28,14 @@ import { PokerCard } from "@/components/poker-card";
 import { PokerTable } from "@/components/poker-table";
 import { MonteCarloUncertainty } from "@/components/monte-carlo-uncertainty";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import {
   Card,
   CardContent,
@@ -45,11 +53,13 @@ import {
 } from "@/components/ui/select";
 import { postJson } from "@/lib/api";
 import { checkpointInterval } from "@/lib/monte-carlo";
+import { parseBrowserSeed } from "@/lib/seed";
 import { useCopy } from "@/lib/store";
 import type { EquityResult } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type Zone = "hero" | "villain" | "board";
+type FixedInput = { hero: string[]; villain: string[]; board: string[] };
 type TurnMap = {
   turns: Array<{ card: string; equity: number }>;
   runtime_ms: number;
@@ -65,25 +75,20 @@ export default function EquityLab() {
   const [board, setBoard] = useState(["Js", "8s", "2c"]);
   const [zone, setZone] = useState<Zone>("board");
   const [samples, setSamples] = useState(10000);
-  const [seed, setSeed] = useState(20250902);
+  const [seedInput, setSeedInput] = useState("20250902");
+  const seed = parseBrowserSeed(seedInput);
   const [resultKey, setResultKey] = useState<string | null>(null);
   const exact = useMutation({
-    mutationFn: (value: string[]) =>
-      postJson<EquityResult>("/equity/exact", { hero, villain, board: value }),
+    mutationFn: (input: FixedInput) =>
+      postJson<EquityResult>("/equity/exact", input),
   });
   const monteCarlo = useMutation({
-    mutationFn: (value: string[]) =>
-      postJson<EquityResult>("/equity/monte-carlo", {
-        hero,
-        villain,
-        board: value,
-        samples,
-        seed,
-      }),
+    mutationFn: (input: FixedInput & { samples: number; seed: number }) =>
+      postJson<EquityResult>("/equity/monte-carlo", input),
   });
   const turnMap = useMutation({
-    mutationFn: (value: string[]) =>
-      postJson<TurnMap>("/equity/turn-map", { hero, villain, board: value }),
+    mutationFn: (input: FixedInput) =>
+      postJson<TurnMap>("/equity/turn-map", input),
   });
 
   const selected = [...hero, ...villain, ...board];
@@ -112,6 +117,7 @@ export default function EquityLab() {
   }
   function run(nextBoard = board) {
     if (
+      seed === null ||
       hero.length !== 2 ||
       villain.length !== 2 ||
       ![0, 3, 4, 5].includes(nextBoard.length)
@@ -120,9 +126,10 @@ export default function EquityLab() {
     setResultKey(
       JSON.stringify({ hero, villain, board: nextBoard, samples, seed }),
     );
-    exact.mutate(nextBoard);
-    monteCarlo.mutate(nextBoard);
-    if (nextBoard.length === 3) turnMap.mutate(nextBoard);
+    const input = { hero, villain, board: nextBoard };
+    exact.mutate(input);
+    monteCarlo.mutate({ ...input, samples, seed });
+    if (nextBoard.length === 3) turnMap.mutate(input);
     else turnMap.reset();
   }
   function applyTurn(card: string) {
@@ -375,25 +382,51 @@ export default function EquityLab() {
                   </SelectContent>
                 </Select>
               </label>
-              <label className="flex flex-col gap-2 text-xs text-muted-foreground">
-                Seed
-                <input
-                  className="font-data h-9 rounded-lg border bg-background px-3 text-foreground outline-none focus:ring-2 focus:ring-ring"
-                  type="number"
-                  min={0}
-                  value={seed}
-                  onChange={(event) => {
-                    invalidateResults();
-                    setSeed(Number(event.target.value));
-                  }}
-                />
-              </label>
+              <FieldGroup>
+                <Field data-invalid={seed === null}>
+                  <FieldLabel htmlFor="equity-seed">
+                    {zh ? "种子" : "Seed"}
+                  </FieldLabel>
+                  <Input
+                    id="equity-seed"
+                    className="font-data"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={seedInput}
+                    aria-invalid={seed === null}
+                    aria-describedby={
+                      seed === null
+                        ? "equity-seed-help equity-seed-error"
+                        : "equity-seed-help"
+                    }
+                    onChange={(event) => {
+                      invalidateResults();
+                      setSeedInput(event.target.value);
+                    }}
+                  />
+                  <FieldDescription id="equity-seed-help">
+                    {zh
+                      ? "范围：0–9,007,199,254,740,991。相同牌面、样本数和种子可复现抽样。"
+                      : "Range: 0–9,007,199,254,740,991. Use the same cards, sample count and seed to reproduce a run."}
+                  </FieldDescription>
+                  {seed === null ? (
+                    <FieldError id="equity-seed-error">
+                      {zh
+                        ? "请输入范围内的非负整数，仅使用数字；不接受小数、指数或空白。"
+                        : "Enter a whole number in range using digits only; no decimals, exponents or spaces."}
+                    </FieldError>
+                  ) : null}
+                </Field>
+              </FieldGroup>
               <Button
                 size="lg"
                 onClick={() => run()}
                 disabled={
                   exact.isPending ||
                   monteCarlo.isPending ||
+                  seed === null ||
                   hero.length !== 2 ||
                   villain.length !== 2 ||
                   ![0, 3, 4, 5].includes(board.length)
