@@ -78,8 +78,9 @@ range; the HTTP endpoint intentionally offers only the three presets above.
 上限，调用方须自行限制规模；直接策略对比保留 2–10,000 局范围，HTTP 则仅提供
 上述三个预设。
 
-JavaScript `Number` cannot represent every 64-bit integer. The browser's editable
-seed control therefore accepts only safe integers (at most 2^53 − 1). Python
+JavaScript `Number` cannot represent every 64-bit integer. Both editable browser
+seed controls (Equity Lab and Research's agent comparison) therefore accept only
+safe integers (0 through 2^53 − 1, or 9,007,199,254,740,991). Python
 clients can send the full supported range as exact JSON integer tokens. Do not
 convert large seeds through a JavaScript `Number` or quote them as request
 strings. The history summary's string seed is a display/export representation,
@@ -91,14 +92,42 @@ its [documented OpenAPI customization mechanism](https://fastapi.tiangolo.com/ho
 to restore the shared seed bounds after generation, retaining normal routes,
 metadata and schema caching. Runtime validation remains in the request models.
 
-JavaScript `Number` 无法精确表示全部 64 位整数，因此浏览器可编辑种子只接受
-安全整数（最多 2^53 − 1）。Python 客户端可按精确 JSON 整数提交完整支持范围。
+JavaScript `Number` 无法精确表示全部 64 位整数，因此胜率实验室和研究页策略对比
+的两个可编辑种子控件只接受安全整数（0 至 2^53 − 1，即 9,007,199,254,740,991）。
+Python 客户端可按精确 JSON 整数提交完整支持范围。
 不要将大种子转成 JavaScript `Number`，也不要给请求种子加引号。历史摘要中的
 字符串种子用于展示/导出，不是提交请求的格式；原始 JSON 导出保留整数文本。
 
 公开的 `/openapi.json` 同样保留精确整数上限。FastAPI 中间模型以浮点数表示
 数值边界，因此应用通过上述官方 OpenAPI 自定义机制在生成后恢复共用的种子边界，
 保留原有路由、元数据和缓存；运行时校验仍由请求模型负责。
+
+The browser keeps the original editable text, using a shared digits-only parser
+before submission. Empty values, whitespace, signs, decimals, exponent notation
+and out-of-range values are invalid. Leading zeroes are allowed: `007` stays in
+the field and is submitted as JSON integer `7`. Equity Lab shows a localized,
+screen-reader-linked error and disables all three calculations until corrected;
+it does not silently replace an empty seed with zero or round a large input.
+For example, `9007199254740993` previously reached the API as `9007199254740992`.
+It is now retained verbatim and rejected before sending a request.
+
+浏览器保留编辑原文，提交前共享仅允许数字的解析器。空值、空白、正负号、小数、
+指数和超范围值均无效。允许前导零：`007` 在输入框中保持原样，提交为 JSON 整数
+`7`。胜率实验室显示与输入框关联的本地化读屏提示，修正前禁用全部三项计算，
+不再把空值静默变为零或舍入大整数。例如 `9007199254740993` 此前会以
+`9007199254740992` 到达 API，现在保留原文并在发请求前拒绝。
+
+Each valid Equity Lab run captures its cards, sample count and numeric seed.
+Editing the seed clears visible results; delayed responses from an earlier run
+cannot reappear as the edited run's result. Editing does not cancel server work
+already requested or undo saved experiments. A corrected seed requires an
+explicit new calculation. Existing records keep the seed actually stored; the
+original typed digits from an older rounded submission cannot be reconstructed.
+
+每次合法胜率计算固定本次牌面、样本数和数字种子。编辑种子会清除可见结果，
+旧请求的延迟响应不会冒充新参数的结果。编辑不会取消已发出的服务端计算或撤销
+已存实验，修正后需明确再次点击计算。历史记录保留实际存储种子，无法从旧版已
+舍入的请求恢复当时输入的原始数字。
 
 This is an intentional tightening for clients that relied on coercion. Valid
 integer inputs retain their RNG stream, accumulation order, results, uncertainty,
@@ -113,6 +142,17 @@ future adaptive questions after that history changes.
 固定后续自适应题目。
 
 ## Verification / 验证
+
+```bash
+pnpm --filter web exec vitest run src/app/equity/page.test.tsx src/lib/research.test.ts
+```
+
+The bilingual browser-control regressions cover unsafe values, the maximum safe
+seed, zero, leading zeroes, correction, complete request payloads and late/out-of-order
+responses. They use transport fixtures, not substitute poker results.
+
+双语浏览器控件回归覆盖非法值、最大安全种子、零、前导零、修正、完整请求参数及
+延迟/乱序响应；其中模拟数据仅用于传输测试，不作为产品扑克结果。
 
 ```bash
 cd apps/api

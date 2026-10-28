@@ -58,11 +58,7 @@ export const policyCopy: Record<
   },
 };
 
-export function parseResearchSeed(value: string): number | null {
-  if (!/^\d+$/.test(value)) return null;
-  const seed = Number(value);
-  return Number.isSafeInteger(seed) ? seed : null;
-}
+export { parseBrowserSeed as parseResearchSeed } from "./seed";
 
 export function agentCsvRows(result: AgentResult) {
   return result.agents.map((agent) => ({

@@ -4,6 +4,11 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Keep Equity Lab seed input as text and share safe-integer parsing with Research. Reject empty, fractional, exponent and unsafe inputs before any calculation; preserve zero, leading zeroes and exact safe integers. Show linked English/Chinese inline validation.
+- Capture each calculation's complete parameters and verify that edited seeds hide prior results and late responses cannot overwrite a corrected run. Add bilingual integration regressions and document browser/API precision, existing-record and in-flight-request boundaries.
+- 胜率实验室种子改为保留文本，与研究页共享安全整数解析；空值、小数、指数及超范围输入在全部计算前拒绝，保留零、前导零与精确安全整数，新增关联输入框的中英文就地提示。
+- 固定每次计算的完整参数，验证编辑种子后隐藏旧结果、延迟响应不覆盖修正后的新结果；新增双语集成回归，说明浏览器/API 精度、历史记录与已发出请求的边界。
+
 - Reuse job-local river information-set lookups keyed only by actor, own cards and public history; preserve canonical keys, every traversal/update and all mutable strategy state. Add O(information sets) lookup references without sharing nodes across jobs.
 - Add complete-state, continued-training, identity/isolation and benchmark-failure regressions. Publish a bilingual reproducible benchmark: 61 deals × 500 rounds reduce private-key formatting from 183,000 to 54; observed five-run medians fall 9.5% with Python evaluation and 12.6% with Rust. These are workload-specific timings, not whole-app or stronger-solving claims.
 - 河牌信息集复用任务内查找表，身份仅含行动者、自身手牌和公开历史；保留规范键、全部遍历/更新及可变策略状态。增加 O(信息集数) 的查找引用，不跨任务共享节点。
