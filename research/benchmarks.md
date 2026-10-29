@@ -19,6 +19,85 @@ These are observations, not promises. The CFR rate depends strongly on blocker-c
 
 以上是实测观察，而非性能承诺。CFR 速度强烈依赖合法范围组合对的数量及博弈树分支；Rust 加速终局牌力评估，调度与 CFR 仍由 Python 执行。
 
+## Python validation reuse / Python 校验复用 — 2026-10-29
+
+The Python seven-card evaluator now validates its input once before ranking all
+21 five-card subsets. Their uniqueness follows from the validated seven cards.
+The five-card ranking body is unchanged; both public evaluators still reject
+duplicate cards and incorrect lengths, including list and generator inputs.
+Per seven-card evaluation, uniqueness-related card hashes fall from **112 to 7**
+(22 uniqueness sets to one). This structural count is measured separately in
+regression tests; timing runs have no instrumentation.
+
+Python 七张牌评估器在入口校验一次后，继续评估全部 21 个五张牌子集；子集唯一性
+由已通过校验的七张牌保证。五张牌排序逻辑保持不变，两个公开入口仍拒绝重牌和
+错误数量，包含列表与生成器输入。每次七张牌评估用于唯一性检查的牌面哈希从
+**112 次降至 7 次**（唯一性集合从 22 个降至 1 个）。结构计数在回归测试中单独
+测量，计时不带插桩。
+
+Same-machine comparison: macOS 26.5.2 ARM64, CPython 3.12.13. The benchmark
+freezes the original five/seven-card evaluator bodies from `a3237bd`. Card types,
+straight detection, engine orchestration, Monte Carlo caching and uncertainty
+calculations are shared unchanged. It isolates validation placement, not two
+complete application versions. Input generation and output comparisons happen
+outside timing. Each variant warms up once; five measured runs alternate order.
+Every rank and complete public output must match exactly, excluding only runtime.
+The command fails on a mismatch; stored SHA-256 fingerprints supplement that check.
+
+同机环境为 macOS 26.5.2 ARM64、CPython 3.12.13。基准冻结 `a3237bd` 的原五/七张牌
+函数体，共享未改动的牌类型、顺子判定、引擎调度、蒙特卡洛缓存及不确定性计算。
+因此仅比较校验位置，不是整个新旧应用。输入生成与输出核对不计时，每个版本预热
+一次，五次计时交替顺序。每个牌力向量及完整公开输出须精确一致，仅排除耗时；
+不一致时命令失败，SHA-256 摘要仅作为核对的补充。
+
+Seed **20261029** generates 5,000 seven-card hands; the five-card control uses each
+hand's first five cards. Equity workloads use `As Ks` versus `Qh Qd`, flop
+`Js 8s 2c`; Monte Carlo requests 10,000 draws with that seed, including the existing
+runout cache. Exact flop and turn map each evaluate 990 unordered runouts.
+
+种子 **20261029** 生成 5,000 组七张牌；五张牌对照使用每组前五张。胜率场景为
+`As Ks` 对 `Qh Qd`，翻牌 `Js 8s 2c`；蒙特卡洛使用同一种子抽样 10,000 次，保留
+已有补牌缓存。精确翻牌和转牌地图各评估 990 个无序补牌组合。
+
+| Python workload / Python 场景 | Original median / 原中位数 | New median / 新中位数 | Observed reduction / 实测下降 |
+| --- | ---: | ---: | ---: |
+| Five-card batch, 5,000 / 五张牌批量 | 12.218 ms | 12.212 ms | Effectively unchanged / 基本持平 |
+| Seven-card batch, 5,000 / 七张牌批量 | 267.938 ms | 225.359 ms | 15.9% |
+| Exact flop / 翻牌精确胜率 | 106.893 ms | 95.071 ms | 11.1% |
+| Monte Carlo, 10,000 draws / 蒙特卡洛抽样 | 109.492 ms | 96.464 ms | 11.9% |
+| Conditional turn map / 条件转牌地图 | 101.423 ms | 82.316 ms | 18.8% |
+
+[Raw measurements / 原始实测](python-evaluator-2026-10-29.json) contain all five
+timings, inputs, environment and output fingerprints. Gains vary with hardware,
+load, hand distribution and cache hit rate. This changes the Python fallback
+path; Rust's evaluator and startup selection are unchanged. It does not change
+asymptotic complexity, poker mathematics, solver strength or whole-app latency.
+Historical timings elsewhere in this file describe their original dates; do not
+multiply their ratios by these measurements.
+
+原始数据包含五次独立耗时、输入、环境和输出摘要。收益随硬件、负载、牌型分布及
+缓存命中率变化。此次优化作用于 Python 回退路径，Rust 评估器及启动选择不变，
+不改变渐进复杂度、扑克数学或求解能力，不能代表整个应用延迟。本文其他历史耗时
+对应各自测量日期，不应将历史比率与本次实测相乘。
+
+```bash
+cd apps/api
+uv run python -m pokerlab_api.python_evaluator_benchmark --seed 20261029 --repeats 5
+uv run pytest tests/test_python_evaluator.py tests/test_rust_crosscheck.py
+```
+
+The test suite exhaustively compares all 2,598,960 physical five-card hands and
+their category counts, checks seeded seven-card hands plus suit/order
+permutations, rejects every duplicate-position pair at both public boundaries,
+and compares complete exact, Monte Carlo and turn-map results. Existing 5,000-hand
+Rust/Python parity and startup-fallback tests also run. The seven-card space is
+sampled, not exhaustively enumerated.
+
+测试穷举全部 2,598,960 种实体五张牌并核对牌型计数，检查固定种子的七张牌及花色/
+顺序置换，验证两个公开入口拒绝每种重复位置组合，并对照精确、蒙特卡洛及转牌
+地图完整结果。既有 5,000 组 Rust/Python 一致性与启动回退测试同时执行。七张牌
+空间采用抽样核对，没有宣称全部穷举。
+
 ## River node lookup / 河牌节点查找 — 2026-10-27
 
 Same-machine comparison on macOS ARM64, CPython 3.12.13. The reference `_cfr`

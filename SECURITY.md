@@ -20,13 +20,13 @@ Include the affected commit, reproduction steps, impact, and any suggested mitig
 
 ### Known dependency advisories / 已知依赖告警
 
-Rechecked on **2026-10-28**: the October 24 development-toolchain pins remain undici
+Rechecked on **2026-10-29**: the October 24 development-toolchain pins remain undici
 **8.12.2** and Zod **4.6.6**, retaining earlier Next.js, Vitest, Vite, native-image
 and Python patches. Full/production npm audits and the Python package audit report
 no known advisories. Python skips this repository's two local distributions;
 these results do not audit every runtime, host or first-party code path.
 
-**2026-10-28 复核**：保留 10 月 24 日锁定的开发工具链 undici **8.12.2**、Zod
+**2026-10-29 复核**：保留 10 月 24 日锁定的开发工具链 undici **8.12.2**、Zod
 **4.6.6**，以及此前 Next.js、Vitest、Vite、原生图像库与 Python 补丁。
 完整/生产 npm 审计和 Python 包审计未报告已知告警；Python 跳过本仓库两个
 本地项目包。这不等于审计了每个运行时、宿主机或本项目代码路径。
