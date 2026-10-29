@@ -115,6 +115,11 @@ def evaluate_five(cards: Iterable[Card]) -> HandRank:
     hand = tuple(cards)
     if len(hand) != 5 or len(set(hand)) != 5:
         raise ValueError("A five-card hand must contain five unique cards")
+    return _rank_five(hand)
+
+
+def _rank_five(hand: tuple[Card, ...]) -> HandRank:
+    """Rank five already-validated cards; only the public evaluators call this."""
     ranks = [card.rank for card in hand]
     counts = Counter(ranks)
     grouped = sorted(((count, rank) for rank, count in counts.items()), reverse=True)
@@ -152,7 +157,9 @@ def evaluate_seven(cards: Iterable[Card]) -> HandRank:
     hand = tuple(cards)
     if len(hand) != 7 or len(set(hand)) != 7:
         raise ValueError("A seven-card hand must contain seven unique cards")
-    return max(evaluate_five(combo) for combo in combinations(hand, 5))
+    # Every five-card subset of seven unique cards is already unique. Keep the
+    # public boundary check, but avoid rebuilding 21 sets for trusted subsets.
+    return max(_rank_five(combo) for combo in combinations(hand, 5))
 
 
 def validate_showdown_state(

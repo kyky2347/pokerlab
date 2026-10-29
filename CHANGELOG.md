@@ -4,6 +4,11 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Validate seven-card uniqueness once in the Python reference evaluator, then rank every one of its 21 trusted five-card subsets with the unchanged ranking logic. Public five/seven-card validation, full kicker vectors, seeded results and automatic Rust fallback remain intact.
+- Add exhaustive 2,598,960-hand parity, category-count, permutation, malformed-input, complete-output and benchmark-failure regressions. Publish a reproducible five-run benchmark and raw measurements: observed Python seven-card batch time falls 15.9%, exact-flop time 11.1%; standalone five-card timing is effectively unchanged. These are workload-specific measurements, not Rust or whole-app claims.
+- Python 参考评估器仅在七张牌入口检查一次唯一性，再以原有牌力逻辑评估全部 21 个合法五张牌子集；保留五/七张牌公开入口校验、完整踢脚牌排序、固定种子结果及 Rust 自动回退。
+- 新增全部 2,598,960 种五张牌对照、牌型计数、排列、非法输入、完整输出及基准故障回归。发布五次可复现实测和原始数据：Python 七张牌批量评估耗时下降 15.9%、翻牌精确胜率下降 11.1%，独立五张牌耗时基本持平；属于特定工作负载观察，不代表 Rust 或全系统提速。
+
 - Keep Equity Lab seed input as text and share safe-integer parsing with Research. Reject empty, fractional, exponent and unsafe inputs before any calculation; preserve zero, leading zeroes and exact safe integers. Show linked English/Chinese inline validation.
 - Capture each calculation's complete parameters and verify that edited seeds hide prior results and late responses cannot overwrite a corrected run. Add bilingual integration regressions and document browser/API precision, existing-record and in-flight-request boundaries.
 - 胜率实验室种子改为保留文本，与研究页共享安全整数解析；空值、小数、指数及超范围输入在全部计算前拒绝，保留零、前导零与精确安全整数，新增关联输入框的中英文就地提示。

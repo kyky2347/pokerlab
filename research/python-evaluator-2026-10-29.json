@@ -1,0 +1,162 @@
+{
+  "environment": {
+    "platform": "macOS-26.5.2-arm64-arm-64bit",
+    "python": "3.12.13",
+    "engine": "Python reference"
+  },
+  "workload": {
+    "baseline_commit": "a3237bde836af6d2e341652e131906ccce47af5c",
+    "seed": 20261029,
+    "hand_count": 5000,
+    "samples": 10000,
+    "hero": [
+      "As",
+      "Ks"
+    ],
+    "villain": [
+      "Qh",
+      "Qd"
+    ],
+    "flop": [
+      "Js",
+      "8s",
+      "2c"
+    ],
+    "repeats": 5,
+    "warmup_runs_per_variant": 1,
+    "alternating_order": true,
+    "timing_scope": "Core calls; excludes input generation, output comparison, HTTP, storage and UI"
+  },
+  "results": [
+    {
+      "benchmark": "five_card_batch",
+      "times_ms": {
+        "baseline": [
+          12.381082982756197,
+          12.21766707021743,
+          12.104874942451715,
+          12.026083073578775,
+          12.246333993971348
+        ],
+        "candidate": [
+          12.212082976475358,
+          12.256916030310094,
+          12.149791931733489,
+          12.254209024831653,
+          12.127417023293674
+        ]
+      },
+      "median_ms": {
+        "baseline": 12.21766707021743,
+        "candidate": 12.212082976475358
+      },
+      "baseline_over_candidate": 1.0004572597281585,
+      "reference_match": true,
+      "result_sha256": "9dc2af90f83bea69f6aaf9909d94ed54b1612219161e3db35cfdcaa634cb6097"
+    },
+    {
+      "benchmark": "seven_card_batch",
+      "times_ms": {
+        "baseline": [
+          267.93833298143,
+          263.9461250510067,
+          267.36449997406453,
+          295.13716604560614,
+          632.6447919709608
+        ],
+        "candidate": [
+          225.3592909546569,
+          220.0262079713866,
+          214.32129200547934,
+          248.60766693018377,
+          310.396125074476
+        ]
+      },
+      "median_ms": {
+        "baseline": 267.93833298143,
+        "candidate": 225.3592909546569
+      },
+      "baseline_over_candidate": 1.1889384806208863,
+      "reference_match": true,
+      "result_sha256": "3f3a8502b96df4ec62658229e7a69725fd838bb06497bab777d0a567ac531ffc"
+    },
+    {
+      "benchmark": "exact_flop",
+      "times_ms": {
+        "baseline": [
+          108.03787503391504,
+          106.89341695979238,
+          108.4554159315303,
+          104.77529198396951,
+          100.53808393422514
+        ],
+        "candidate": [
+          97.16220898553729,
+          95.07137502077967,
+          90.27112508192658,
+          96.89841698855162,
+          93.31883292179555
+        ]
+      },
+      "median_ms": {
+        "baseline": 106.89341695979238,
+        "candidate": 95.07137502077967
+      },
+      "baseline_over_candidate": 1.1243491212410546,
+      "reference_match": true,
+      "result_sha256": "cfac64cd2ee14fa3ceedc7eaffb763bd7cde9eebaec340834a4fe3de2344e5ec"
+    },
+    {
+      "benchmark": "monte_carlo",
+      "times_ms": {
+        "baseline": [
+          109.49162498582155,
+          111.88116704579443,
+          109.24850008450449,
+          108.98883396293968,
+          204.60283302236348
+        ],
+        "candidate": [
+          93.06062490213662,
+          96.46395803429186,
+          93.94020901527256,
+          97.35958301462233,
+          258.5762500530109
+        ]
+      },
+      "median_ms": {
+        "baseline": 109.49162498582155,
+        "candidate": 96.46395803429186
+      },
+      "baseline_over_candidate": 1.1350521709558972,
+      "reference_match": true,
+      "result_sha256": "a8f4e378df74bb9d2b1be51562143bcebc3d898660cff09a6d14311da13bcfeb"
+    },
+    {
+      "benchmark": "turn_map",
+      "times_ms": {
+        "baseline": [
+          104.59216695744544,
+          101.423165993765,
+          102.19145799055696,
+          100.13283300213516,
+          99.83133303467184
+        ],
+        "candidate": [
+          95.12237494345754,
+          81.74533303827047,
+          83.29400001093745,
+          82.15616701636463,
+          82.31562504079193
+        ]
+      },
+      "median_ms": {
+        "baseline": 101.423165993765,
+        "candidate": 82.31562504079193
+      },
+      "baseline_over_candidate": 1.232125321814713,
+      "reference_match": true,
+      "result_sha256": "a380958587a22f046ed7a8de45b4eb7c99ad29c3e7ebea5dc4fe772701dc2b09"
+    }
+  ]
+}
