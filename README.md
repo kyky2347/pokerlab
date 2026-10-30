@@ -64,6 +64,10 @@ Real API output: 10,000 samples, seed `20250902`, Rust evaluator. The shaded reg
 
 ![EV Lab](output/playwright/ev-lab.png)
 
+EV markers use continuous coordinates, including fractional break-even thresholds and 0.5-point slider steps. Solid and dashed markers have bilingual value labels; the zero line distinguishes positive and negative EV. [Chart conventions and worked example](docs/math/expected-value.md#reading-the-chart--阅读图表). / EV 标记使用连续坐标，支持小数盈亏平衡阈值与 0.5 个百分点的滑块步长；实线、虚线配有双语数值图例，零线区分 EV 正负。详见[图表约定与算例](docs/math/expected-value.md#reading-the-chart--阅读图表)。
+
+[Chinese mobile EV chart / 中文移动端 EV 图表](output/playwright/ev-zh-mobile.png)
+
 ### Game theory and research / 博弈论与研究
 
 ![CFR Solver Lite](output/playwright/solver.png)
@@ -233,7 +237,7 @@ Full-range regression tests verify every legal pair across preflop/flop/turn/riv
 
 Bayesian charts preserve probability mass using API-computed CDF/survival differences over 200 bins, including narrow peaks and boundary tails. Numeric axes, step rendering, and bilingual notes distinguish density from probability and disclose the 0.5-percentage-point resolution. Credible intervals are computed independently; old records and point-sample export fields remain unchanged. [Method and compatibility notes](docs/math/bayesian.md). / 贝叶斯图改用 API 计算的 200 个区间概率，保留窄峰与边界尾部的概率质量；数值坐标、阶梯绘图和双语说明区分密度与概率，并公开每格 0.5 个百分点的分辨率。可信区间独立计算，旧记录与旧点采样导出字段保留。[方法与兼容性说明](docs/math/bayesian.md)。
 
-Dependency audits are separate from the quality gate. Rechecked on **2026-10-29**: the development toolchain retains the October 24 pins of undici **8.12.2** and Zod **4.6.6**, alongside earlier framework patches. Full/production npm audits and the Python audit report no known advisories; Python skips the two local first-party packages. The previously reported `braces` advisory was **withdrawn upstream**, not patched or suppressed by PokerLab. These results do not prove vulnerability-free software. See [security status and exposure](SECURITY.md#known-dependency-advisories--已知依赖告警). / 依赖审计与质量门禁分开；**2026-10-29 复核**，保留 10 月 24 日锁定的开发工具链 undici **8.12.2**、Zod **4.6.6** 及此前框架补丁。完整/生产 npm 审计和 Python 审计均未报告已知告警，Python 跳过两个本地项目包。此前的 `braces` 告警由**上游撤回**，不是本项目修复或屏蔽。审计结果不代表软件绝无漏洞，详见[安全状态与影响边界](SECURITY.md#known-dependency-advisories--已知依赖告警)。
+Dependency audits are separate from the quality gate. Rechecked on **2026-10-30**: the development toolchain retains the October 24 pins of undici **8.12.2** and Zod **4.6.6**, alongside earlier framework patches. Full/production npm audits and the Python audit report no known advisories; Python skips the two local first-party packages. The previously reported `braces` advisory was **withdrawn upstream**, not patched or suppressed by PokerLab. These results do not prove vulnerability-free software. See [security status and exposure](SECURITY.md#known-dependency-advisories--已知依赖告警). / 依赖审计与质量门禁分开；**2026-10-30 复核**，保留 10 月 24 日锁定的开发工具链 undici **8.12.2**、Zod **4.6.6** 及此前框架补丁。完整/生产 npm 审计和 Python 审计均未报告已知告警，Python 跳过两个本地项目包。此前的 `braces` 告警由**上游撤回**，不是本项目修复或屏蔽。审计结果不代表软件绝无漏洞，详见[安全状态与影响边界](SECURITY.md#known-dependency-advisories--已知依赖告警)。
 
 API failures use bilingual JSON and bounded request IDs; structured application logs omit raw exceptions, SQL parameters and private path values. The browser displays safe correlation IDs, rejects unreadable JSON instead of treating it as a successful empty result, and preserves HTTP error status, cancellation and lossless export text. Trainer recovery counts only readable successful responses. A failed response does not prove a write rolled back; see [error handling and recovery boundaries](docs/deployment.md#api-errors--api-错误). / API 错误使用中英文 JSON 与长度受限的请求编号，应用结构化日志不记录异常正文、SQL 参数和具体资源路径。浏览器显示安全编号，拒绝不可读 JSON，不再将其当作空结果成功处理；保留 HTTP 错误状态、取消语义和原文导出。训练恢复只有可读取的成功响应才计数；响应失败不证明写入回滚，详见[错误处理与恢复边界](docs/deployment.md#api-errors--api-错误)。
 
