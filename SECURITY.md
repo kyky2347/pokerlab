@@ -20,16 +20,19 @@ Include the affected commit, reproduction steps, impact, and any suggested mitig
 
 ### Known dependency advisories / 已知依赖告警
 
-Rechecked on **2026-10-30**: the October 24 development-toolchain pins remain undici
-**8.12.2** and Zod **4.6.6**, retaining earlier Next.js, Vitest, Vite, native-image
-and Python patches. Full/production npm audits and the Python package audit report
-no known advisories. Python skips this repository's two local distributions;
-these results do not audit every runtime, host or first-party code path.
+Rechecked on **2026-11-02**: the full npm audit reports **one moderate development-only advisory**, GHSA-g3hv-75wg-m249, against legacy minimatch **3.1.5**. The modern TypeScript consumer now resolves patched minimatch **11.0.1**. Production npm and Python audits report no known advisories; Python skips this repository's two local distributions. Earlier undici, Zod, framework and native-image patches remain. These results do not audit every runtime, host or first-party code path.
 
-**2026-10-30 复核**：保留 10 月 24 日锁定的开发工具链 undici **8.12.2**、Zod
-**4.6.6**，以及此前 Next.js、Vitest、Vite、原生图像库与 Python 补丁。
-完整/生产 npm 审计和 Python 包审计未报告已知告警；Python 跳过本仓库两个
-本地项目包。这不等于审计了每个运行时、宿主机或本项目代码路径。
+**2026-11-02 复核**：完整 npm 审计保留 **一条仅开发环境的中危告警**，GHSA-g3hv-75wg-m249 标记旧版 minimatch **3.1.5**；TypeScript 工具链的现代版本已升级至修复版 **11.0.1**。生产 npm 与 Python 审计没有已知告警，Python 跳过本仓库两个本地项目包；此前 undici、Zod、框架及原生图像补丁保留。这不等于审计了每个运行时、宿主机或本项目代码路径。
+
+### November 2 glob preprocessing / 11 月 2 日 glob 预处理
+
+[GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249) describes pattern amplification and quadratic deduplication at `optimizationLevel >= 2`. The [upstream patch](https://github.com/isaacs/minimatch/commit/77a0f5c4b80bdc641c3c930a1d9edf5ad2db57f8) caps generated patterns and skips deduplication above 1,000 entries. A scoped override moves the installed modern 10.x consumer to **11.0.1**, preserving the legacy callable API required by ESLint and its plugins. Tests resolve TypeScript's actual transitive package and exercise bounded expansion, large-set handling and normal file matching; lint, types, build and browser checks validate integration.
+
+上述告警涉及 `optimizationLevel >= 2` 的模式膨胀与平方级去重。上游补丁限制生成模式数量，并跳过超过 1,000 项集合的去重。本项目仅将已安装的现代 10.x 依赖定向升级到 **11.0.1**，保留 ESLint 及其插件需要的旧版可调用导出接口。测试解析 TypeScript 实际加载的间接依赖，验证有界展开、大集合处理及正常文件匹配，并通过 lint、类型、构建与浏览器检查验证集成。
+
+The registry's broad `<11.0.1` range still flags **3.1.5**. Inspection and runtime checks find neither `firstPhasePreProcess` nor `secondPhasePreProcess` on that legacy branch. This is evidence that the specific reported mechanism is absent, **not** a claim that legacy minimatch has no other denial-of-service risks. No audit entry is suppressed. Replacing the legacy function export with the modern object export would break consumers; keep untrusted glob patterns out of development tooling and revisit this finding when upstream metadata or compatible releases change.
+
+注册表的宽泛 `<11.0.1` 范围仍标记 **3.1.5**。源码检查与运行测试确认该旧分支不存在 `firstPhasePreProcess`、`secondPhasePreProcess`；这说明报告中的特定机制不在该版本中，**不代表**旧版 minimatch 没有其他拒绝服务风险。未屏蔽任何审计项。将旧版函数导出强行替换为现代对象导出会破坏调用方；开发工具仍应避免处理不可信 glob，并在上游元数据或兼容版本更新时复核。
 
 The previously disclosed [braces advisory GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)
 was withdrawn by the advisory publisher on **2026-10-23**, with the stated reason

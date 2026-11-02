@@ -3,6 +3,8 @@ packages:
   - "packages/*"
 
 overrides:
+  # Patch modern minimatch preprocessing without replacing the legacy callable API.
+  "minimatch@>=10.0.0 <11.0.1": "11.0.1"
   # Patch jsdom's 8.x HTTP client: EventSource, integrity and encoding advisories.
   "undici@>=8.0.0 <8.12.2": "8.12.2"
   # Bound oversized constrained collections in the ESLint schema validator.
