@@ -18,6 +18,8 @@ class WeightedCombo:
 
 
 def normalize_hand_class(label: str) -> str:
+    if not isinstance(label, str):
+        raise ValueError("A hand class must be text / 起手牌类别必须为字符串")
     text = label.strip().upper()
     if len(text) == 2 and text[0] == text[1] and text[0] in RANK_CHARS:
         return text
@@ -55,13 +57,28 @@ def combo_class(cards: tuple[Card, Card]) -> str:
 def expand_weighted_range(
     weights: Mapping[str, float], blocked: Iterable[Card] = ()
 ) -> tuple[WeightedCombo, ...]:
-    blocked_set = set(blocked)
+    blocked_cards = tuple(blocked)
+    if any(not isinstance(card, Card) for card in blocked_cards):
+        raise ValueError("Blockers must be Card objects / 阻断牌必须为 Card 对象")
+    blocked_set = set(blocked_cards)
+    if len(blocked_set) != len(blocked_cards):
+        raise ValueError("Duplicate blockers are not permitted / 阻断牌不可重复")
     combos: list[WeightedCombo] = []
     normalized_labels: set[str] = set()
     for label, raw_weight in weights.items():
+        # Check the original value before conversion: bool and numeric text can
+        # otherwise silently become a different experiment. Bounds precede the
+        # float conversion so oversized Python integers fail as domain errors.
+        if (
+            type(raw_weight) not in (int, float)
+            or not 0 <= raw_weight <= 1
+            or not math.isfinite(raw_weight)
+        ):
+            raise ValueError(
+                "Range weights must be finite numbers between 0 and 1 / "
+                "范围权重必须为 0 至 1 的有限数值"
+            )
         weight = float(raw_weight)
-        if not math.isfinite(weight) or not 0 <= weight <= 1:
-            raise ValueError("Range weights must be between 0 and 1")
         normalized = normalize_hand_class(label)
         if normalized in normalized_labels:
             raise ValueError(f"Duplicate canonical hand class {normalized!r}")

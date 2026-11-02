@@ -115,6 +115,20 @@ Its chance mass is proportional to $w_h w_v$. This is why a hand class, a physic
 
 每组合法手牌对的概率质量与双方权重乘积 $w_h w_v$ 成正比。因此，手牌类别、物理组合与加权组合是不同单位；不可能的阻断冲突不会进入分母。
 
+### Range input contract / 范围输入契约
+
+Each weight must be a finite JSON number in `[0, 1]`. Integers `0` and `1` and fractional numbers such as `0.25` are valid; `true`, `false`, `"0.5"`, null, arrays, objects, NaN and infinity are rejected. This applies to `/range/statistics`, both players in `/range/equity`, and both players in `/solver/jobs`. Invalid weights return HTTP 422 with the offending hand's field path and a request ID, before calculation, solver-slot acquisition or a durable experiment/job write. API documentation exposes the same numeric bounds.
+
+每个权重必须为 `[0, 1]` 内的有限 JSON 数值。整数 `0`、`1` 和 `0.25` 等小数均合法；`true`、`false`、`"0.5"`、null、数组、对象、NaN 和无穷大都会被拒绝。此契约统一应用于 `/range/statistics`、`/range/equity` 双方范围及 `/solver/jobs` 双方范围。非法权重在计算、占用求解名额或写入实验/任务记录之前返回 HTTP 422，附具体手牌字段路径和请求 ID；API 文档同时列出数值上下界。
+
+For example, `{"range":{"AA":1,"AKs":0.5,"22":0},"blocked":["As"]}` is a valid statistics request. Zero excludes a class. Statistics allow an empty range; equity and solver requests still require at least one positive weight per player. Canonical aliases such as `KAs` remain accepted, but supplying both `AKs` and `KAs` remains an error, including when one weight is zero. HTTP card inputs use two-character tokens and cannot repeat a physical card.
+
+例如 `{"range":{"AA":1,"AKs":0.5,"22":0},"blocked":["As"]}` 是合法统计请求。权重为零表示排除该类别。统计接口允许空范围，胜率和求解接口仍要求双方至少各有一个正权重类别。`KAs` 等别名继续有效，但同时传入 `AKs` 和 `KAs` 仍会报错，即使其中一项权重为零。HTTP 牌面使用两字符记法，不可重复指定同一张物理牌。
+
+Direct Python range functions accept built-in `int`/`float` weights under the same bounds. They do not coerce booleans, text, complex values or arbitrary numeric objects. Blockers must be distinct `Card` objects; a one-shot iterator is supported. Repeated blockers and raw strings such as `"As"` now raise `ValueError` rather than being silently deduplicated or ignored; parse tokens with `parse_cards` first. This stricter boundary intentionally rejects previously coerced inputs. For valid input, physical-combo ordering, weight values, exact results, seeded draw streams and solver strategies are unchanged.
+
+直接调用 Python 范围函数时，权重必须使用相同边界内的内置 `int`/`float`，不自动转换布尔值、文本、复数或任意数值对象。阻断牌必须为不重复的 `Card` 对象，支持一次性迭代器。重复阻断牌或原始字符串 `"As"` 现在会抛出 `ValueError`，而不是被静默去重或忽略；字符串牌面应先经 `parse_cards` 解析。此次收紧明确拒绝旧版自动转换的输入；合法输入的物理组合顺序、权重、精确结果、固定种子抽样序列及求解策略保持不变。
+
 ### Compact pair storage / 紧凑组合对存储
 
 Range expansion preserves input class order. Each physical combo receives a

@@ -8,6 +8,19 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from .controls import MAX_SEED
 
 CardToken = Annotated[str, Field(pattern=r"^[2-9TJQKA][cdhs]$")]
+RangeWeight = Annotated[
+    float,
+    Field(
+        strict=True,
+        ge=0,
+        le=1,
+        allow_inf_nan=False,
+        description=(
+            "Finite JSON number from 0 to 1, inclusive; booleans and strings are rejected. / "
+            "0 至 1 的有限 JSON 数值（含端点）；不接受布尔值或字符串。"
+        ),
+    ),
+]
 INTEGER_CONTROL_DESCRIPTION = (
     "JSON integer only; booleans, strings and floating-point values are rejected. / "
     "仅接受 JSON 整数，不接受布尔值、字符串或浮点数。"
@@ -61,8 +74,8 @@ class TurnMapRequest(FixedEquityRequest):
 
 
 class RangeEquityRequest(BaseModel):
-    hero_range: dict[str, float]
-    villain_range: dict[str, float]
+    hero_range: dict[str, RangeWeight]
+    villain_range: dict[str, RangeWeight]
     board: Annotated[list[CardToken], Field(max_length=5)] = Field(default_factory=list)
     seed: Seed = 20250902
     samples: int = Field(
@@ -76,8 +89,6 @@ class RangeEquityRequest(BaseModel):
             raise ValueError("Range cannot be empty")
         if len(value) > 169:
             raise ValueError("Range cannot exceed 169 hand classes")
-        if any(not math.isfinite(weight) or weight < 0 or weight > 1 for weight in value.values()):
-            raise ValueError("Range weights must be between 0 and 1")
         return value
 
     @field_validator("board")
@@ -89,7 +100,7 @@ class RangeEquityRequest(BaseModel):
 
 
 class RangeStatisticsRequest(BaseModel):
-    range: dict[str, float]
+    range: dict[str, RangeWeight]
     blocked: Annotated[list[CardToken], Field(max_length=9)] = Field(default_factory=list)
 
     @field_validator("range")
@@ -97,8 +108,6 @@ class RangeStatisticsRequest(BaseModel):
     def valid_range(cls, value: dict[str, float]) -> dict[str, float]:
         if len(value) > 169:
             raise ValueError("Range cannot exceed 169 hand classes")
-        if any(not math.isfinite(weight) or weight < 0 or weight > 1 for weight in value.values()):
-            raise ValueError("Range weights must be between 0 and 1")
         return value
 
 
@@ -131,8 +140,8 @@ class EVRequest(BaseModel):
 
 class SolverRequest(BaseModel):
     board: Annotated[list[CardToken], Field(min_length=5, max_length=5)]
-    oop_range: dict[str, float]
-    ip_range: dict[str, float]
+    oop_range: dict[str, RangeWeight]
+    ip_range: dict[str, RangeWeight]
     pot: float = Field(default=100, gt=0, le=100_000)
     effective_stack: float = Field(default=100, gt=0, le=100_000)
     bet_small: float = Field(default=0.5, gt=0, le=1)
@@ -148,8 +157,6 @@ class SolverRequest(BaseModel):
             raise ValueError("Solver range cannot be empty")
         if len(value) > 40:
             raise ValueError("Solver Lite accepts at most 40 hand classes per player")
-        if any(not math.isfinite(weight) or weight < 0 or weight > 1 for weight in value.values()):
-            raise ValueError("Solver range weights must be between 0 and 1")
         return value
 
     @model_validator(mode="after")

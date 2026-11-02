@@ -4,6 +4,12 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Upgrade the modern TypeScript minimatch dependency to 11.0.1 for GHSA-g3hv-75wg-m249, with bounded preprocessing and real-consumer compatibility tests. Preserve ESLint's legacy callable API; the full audit still reports one moderate development-only finding against 3.1.5, whose code lacks the cited preprocessing methods. Document that limitation without suppressing the advisory; production npm and Python audits remain clear.
+- 针对 GHSA-g3hv-75wg-m249，将 TypeScript 的现代 minimatch 依赖升级至 11.0.1，新增有界预处理与实际调用方兼容测试。保留 ESLint 的旧版可调用接口；完整审计仍对不含公告所述预处理方法的 3.1.5 报告一条仅开发环境的中危告警。明确记录此限制，不屏蔽告警；生产 npm 与 Python 审计仍无已知告警。
+
+- Reject ambiguous range weights consistently across statistics, equity and river solver APIs: finite JSON numbers in `[0, 1]` only, with hand-level HTTP 422 errors before evaluation, solver capacity or writes. Direct Python expansion also rejects nonnumeric weights, nontext hand classes, duplicate blockers and unparsed blocker tokens. Valid combination order, seeded results and solver output remain unchanged; this intentionally tightens compatibility for previously coerced inputs.
+- 范围统计、胜率与河牌求解 API 统一拒绝含糊权重：仅接受 `[0, 1]` 内有限 JSON 数值，在评估、占用求解名额或写入前返回带具体手牌字段的 HTTP 422。Python 范围展开同时拒绝非数值权重、非文本类别、重复阻断牌及未解析的牌面字符串。合法组合顺序、种子结果与策略输出保持不变；旧版依赖自动类型转换的输入需按新契约修正。
+
 - Fix EV Lab markers disappearing between sampled equities: use a continuous 0–100% axis and linear rendering of the API curve. Add actual SVG-coordinate regressions for fractional thresholds, 30.5% equity, both endpoints, overlapping markers and zero-cost calls. Provide bilingual marker legends, decision labels and failure states; explain EV sign by the zero line instead of nonexistent red/green regions.
 - 修复 EV 实验室参考线在采样胜率之间消失的问题：改用 0–100% 连续坐标，直线绘制 API 曲线；以真实 SVG 坐标回归测试覆盖小数阈值、30.5% 胜率、两端点、重合标记和零成本跟注。补齐中英文图例、决策及失败提示，以零线解释 EV 正负，移除与图形不符的红绿区域说明。
 
