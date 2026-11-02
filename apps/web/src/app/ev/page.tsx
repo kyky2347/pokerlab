@@ -3,17 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Equal, Sigma } from "lucide-react";
 import { useState } from "react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 
+import { EVChart } from "@/components/ev-chart";
 import { ErrorAlert, Metric, PageHeader, percent } from "@/components/lab-ui";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -98,14 +89,14 @@ export default function EVLab() {
   return (
     <div>
       <PageHeader
-        eyebrow="Module 04 · Decision theory"
+        eyebrow={zh ? "模块 04 · 决策理论" : "Module 04 · Decision theory"}
         title={zh ? "EV 实验室" : "EV Lab"}
         description={
           zh
             ? "改变底池、下注与胜率，立即看到增量跟注 EV 及盈亏平衡边界。"
             : "Change the pot, bet, and equity to see incremental call EV and the break-even boundary update from the API."
         }
-        badge="CLEAR CONVENTIONS"
+        badge={zh ? "明确计算约定" : "CLEAR CONVENTIONS"}
       />
       <div className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
         <Card>
@@ -178,20 +169,25 @@ export default function EVLab() {
             <CardHeader>
               <CardTitle>{zh ? "跟注决策" : "Call decision"}</CardTitle>
               <CardDescription>
-                {result.data?.formula ??
-                  "EV(call) = equity × final pot after call − call size"}
+                {zh
+                  ? "跟注 EV = 胜率 × 跟注后最终底池 − 跟注额"
+                  : (result.data?.formula ??
+                    "EV(call) = equity × final pot after call − call size")}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {result.data ? (
                 <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
                   <Metric
-                    label="Required equity"
+                    label={zh ? "盈亏平衡胜率" : "Required equity"}
                     value={percent(result.data.required_equity)}
                   />
-                  <Metric label="Hero equity" value={percent(equity / 100)} />
                   <Metric
-                    label="EV(call)"
+                    label={zh ? "英雄胜率" : "Hero equity"}
+                    value={percent(equity / 100)}
+                  />
+                  <Metric
+                    label={zh ? "跟注 EV" : "EV(call)"}
                     value={`${result.data.incremental_call_ev >= 0 ? "+" : "−"}$${Math.abs(result.data.incremental_call_ev).toFixed(2)}`}
                     accent={
                       result.data.incremental_call_ev > 0
@@ -203,7 +199,7 @@ export default function EVLab() {
                   />
                   <div>
                     <p className="font-data text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
-                      Decision
+                      {zh ? "决策" : "Decision"}
                     </p>
                     <Badge
                       className="mt-2"
@@ -215,12 +211,30 @@ export default function EVLab() {
                             : "outline"
                       }
                     >
-                      {result.data.decision.toUpperCase()}
+                      {zh
+                        ? {
+                            call: "跟注",
+                            fold: "弃牌",
+                            break_even: "盈亏平衡",
+                          }[result.data.decision]
+                        : {
+                            call: "Call",
+                            fold: "Fold",
+                            break_even: "Break-even",
+                          }[result.data.decision]}
                     </Badge>
                   </div>
                 </div>
               ) : (
-                <p className="text-muted-foreground">Calculating…</p>
+                <p className="text-muted-foreground">
+                  {result.error
+                    ? zh
+                      ? "计算失败，请查看下方错误信息。"
+                      : "Calculation failed. See the error below."
+                    : zh
+                      ? "计算中…"
+                      : "Calculating…"}
+                </p>
               )}
             </CardContent>
           </Card>
@@ -231,85 +245,18 @@ export default function EVLab() {
               </CardTitle>
               <CardDescription>
                 {zh
-                  ? "红色区域为负 EV，绿色为正 EV；虚线是盈亏平衡点。"
-                  : "Negative EV sits below zero; the dashed line marks break-even equity."}
+                  ? "零线上方为正 EV，下方为负 EV。实线标记英雄胜率，虚线标记盈亏平衡胜率；两者相等时重合。"
+                  : "EV is positive above zero and negative below it. Solid marks hero equity; dashed marks break-even. The markers overlap when equal."}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {result.data ? (
-                <div className="h-[380px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                      data={result.data.curve}
-                      margin={{ top: 12, right: 12, left: 0, bottom: 8 }}
-                    >
-                      <defs>
-                        <linearGradient
-                          id="evPositive"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="0"
-                            stopColor="var(--chart-2)"
-                            stopOpacity={0.45}
-                          />
-                          <stop
-                            offset="1"
-                            stopColor="var(--chart-2)"
-                            stopOpacity={0.03}
-                          />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid stroke="var(--border)" vertical={false} />
-                      <XAxis
-                        dataKey="equity"
-                        tickFormatter={(v) => `${Math.round(v * 100)}%`}
-                        tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        tickFormatter={(v) => `$${v}`}
-                        tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          background: "var(--popover)",
-                          border: "1px solid var(--border)",
-                          borderRadius: 8,
-                        }}
-                        labelFormatter={(v) =>
-                          `${(Number(v) * 100).toFixed(0)}% equity`
-                        }
-                        formatter={(v) => `$${Number(v).toFixed(2)}`}
-                      />
-                      <ReferenceLine y={0} stroke="var(--chart-3)" />
-                      <ReferenceLine
-                        x={result.data.required_equity}
-                        stroke="var(--chart-1)"
-                        strokeDasharray="5 5"
-                        label={{
-                          value: "break-even",
-                          fill: "var(--muted-foreground)",
-                          fontSize: 10,
-                        }}
-                      />
-                      <ReferenceLine x={equity / 100} stroke="var(--chart-2)" />
-                      <Area
-                        type="monotone"
-                        dataKey="ev"
-                        stroke="var(--chart-2)"
-                        fill="url(#evPositive)"
-                        isAnimationActive={false}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
+                <EVChart
+                  curve={result.data.curve}
+                  requiredEquity={result.data.required_equity}
+                  heroEquity={equity / 100}
+                  zh={zh}
+                />
               ) : null}
             </CardContent>
           </Card>
@@ -323,19 +270,19 @@ export default function EVLab() {
             <CardContent className="grid gap-4 md:grid-cols-3">
               <div className="rounded-lg bg-muted p-4">
                 <p className="font-data text-xs text-muted-foreground">
-                  FINAL POT
+                  {zh ? "最终底池" : "FINAL POT"}
                 </p>
                 <p className="font-data mt-2 text-lg">P + B + C</p>
               </div>
               <div className="rounded-lg bg-muted p-4">
                 <p className="font-data text-xs text-muted-foreground">
-                  BREAK-EVEN
+                  {zh ? "盈亏平衡" : "BREAK-EVEN"}
                 </p>
                 <p className="font-data mt-2 text-lg">C / (P + B + C)</p>
               </div>
               <div className="rounded-lg bg-muted p-4">
                 <p className="font-data text-xs text-muted-foreground">
-                  CALL EV
+                  {zh ? "跟注 EV" : "CALL EV"}
                 </p>
                 <p className="font-data mt-2 text-lg">e(P + B + C) − C</p>
               </div>

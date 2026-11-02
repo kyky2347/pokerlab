@@ -4,6 +4,9 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Fix EV Lab markers disappearing between sampled equities: use a continuous 0–100% axis and linear rendering of the API curve. Add actual SVG-coordinate regressions for fractional thresholds, 30.5% equity, both endpoints, overlapping markers and zero-cost calls. Provide bilingual marker legends, decision labels and failure states; explain EV sign by the zero line instead of nonexistent red/green regions.
+- 修复 EV 实验室参考线在采样胜率之间消失的问题：改用 0–100% 连续坐标，直线绘制 API 曲线；以真实 SVG 坐标回归测试覆盖小数阈值、30.5% 胜率、两端点、重合标记和零成本跟注。补齐中英文图例、决策及失败提示，以零线解释 EV 正负，移除与图形不符的红绿区域说明。
+
 - Validate seven-card uniqueness once in the Python reference evaluator, then rank every one of its 21 trusted five-card subsets with the unchanged ranking logic. Public five/seven-card validation, full kicker vectors, seeded results and automatic Rust fallback remain intact.
 - Add exhaustive 2,598,960-hand parity, category-count, permutation, malformed-input, complete-output and benchmark-failure regressions. Publish a reproducible five-run benchmark and raw measurements: observed Python seven-card batch time falls 15.9%, exact-flop time 11.1%; standalone five-card timing is effectively unchanged. These are workload-specific measurements, not Rust or whole-app claims.
 - Python 参考评估器仅在七张牌入口检查一次唯一性，再以原有牌力逻辑评估全部 21 个合法五张牌子集；保留五/七张牌公开入口校验、完整踢脚牌排序、固定种子结果及 Rust 自动回退。
