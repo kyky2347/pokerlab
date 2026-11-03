@@ -92,8 +92,13 @@ def create_question(seed: int, engine: PokerEngine, db: Session) -> dict:
 
 
 def score_answer(question_id: str, answer: float, db: Session) -> dict:
-    if not 0 <= answer <= 1:
-        raise ValueError("Equity answer must be between 0 and 1")
+    # Reject coercion before the atomic claim: bool is an int subclass, but is
+    # never an equity estimate. Bounds also reject NaN/infinity without casting.
+    if type(answer) not in (int, float) or not 0 <= answer <= 1:
+        raise ValueError(
+            "Equity answer must be a finite number between 0 and 1 / "
+            "胜率答案必须是 0 至 1 的有限数值，不接受布尔值或字符串"
+        )
     now = datetime.now(UTC)
     # Claim, record and prepare feedback in one transaction. Concurrent workers
     # cannot score the same question twice. A failed pre-commit read or write

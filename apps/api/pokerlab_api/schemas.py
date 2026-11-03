@@ -8,6 +8,17 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from .controls import MAX_SEED
 
 CardToken = Annotated[str, Field(pattern=r"^[2-9TJQKA][cdhs]$")]
+FiniteNumber = Annotated[
+    float,
+    Field(
+        strict=True,
+        allow_inf_nan=False,
+        description=(
+            "Finite JSON number; booleans and strings are rejected. / "
+            "仅接受有限 JSON 数值，不接受布尔值或字符串。"
+        ),
+    ),
+]
 RangeWeight = Annotated[
     float,
     Field(
@@ -117,15 +128,15 @@ class TrainerQuestionRequest(BaseModel):
 
 class TrainerAnswerRequest(BaseModel):
     question_id: str
-    answer: float = Field(ge=0, le=1)
+    answer: FiniteNumber = Field(ge=0, le=1)
 
 
 class EVRequest(BaseModel):
-    pot: float = Field(gt=0, le=1_000_000)
-    opponent_bet: float = Field(ge=0, le=1_000_000)
-    call_size: float = Field(ge=0, le=1_000_000)
-    hero_equity: float = Field(ge=0, le=1)
-    effective_stack: float = Field(gt=0, le=1_000_000)
+    pot: FiniteNumber = Field(gt=0, le=1_000_000)
+    opponent_bet: FiniteNumber = Field(ge=0, le=1_000_000)
+    call_size: FiniteNumber = Field(ge=0, le=1_000_000)
+    hero_equity: FiniteNumber = Field(ge=0, le=1)
+    effective_stack: FiniteNumber = Field(gt=0, le=1_000_000)
 
     @model_validator(mode="after")
     def legal_call_geometry(self) -> EVRequest:
@@ -142,10 +153,10 @@ class SolverRequest(BaseModel):
     board: Annotated[list[CardToken], Field(min_length=5, max_length=5)]
     oop_range: dict[str, RangeWeight]
     ip_range: dict[str, RangeWeight]
-    pot: float = Field(default=100, gt=0, le=100_000)
-    effective_stack: float = Field(default=100, gt=0, le=100_000)
-    bet_small: float = Field(default=0.5, gt=0, le=1)
-    bet_large: float = Field(default=1.0, gt=0, le=2)
+    pot: FiniteNumber = Field(default=100, gt=0, le=100_000)
+    effective_stack: FiniteNumber = Field(default=100, gt=0, le=100_000)
+    bet_small: FiniteNumber = Field(default=0.5, gt=0, le=1)
+    bet_large: FiniteNumber = Field(default=1.0, gt=0, le=2)
     iterations: int = Field(
         default=2_000, ge=100, le=100_000, strict=True, description=INTEGER_CONTROL_DESCRIPTION
     )
