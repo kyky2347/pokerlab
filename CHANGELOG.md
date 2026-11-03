@@ -4,6 +4,9 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Reject boolean/string training answers before they can consume a one-time question, and apply a shared finite-number HTTP contract to EV and river-solver chip/bet inputs. Return bilingual validation summaries with field locations and request IDs. Preserve valid numeric bounds, zero-cost calls, scoring, complete EV curves, solver results and engine fallback; document the intentional compatibility tightening.
+- 训练答案在消耗一次性题目前拒绝布尔值/字符串；EV 与河牌求解接口的筹码/下注参数共用有限数值 HTTP 契约。校验错误包含双语摘要、字段位置和请求编号。保留合法数值边界、零成本跟注、评分、完整 EV 曲线、求解结果与引擎回退，明确记录兼容性收紧。
+
 - Upgrade the modern TypeScript minimatch dependency to 11.0.1 for GHSA-g3hv-75wg-m249, with bounded preprocessing and real-consumer compatibility tests. Preserve ESLint's legacy callable API; the full audit still reports one moderate development-only finding against 3.1.5, whose code lacks the cited preprocessing methods. Document that limitation without suppressing the advisory; production npm and Python audits remain clear.
 - 针对 GHSA-g3hv-75wg-m249，将 TypeScript 的现代 minimatch 依赖升级至 11.0.1，新增有界预处理与实际调用方兼容测试。保留 ESLint 的旧版可调用接口；完整审计仍对不含公告所述预处理方法的 3.1.5 报告一条仅开发环境的中危告警。明确记录此限制，不屏蔽告警；生产 npm 与 Python 审计仍无已知告警。
 

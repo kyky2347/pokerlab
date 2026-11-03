@@ -62,6 +62,51 @@ defaults as before; explicit null is not an instruction to use a default.
 这是有效的 `/equity/monte-carlo` 请求体。省略可选参数时沿用原默认值；显式传
 null 不等于省略。
 
+## Decision numbers / 决策数值
+
+Training answers, EV inputs and river-solver HTTP chip/bet inputs require finite
+JSON numbers. Both integers and fractional numbers are allowed within their
+existing bounds. For these fields, `1`, `1.0` and `1e0` mean the same number;
+`true` and `"1"` are rejected. This differs from the integer-only seed/count
+controls above. Null, arrays, objects, NaN and infinities are also rejected.
+
+训练答案、EV 输入和河牌求解 HTTP 接口的筹码/下注参数仅接受有限 JSON 数值，
+在原有边界内允许整数和小数。这些字段的 `1`、`1.0` 和 `1e0` 等价，但 `true`
+和 `"1"` 会被拒绝；与上文仅允许整数的种子/次数参数不同。null、数组、对象、
+NaN 和无穷值同样不被接受。
+
+| Endpoint / 接口 | Fields and bounds / 字段与边界 |
+| --- | --- |
+| `/trainer/answer` | `answer`: 0–1, inclusive / 含端点 |
+| `/ev/calculate` | `pot`, `effective_stack`: (0, 1,000,000]; `opponent_bet`, `call_size`: [0, 1,000,000]; `hero_equity`: [0, 1] |
+| `/solver/jobs` | `pot`, `effective_stack`: (0, 100,000]; `bet_small`: (0, 1]; `bet_large`: (0, 2] |
+
+EV's call/stack constraints and the solver's ordered, distinct effective bet
+sizes still apply. Invalid input returns HTTP 422 with a bilingual summary,
+the specific `body.<field>` location and a request ID, before scoring, acquiring
+a solver slot or creating a job. For example, `{"question_id":"…","answer":true}`
+previously consumed a question as a 100% estimate. It now leaves the question
+unanswered and the training history unchanged. A corrected numeric answer can
+score it once, subject to its original 24-hour expiry and concurrent claims.
+
+EV 的跟注/筹码约束，以及求解器有效下注大小有序且不重合的约束仍然生效。非法
+输入在评分、占用求解名额或创建任务之前返回 HTTP 422，包含双语摘要、具体
+`body.<字段>` 位置和请求编号。例如 `{"question_id":"…","answer":true}`
+此前会按 100% 估计消耗题目，现在保留未答状态、不改变训练历史；修正为数值后
+可提交一次，仍受原有 24 小时有效期与并发领取规则约束。
+
+Direct Python `score_answer` likewise accepts only built-in `int`/`float`
+values in [0, 1], rejecting ambiguous values before accessing its session.
+This HTTP contract does not add new validation to direct `RiverCFRSolver`
+construction. No scoring formula, EV curve, CFR traversal, seeded selection,
+default, engine fallback or stored record is changed. Clients relying on
+numeric strings/booleans must send numbers; no database migration is needed.
+
+直接 Python `score_answer` 同样仅接受 [0, 1] 内的内置 `int`/`float`，在访问
+数据库会话前拒绝含糊输入。此 HTTP 契约不为直接构造 `RiverCFRSolver` 增加新的
+校验。评分公式、EV 曲线、CFR 遍历、种子选题、默认值、引擎回退及已有记录保持
+不变。依赖数字字符串/布尔值的客户端需改传数值，无需数据库迁移。
+
 ## Precision and direct Python use / 精度与直接 Python 调用
 
 Python callers must supply built-in `int` seeds in the same nonnegative signed
@@ -156,7 +201,7 @@ responses. They use transport fixtures, not substitute poker results.
 
 ```bash
 cd apps/api
-uv run pytest tests/test_controls.py tests/test_monte_carlo_cache.py tests/test_cfr_allocations.py
+uv run pytest tests/test_controls.py tests/test_decision_inputs.py tests/test_monte_carlo_cache.py tests/test_cfr_allocations.py
 ```
 
 The controls suite exercises SQLite and, when `POKERLAB_TEST_POSTGRES_URL` is set,
@@ -170,3 +215,10 @@ requests against the real API. See [isolated browser verification](browser-testi
 模式中验证：副作用前拒绝、求解状态保留、原始 JSON 数值形式、OpenAPI 兼容性及
 全部随机接口的精确 64 位种子往返。已有冻结参考测试核对完整种子结果及 CFR 状态；
 桌面/移动端流程使用真实 API 验证正常界面请求，详见上述浏览器验收指南。
+
+Decision-input regressions additionally check every affected field, rejection
+without database access or solver allocation, corrected one-time submissions,
+all 101 EV curve points and full durable solver results with both real engines.
+
+决策输入回归进一步覆盖所有受影响字段、拒绝时不访问数据库或分配求解名额、
+修正后一次性提交、全部 101 个 EV 曲线点及两个真实引擎的完整求解与持久化结果。

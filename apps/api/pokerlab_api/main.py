@@ -234,7 +234,7 @@ async def request_validation_error_handler(
         content={
             "error": {
                 "code": "request_validation_error",
-                "message": "Request validation failed",
+                "message": "Request validation failed / 请求参数校验失败",
                 "request_id": getattr(request.state, "request_id", None),
                 "details": details,
             }

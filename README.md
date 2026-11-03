@@ -27,7 +27,7 @@ PokerLab 是一套可审查的研究系统，而不是赌场风格外壳或互�
 
 - **One source of mathematical truth / 单一数学真值源** — Python reference evaluator plus a cross-checked Rust/PyO3 accelerator.
 - **Reproducible by construction / 从设计上可复现** — stochastic runs store their seed, parameters, engine, runtime, and result.
-- **Durable training / 可持续训练** — issued questions survive API restarts for 24 hours. One transaction claims the question, saves the score and prepares feedback; pre-commit feedback failures allow retry without duplicate scores. [Retry boundaries / 重试边界](docs/deployment.md#training-feedback-and-retry-boundaries--训练反馈与重试边界). / 已出题目在 24 小时有效期内可跨 API 重启提交；领取题目、保存评分与准备反馈在同一事务完成，提交前反馈失败可重试，不重复计分。
+- **Durable training / 可持续训练** — issued questions survive API restarts for 24 hours. One transaction claims the question, saves the score and prepares feedback; pre-commit feedback failures allow retry without duplicate scores. Invalid answer types are rejected before claiming the question. [Retry boundaries / 重试边界](docs/deployment.md#training-feedback-and-retry-boundaries--训练反馈与重试边界). / 已出题目在 24 小时有效期内可跨 API 重启提交；领取题目、保存评分与准备反馈在同一事务完成，提交前反馈失败可重试、不重复计分；非法答案类型在领取题目前即被拒绝。
 - **Recoverable practice / 可恢复的练习流程** — manual retries retain the requested seed or estimate; the next question does not erase confirmed feedback until it loads. Accessible, bilingual controls lock during submission, expose the actual engine, and distinguish confirmed page totals from the last database-wide weakness snapshot. / 手动重试保留请求种子或估计值，新题加载成功前保留已确认反馈；双语无障碍控件在提交中锁定，展示实际引擎，并区分本次页面的已确认统计与最近一次数据库薄弱项快照。
 - **Real finite solving / 真实有限求解** — CFR+ is implemented in this repository and verified against Kuhn Poker; no third-party solver is used.
 - **Honest limits / 坦诚展示边界** — the river solver’s no-raise abstraction is visible in the UI and documentation.
@@ -217,6 +217,8 @@ Range statistics, equity and solver inputs require finite numeric weights in `[0
 ## Validation / 验证
 
 Seeds and run counts now require explicit JSON integers: booleans, numeric strings and floating-point values are rejected before calculation or storage. Valid seeded results, defaults and historical records remain unchanged. See the [bilingual experiment-control contract](docs/experiment-controls.md) for limits, 64-bit precision and client migration. / 种子与运行次数现在要求明确的 JSON 整数，布尔值、数字字符串和浮点数在计算或写入前即被拒绝；合法种子结果、默认值和历史记录保持不变。范围、64 位精度及客户端迁移详见[双语参数契约](docs/experiment-controls.md)。
+
+Training answers, EV inputs and solver chip/bet fields accept finite JSON numbers within their existing bounds. Boolean/string answers cannot consume a question or change training history; field-specific bilingual errors allow correction. See [decision numbers](docs/experiment-controls.md#decision-numbers--决策数值). / 训练答案、EV 输入及求解器筹码/下注字段仅接受原有范围内的有限 JSON 数值。布尔值/字符串答案不会消耗题目或改变训练历史，字段级双语错误便于修正，详见[决策数值契约](docs/experiment-controls.md#decision-numbers--决策数值)。
 
 Both editable browser seed controls preserve typed text and accept only digits representing integers from **0 to 9,007,199,254,740,991**. Equity Lab now shows inline English/Chinese errors before calculation, instead of silently rounding a large seed or treating an empty input as zero. Corrected inputs require a new run; late responses do not replace its results. The API still accepts exact signed 64-bit nonnegative seeds from suitable clients. / 浏览器的两个可编辑种子控件保留输入原文，仅接受数字组成的 **0 至 9,007,199,254,740,991** 整数。胜率实验室在计算前显示中英文就地错误，不再静默舍入大整数或将空输入当作零。修正后需重新计算，延迟响应不会替换新结果；API 仍接受适用客户端精确提交的非负有符号 64 位种子。
 

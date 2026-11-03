@@ -1,5 +1,12 @@
 # Expected value and pot odds / 期望值与底池赔率
 
+EV inputs require finite JSON numbers within the published bounds; booleans and
+numeric strings are rejected before calculation. Zero-cost calls and 0%/100%
+equity remain valid. See the [decision input contract](../experiment-controls.md#decision-numbers--决策数值).
+
+EV 输入须为公开边界内的有限 JSON 数值；布尔值和数字字符串会在计算前被拒绝。
+零成本跟注与 0%/100% 胜率仍合法，详见上述决策输入契约。
+
 PokerLab uses these input conventions:
 
 - $P$: pot before the opponent bets;
