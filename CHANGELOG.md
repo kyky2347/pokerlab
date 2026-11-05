@@ -4,6 +4,12 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Add a native Rust showdown entry point that parses the nine-card deal once, validates cross-player/board uniqueness and compares both complete rank vectors within one call. Preserve the best-of-21 evaluator, seeded outputs, old-extension compatibility and automatic Python fallback; add startup win/loss/tie checks, mathematical regressions and a reproducible output-checked benchmark.
+- 新增 Rust 原生摊牌入口，一次解析九张牌并检查跨玩家/公共牌重复，在单次调用内比较完整牌力向量。保留全部 21 子集评估、种子结果、旧扩展兼容与 Python 自动回退；新增启动赢/输/平自检、数学回归及核对完整输出的可复现基准。
+
+- Recheck GHSA-g3hv-75wg-m249 after upstream narrowed its affected range on November 4 to `>=7.0.0, <11.0.1`. Legacy minimatch 3.1.5 is no longer flagged; retain the modern 11.0.1 patch and compatibility tests. Update the bilingual security status without changing dependencies or suppressing advisories.
+- 上游于 11 月 4 日将 GHSA-g3hv-75wg-m249 影响范围修正为 `>=7.0.0, <11.0.1`，复核后旧版 minimatch 3.1.5 不再被标记。保留现代 11.0.1 补丁与兼容测试，同步双语安全状态，不改动依赖或屏蔽告警。
+
 - Reject boolean/string training answers before they can consume a one-time question, and apply a shared finite-number HTTP contract to EV and river-solver chip/bet inputs. Return bilingual validation summaries with field locations and request IDs. Preserve valid numeric bounds, zero-cost calls, scoring, complete EV curves, solver results and engine fallback; document the intentional compatibility tightening.
 - 训练答案在消耗一次性题目前拒绝布尔值/字符串；EV 与河牌求解接口的筹码/下注参数共用有限数值 HTTP 契约。校验错误包含双语摘要、字段位置和请求编号。保留合法数值边界、零成本跟注、评分、完整 EV 曲线、求解结果与引擎回退，明确记录兼容性收紧。
 

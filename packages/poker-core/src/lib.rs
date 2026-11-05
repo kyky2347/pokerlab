@@ -130,6 +130,11 @@ fn evaluate_seven_cards(cards: &[Card]) -> Result<HandRank, String> {
     if cards.len() != 7 || cards.iter().copied().collect::<HashSet<_>>().len() != 7 {
         return Err("seven unique cards are required".into());
     }
+    Ok(rank_seven_unique(cards.try_into().unwrap()))
+}
+
+// Private: both public entry points validate the complete deal first.
+fn rank_seven_unique(cards: &[Card; 7]) -> HandRank {
     let mut best: Option<HandRank> = None;
     for a in 0..3 {
         for b in (a + 1)..4 {
@@ -146,7 +151,34 @@ fn evaluate_seven_cards(cards: &[Card]) -> Result<HandRank, String> {
             }
         }
     }
-    Ok(best.expect("seven cards produce combinations"))
+    best.expect("seven cards produce combinations")
+}
+
+fn showdown_cards(hero: &[Card], villain: &[Card], board: &[Card]) -> Result<f64, String> {
+    if hero.len() != 2 || villain.len() != 2 || board.len() != 5 {
+        return Err("showdown requires two cards per player and five board cards".into());
+    }
+    if hero
+        .iter()
+        .chain(villain)
+        .chain(board)
+        .copied()
+        .collect::<HashSet<_>>()
+        .len()
+        != 9
+    {
+        return Err("showdown requires nine unique cards".into());
+    }
+    let rank = |hand: &[Card]| {
+        rank_seven_unique(&[
+            hand[0], hand[1], board[0], board[1], board[2], board[3], board[4],
+        ])
+    };
+    Ok(match rank(hero).cmp(&rank(villain)) {
+        std::cmp::Ordering::Greater => 1.0,
+        std::cmp::Ordering::Equal => 0.5,
+        std::cmp::Ordering::Less => 0.0,
+    })
 }
 
 #[cfg(feature = "python")]
@@ -162,6 +194,26 @@ fn evaluate_seven(cards: Vec<String>) -> PyResult<Vec<u8>> {
 
 #[cfg(feature = "python")]
 #[pyfunction]
+fn showdown(hero: Vec<String>, villain: Vec<String>, board: Vec<String>) -> PyResult<f64> {
+    if hero.len() != 2 || villain.len() != 2 || board.len() != 5 {
+        return Err(PyValueError::new_err(
+            "showdown requires two cards per player and five board cards",
+        ));
+    }
+    // Parse the board once, compare full rank vectors inside Rust, and cross the
+    // Python boundary once. No rank vectors or shared cards are converted twice.
+    let parsed = hero
+        .iter()
+        .chain(&villain)
+        .chain(&board)
+        .map(|token| Card::parse(token))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(PyValueError::new_err)?;
+    showdown_cards(&parsed[..2], &parsed[2..4], &parsed[4..]).map_err(PyValueError::new_err)
+}
+
+#[cfg(feature = "python")]
+#[pyfunction]
 fn deck() -> Vec<String> {
     (2..=14)
         .flat_map(|rank| (0..4).map(move |suit| Card { rank, suit }.token()))
@@ -172,6 +224,7 @@ fn deck() -> Vec<String> {
 #[pymodule]
 fn poker_core_rs(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(evaluate_seven, module)?)?;
+    module.add_function(wrap_pyfunction!(showdown, module)?)?;
     module.add_function(wrap_pyfunction!(deck, module)?)?;
     module.add("__version__", "1.0.0")?;
     Ok(())

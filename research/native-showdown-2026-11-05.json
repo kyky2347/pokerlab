@@ -1,0 +1,188 @@
+{
+  "environment": {
+    "platform": "macOS-26.5.2-arm64-arm-64bit",
+    "python": "3.12.13",
+    "engine": "Rust accelerated"
+  },
+  "method": {
+    "baseline": "Two-call Rust bridge frozen from abbd202; same current Rust rank kernel",
+    "seed": 20261105,
+    "deals": 5000,
+    "samples": 10000,
+    "repeats": 5,
+    "warmups_per_variant": 1,
+    "alternating_order": true,
+    "scope": "Full core calls; excludes generation, reference checks, HTTP, DB and UI",
+    "hero": [
+      "As",
+      "Ks"
+    ],
+    "villain": [
+      "Qh",
+      "Qd"
+    ],
+    "flop": [
+      "Js",
+      "8s",
+      "2c"
+    ]
+  },
+  "results": [
+    {
+      "workload": "showdown_batch",
+      "times_ms": {
+        "two_calls": [
+          29.087582981446758,
+          29.259792005177587,
+          29.991666990099475,
+          29.507750004995614,
+          29.231167020043358
+        ],
+        "native_showdown": [
+          26.91958300420083,
+          26.490707998163998,
+          26.52037498774007,
+          26.636708003934473,
+          26.2670420052018
+        ]
+      },
+      "median_ms": {
+        "two_calls": 29.259792005177587,
+        "native_showdown": 26.52037498774007
+      },
+      "two_calls_over_native": 1.1032948070569857,
+      "complete_result_match": true,
+      "result_sha256": "ff16d930bc93c0903e507eaef25b64ab251b855ff77c443ada5127bdc18fe1e0"
+    },
+    {
+      "workload": "exact_flop",
+      "times_ms": {
+        "two_calls": [
+          4.22624999191612,
+          4.198166978312656,
+          4.191665997495875,
+          4.217042005620897,
+          4.2030840122606605
+        ],
+        "native_showdown": [
+          3.6817920044995844,
+          3.664707997813821,
+          3.669083002023399,
+          3.6527089832816273,
+          3.6520000139717013
+        ]
+      },
+      "median_ms": {
+        "two_calls": 4.2030840122606605,
+        "native_showdown": 3.664707997813821
+      },
+      "two_calls_over_native": 1.1469082979511622,
+      "complete_result_match": true,
+      "result_sha256": "f4d0e45351d95ec04e59ae52484a480d94bd93ee1a18afaad436e62fa00f3f9e"
+    },
+    {
+      "workload": "monte_carlo_preflop",
+      "times_ms": {
+        "two_calls": [
+          65.81970799015835,
+          65.12941597611643,
+          66.05991598917171,
+          66.4976249972824,
+          66.54287499259226
+        ],
+        "native_showdown": [
+          59.20787499053404,
+          59.606875001918525,
+          59.24599998979829,
+          60.35704200621694,
+          60.718624998116866
+        ]
+      },
+      "median_ms": {
+        "two_calls": 66.05991598917171,
+        "native_showdown": 59.606875001918525
+      },
+      "two_calls_over_native": 1.1082600117359866,
+      "complete_result_match": true,
+      "result_sha256": "357a339c5482b283e388a544ff47711124781250f77d33a26c2a319508982b2a"
+    },
+    {
+      "workload": "monte_carlo_flop",
+      "times_ms": {
+        "two_calls": [
+          13.804791000438854,
+          13.81525001488626,
+          13.793999998597428,
+          13.778332999208942,
+          13.787832984235138
+        ],
+        "native_showdown": [
+          13.325042003998533,
+          13.228374999016523,
+          13.278875005198643,
+          13.27483297791332,
+          13.250124990008771
+        ]
+      },
+      "median_ms": {
+        "two_calls": 13.793999998597428,
+        "native_showdown": 13.27483297791332
+      },
+      "two_calls_over_native": 1.039109118852787,
+      "complete_result_match": true,
+      "result_sha256": "fdedeb53622d937ae8f5963d19080daae926f0336f15de536faedccb078485b8"
+    },
+    {
+      "workload": "turn_map",
+      "times_ms": {
+        "two_calls": [
+          4.469375009648502,
+          4.4636249949689955,
+          4.509833001065999,
+          4.445375001523644,
+          4.452833003597334
+        ],
+        "native_showdown": [
+          3.8966249849181622,
+          3.907333011738956,
+          3.8970420137047768,
+          3.904292010702193,
+          3.9035830122884363
+        ]
+      },
+      "median_ms": {
+        "two_calls": 4.4636249949689955,
+        "native_showdown": 3.9035830122884363
+      },
+      "two_calls_over_native": 1.1434687006572046,
+      "complete_result_match": true,
+      "result_sha256": "a380958587a22f046ed7a8de45b4eb7c99ad29c3e7ebea5dc4fe772701dc2b09"
+    },
+    {
+      "workload": "range_preflop",
+      "times_ms": {
+        "two_calls": [
+          111.76687499391846,
+          112.36387499957345,
+          111.98829201748595,
+          112.55374999018386,
+          113.02925000200048
+        ],
+        "native_showdown": [
+          107.20879200380296,
+          106.77962499903515,
+          106.39312499552034,
+          106.2257919984404,
+          106.19208400021307
+        ]
+      },
+      "median_ms": {
+        "two_calls": 112.36387499957345,
+        "native_showdown": 106.39312499552034
+      },
+      "two_calls_over_native": 1.0561196976243015,
+      "complete_result_match": true,
+      "result_sha256": "65b6c231368474e50df2dd6e689e6e39a1b439eca5b0454f26765df311d165c2"
+    }
+  ]
+}
