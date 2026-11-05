@@ -20,6 +20,46 @@ states. PokerLab evaluates every unordered runout when $N \le 2{,}000{,}000$. Ea
 
 当状态空间不超过安全上限时，系统枚举所有无序补牌，并使用自己的五/七张牌评估器完成摊牌；生产代码不依赖第三方牌力库。
 
+## Native showdown bridge / 原生摊牌接口
+
+The Rust extension exposes `showdown(hero, villain, board)` for two cards per
+player and a completed five-card board. It parses nine card tokens once and
+rejects duplicates across the whole deal before ranking both players' 21
+five-card subsets. Complete rank vectors, including every kicker, are compared
+inside Rust; the result is hero's **win 1 / tie 0.5 / loss 0**. The existing
+`evaluate_seven` public entry point still validates its own seven cards.
+
+Rust 扩展提供 `showdown(hero, villain, board)`，要求双方各两张手牌与完整五张
+公共牌。九张牌仅解析一次，先拒绝整个牌局的重复牌，再为双方分别评估全部 21 个
+五张牌子集。完整牌力向量（含全部踢脚牌）在 Rust 内比较，返回英雄的**赢 1／
+平 0.5／输 0**。原有 `evaluate_seven` 公开入口仍独立校验七张牌。
+
+`RustPokerEngine` retains the shared Python state validation, then makes one
+native call instead of two and formats nine tokens instead of fourteen. It
+validates the returned outcome before use. Sampling, aggregation, runout caches,
+confidence intervals and CFR updates retain their existing order. This reduces
+bridge overhead without reducing the evaluated poker states or rank comparisons.
+
+`RustPokerEngine` 保留 Python 共享状态校验，将每次摊牌的原生调用从两次减至一次、
+牌面字符串转换从十四次减至九次，并在使用前检查返回值。抽样、累加、补牌缓存、
+置信区间与 CFR 更新顺序保持不变；减少的是跨语言调用开销，不减少评估的牌局状态
+或牌力比较。
+
+Startup verifies native wins, losses and ties when the function is available.
+Failed loading or smoke checks still select `Python reference`. Older extensions
+without this function continue using the two-call Rust path and report
+`Rust accelerated`; they gain the optimization after a rebuild and API restart.
+To rebuild a native checkout: `cd apps/api && uv sync --frozen --reinstall-package poker-core-rs`.
+Container users rebuild with `./pokerlab`. Runtime evaluator failures remain errors
+and do not switch engines partway through a calculation. See the
+[measured benchmark](../../research/benchmarks.md#native-showdown-bridge--原生摊牌接口--2026-11-05).
+
+新接口可用时，启动过程核对真实赢、输、平三种结果；加载或自检失败仍选择
+`Python reference`。没有新接口的旧扩展继续使用两次调用的 Rust 路径，并如实显示
+`Rust accelerated`；重新构建并重启 API 后才能获得此次优化。本地构建命令见上，
+容器用户通过 `./pokerlab` 重建。运行中的评估器故障仍报错，不在计算中途换引擎。
+实测与复现方式见上述基准记录。
+
 ## Conditional turn map / 条件转牌地图
 
 For two fixed, known hands and a legal three-card flop $F$, exactly 45 cards remain.

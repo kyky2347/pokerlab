@@ -19,6 +19,85 @@ These are observations, not promises. The CFR rate depends strongly on blocker-c
 
 以上是实测观察，而非性能承诺。CFR 速度强烈依赖合法范围组合对的数量及博弈树分支；Rust 加速终局牌力评估，调度与 CFR 仍由 Python 执行。
 
+## Native showdown bridge / 原生摊牌接口 — 2026-11-05
+
+The Rust engine now compares both players inside one extension call. Each
+showdown formats/parses nine tokens instead of fourteen; the five shared board
+cards cross the boundary once. Rust checks all nine cards for duplicates, then
+ranks both complete seven-card hands using the same best-of-21 implementation.
+Python's public state validation remains. No RNG call, runout, accumulation,
+cached outcome or strategy update is removed.
+
+Rust 引擎在一次扩展调用中比较双方牌力，每次摊牌的字符串转换/解析由十四张减至
+九张，五张公共牌仅传递一次。Rust 检查九张牌的唯一性后，以相同的全部 21 子集
+算法评估双方七张牌；保留 Python 公开状态校验，不省略随机调用、补牌、累加、
+缓存结果或策略更新。
+
+Same-machine observations: macOS 26.5.2 ARM64, CPython 3.12.13, release extension
+built locally with Rust 1.98.0. CI and the container retain the pinned Rust 1.88
+toolchain. Both variants use the **same compiled rank kernel**; the baseline
+freezes the two-call Python bridge from `abbd202`. It is not a comparison between
+compiler versions. After other build/test jobs finished, each variant warmed up
+once and five timed runs alternated order. Complete outputs must match an
+independent Python calculation, excluding runtime and engine labels. Input
+generation, reference evaluation and result comparison are outside timing.
+
+同机环境：macOS 26.5.2 ARM64、CPython 3.12.13，本地以 Rust 1.98.0 构建 release
+扩展；CI 与容器继续使用锁定的 Rust 1.88。两种实现使用**同一个已编译牌力内核**，
+基线冻结 `abbd202` 的 Python 双调用路径，不比较不同编译器。其他构建/测试结束后，
+每种实现预热一次，五次计时交替顺序。完整输出须与独立 Python 计算一致，仅排除
+耗时与引擎名称；生成输入、参考计算与结果核对不计时。
+
+| Core workload / 核心场景 | Two-call median / 双调用中位数 | Native median / 原生中位数 | Observed reduction / 实测下降 |
+| --- | ---: | ---: | ---: |
+| 5,000 varied showdowns / 5,000 组摊牌 | 29.260 ms | 26.520 ms | 9.4% |
+| Exact flop, 990 runouts / 翻牌精确枚举 | 4.203 ms | 3.665 ms | 12.8% |
+| Preflop MC, 10,000 draws / 翻牌前模拟 | 66.060 ms | 59.607 ms | 9.8% |
+| Flop MC, 10,000 draws / 翻牌模拟 | 13.794 ms | 13.275 ms | 3.8% |
+| Conditional turn map / 条件转牌地图 | 4.464 ms | 3.904 ms | 12.5% |
+| Weighted preflop, 10,000 draws / 加权翻牌前模拟 | 112.364 ms | 106.393 ms | 5.3% |
+
+Seed **20261105** generates 5,000 nine-card deals from the canonical deck. Fixed
+hands are `As Ks` versus `Qh Qd`, flop `Js 8s 2c`; the preflop case uses an empty
+board. Weighted preflop uses hero `AA:0.25, AKs:1` versus villain `KK:1, QJs:0.75`.
+All Monte Carlo cases use 10,000 draws and the same seed. The existing flop
+runout cache limits the number of actual evaluations, so its gain is smaller.
+There is no whole-app, Python-fallback or stronger-solving performance claim.
+
+种子 **20261105** 从规范牌堆生成 5,000 组九张牌。固定手牌为 `As Ks` 对 `Qh Qd`，
+翻牌 `Js 8s 2c`，翻牌前场景使用空公共牌。加权场景为英雄 `AA:0.25, AKs:1` 对
+对手 `KK:1, QJs:0.75`。全部蒙特卡洛场景使用相同种子与 10,000 次抽样。原有翻牌
+补牌缓存限制实际评估次数，因此该项收益较小。上述实测不代表全系统、Python 回退
+路径或求解能力的提升。
+
+[Raw measurements / 原始实测](native-showdown-2026-11-05.json) include every timed
+run and complete-output fingerprints. Older extensions remain usable through the
+legacy Rust bridge; rebuild and restart to use the native function. The benchmark
+refuses to run against an extension missing the new function or any mismatched
+result. Hardware, load and hand distribution affect timings.
+
+原始数据保留每次计时与完整输出摘要。旧扩展继续通过原 Rust 路径运行；重建并重启
+后才使用新函数。基准遇到缺少新函数的扩展或结果不一致时直接失败。耗时受硬件、
+负载和牌型分布影响。
+
+```bash
+cd apps/api
+uv sync --frozen --reinstall-package poker-core-rs
+uv run python -m pokerlab_api.showdown_benchmark
+uv run pytest tests/test_native_showdown.py tests/test_rust_crosscheck.py
+```
+
+Regressions cover 1,500 seeded nine-card deals against both Python and the old
+Rust bridge, all 36 duplicate-position pairs, malformed inputs, suit/board
+permutations, kicker/wheel/shared-board cases, complete CFR results, durable
+API exports and startup fallback. The existing exhaustive 2,598,960-hand
+five-card rank comparison still runs; the nine-card space is sampled.
+
+回归对照 Python 与原 Rust 路径核对 1,500 组固定种子九张牌，覆盖全部 36 种重复
+位置对、非法输入、花色/公共牌顺序置换、踢脚牌/轮子顺子/公共牌平局、完整 CFR
+结果、API 持久化导出与启动回退。既有全部 2,598,960 种五张牌的穷举排序核对继续
+执行；九张牌空间采用抽样，没有宣称穷举。
+
 ## Python validation reuse / Python 校验复用 — 2026-10-29
 
 The Python seven-card evaluator now validates its input once before ranking all

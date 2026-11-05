@@ -230,11 +230,34 @@ class RustPokerEngine(PythonPokerEngine):
         rank = self._rust.evaluate_seven(["As", "Ks", "Qs", "Js", "Ts", "2d", "3c"])
         if tuple(rank) != (8, 14):
             raise ValueError("Rust evaluator failed its startup smoke test")
+        native_showdown = getattr(self._rust, "showdown", None)
+        if native_showdown is not None:
+            hero, villain = ["Ah", "Ad"], ["Kh", "Kd"]
+            board = ["Ac", "7s", "6h", "3d", "2c"]
+            for first, second, public, expected in (
+                (hero, villain, board, 1.0),
+                (villain, hero, board, 0.0),
+                (hero, villain, ["As", "Ks", "Qs", "Js", "Ts"], 0.5),
+            ):
+                outcome = native_showdown(first, second, public)
+                validate_showdown_outcome(outcome)
+                if outcome != expected:
+                    raise ValueError("Rust showdown failed its startup smoke test")
 
     def showdown(
         self, hero: tuple[Card, Card], villain: tuple[Card, Card], board: tuple[Card, ...]
     ) -> float:
         validate_showdown_state(hero, villain, board)
+        native_showdown = getattr(self._rust, "showdown", None)
+        if native_showdown is not None:
+            outcome = native_showdown(
+                [str(card) for card in hero],
+                [str(card) for card in villain],
+                [str(card) for card in board],
+            )
+            validate_showdown_outcome(outcome)
+            return outcome
+        # Older local extensions and historical benchmark binaries remain usable.
         hero_rank = tuple(self._rust.evaluate_seven([str(card) for card in hero + board]))
         villain_rank = tuple(self._rust.evaluate_seven([str(card) for card in villain + board]))
         if hero_rank > villain_rank:

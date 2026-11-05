@@ -142,3 +142,69 @@ fn parser_rejects_malformed_tokens_without_panicking() {
     }
     assert_eq!(Card::parse("aS"), Card::parse("As"));
 }
+
+#[test]
+fn showdown_rejects_every_duplicate_position_pair_across_players_and_board() {
+    let deck = deck_cards();
+    for first in 0..9 {
+        for second in first + 1..9 {
+            let mut deal = deck[..9].to_vec();
+            deal[second] = deal[first];
+            assert!(showdown_cards(&deal[..2], &deal[2..4], &deal[4..]).is_err());
+        }
+    }
+}
+
+#[test]
+fn showdown_requires_two_two_five_geometry() {
+    let deck = deck_cards();
+    for hero_count in 0..=9 {
+        for villain_count in 0..=9 - hero_count {
+            let split = hero_count + villain_count;
+            let result = showdown_cards(
+                &deck[..hero_count],
+                &deck[hero_count..split],
+                &deck[split..9],
+            );
+            assert_eq!(result.is_ok(), hero_count == 2 && villain_count == 2);
+        }
+    }
+    for count in [0, 1, 2, 3, 4, 6, 7, 8] {
+        assert!(showdown_cards(&deck[..2], &deck[2..4], &deck[4..4 + count]).is_err());
+    }
+}
+
+#[test]
+fn showdown_compares_full_ranks_with_the_original_ranker() {
+    // Deterministic full-deck windows, plus separate Python tests for seeded
+    // full-deck draws, permutations and explicit edge cases.
+    let deck = deck_cards();
+    for offset in 0..52 {
+        let deal: Vec<_> = (0..9).map(|i| deck[(offset + i * 5) % 52]).collect();
+        let reference = |hand: &[Card]| {
+            let seven = [hand, &deal[4..]].concat();
+            let mut ranks = Vec::new();
+            for first in 0..7 {
+                for second in first + 1..7 {
+                    let five: Vec<_> = seven
+                        .iter()
+                        .enumerate()
+                        .filter(|(i, _)| *i != first && *i != second)
+                        .map(|(_, card)| *card)
+                        .collect();
+                    ranks.push(reference_five(&five));
+                }
+            }
+            ranks.into_iter().max().unwrap()
+        };
+        let expected = match reference(&deal[..2]).cmp(&reference(&deal[2..4])) {
+            std::cmp::Ordering::Greater => 1.0,
+            std::cmp::Ordering::Equal => 0.5,
+            std::cmp::Ordering::Less => 0.0,
+        };
+        assert_eq!(
+            showdown_cards(&deal[..2], &deal[2..4], &deal[4..]).unwrap(),
+            expected
+        );
+    }
+}
