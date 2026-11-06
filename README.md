@@ -58,6 +58,10 @@ Real API output: 10,000 samples, seed `20250902`, Rust evaluator. The shaded reg
 
 ![Range Lab](output/playwright/range-lab.png)
 
+The range editor supports mouse painting, touch scrolling and keyboard navigation. Use arrow keys to choose a hand, Enter / Space to cycle 25% steps, and the slider for 1% precision. [Controls and verification](docs/range-editor.md).
+
+范围编辑器支持鼠标涂选、触屏滚动与键盘导航。方向键选择手牌，Enter / 空格按 25% 档位循环，滑块精调至 1%。详见[操作与验证说明](docs/range-editor.md)。
+
 ### Training and decision theory / 训练与决策理论
 
 ![Guess the Equity](output/playwright/trainer.png)

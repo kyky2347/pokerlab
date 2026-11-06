@@ -4,6 +4,12 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Make the range matrix keyboard operable with one tab stop, arrow/Home/End navigation, native Enter/Space activation and bilingual instructions/accessible weights. Snap custom weights to the next quarter step and round displayed percentages while retaining 1% slider precision.
+- Separate mouse painting from touch/pen taps so scrolling cannot edit ranges. Ignore non-primary/context-menu buttons, preserve rapid stroke updates and stop painting on release, cancellation, blur, hidden tabs or disabled state. Add focused component regressions and document the input contract; canonical poker calculations are unchanged.
+- 范围矩阵支持单一 Tab 停靠点、方向键及 Home/End 导航、原生 Enter/空格激活，补齐双语提示与权重无障碍名称。自定义权重点击后进入下一 25% 档位，显示百分比统一取整，保留滑块 1% 精度。
+- Keep instructions and the slider visible while the card grid scrolls horizontally; complete Chinese presets, statistics, results and teaching copy. / 横向滚动仅作用于牌格，提示与滑块保持可见；补齐预设、统计、结果与教学说明的中文文案。
+- 区分鼠标涂选与触屏/触控笔轻触，避免滚动误改；忽略非主按钮和上下文菜单操作，保留快速涂选的全部修改，并在松开、取消、失焦、标签页隐藏或禁用时停止。新增组件回归及输入契约文档，扑克核心计算保持不变。
+
 - Add a native Rust showdown entry point that parses the nine-card deal once, validates cross-player/board uniqueness and compares both complete rank vectors within one call. Preserve the best-of-21 evaluator, seeded outputs, old-extension compatibility and automatic Python fallback; add startup win/loss/tie checks, mathematical regressions and a reproducible output-checked benchmark.
 - 新增 Rust 原生摊牌入口，一次解析九张牌并检查跨玩家/公共牌重复，在单次调用内比较完整牌力向量。保留全部 21 子集评估、种子结果、旧扩展兼容与 Python 自动回退；新增启动赢/输/平自检、数学回归及核对完整输出的可复现基准。
 
