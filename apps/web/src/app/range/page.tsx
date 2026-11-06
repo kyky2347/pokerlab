@@ -114,6 +114,12 @@ const presetHands: Record<string, string[]> = {
 const allHands = rangeRanks.flatMap((_, row) =>
   rangeRanks.map((__, column) => handLabel(row, column)),
 );
+const presetNamesZh: Record<string, string> = {
+  "Very Tight": "极紧",
+  Tight: "紧",
+  Balanced: "均衡",
+  Wide: "宽",
+};
 
 export default function RangeLab() {
   const zh = useCopy(false, true);
@@ -193,14 +199,14 @@ export default function RangeLab() {
   return (
     <div>
       <PageHeader
-        eyebrow="Module 02 · Combinatorics"
+        eyebrow={zh ? "模块 02 · 组合数学" : "Module 02 · Combinatorics"}
         title={zh ? "范围实验室" : "Range Lab"}
         description={
           zh
             ? "从 169 个起手牌类别展开为 1,326 个物理组合；权重与阻断牌在后端统一计算。"
             : "Expand 169 starting-hand classes into 1,326 physical combos. Weights and blockers are resolved by the backend."
         }
-        badge="BLOCKER-AWARE"
+        badge={zh ? "考虑阻断牌" : "BLOCKER-AWARE"}
       />
       <div className="grid gap-5 xl:grid-cols-[minmax(680px,1fr)_330px]">
         <Card>
@@ -228,22 +234,18 @@ export default function RangeLab() {
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="hero">
-                <div className="max-w-full overflow-x-auto">
-                  <RangeMatrix
-                    value={hero}
-                    onChange={updateWeights}
-                    label={zh ? "英雄加权范围" : "Hero weighted range"}
-                  />
-                </div>
+                <RangeMatrix
+                  value={hero}
+                  onChange={updateWeights}
+                  label={zh ? "英雄加权范围" : "Hero weighted range"}
+                />
               </TabsContent>
               <TabsContent value="villain">
-                <div className="max-w-full overflow-x-auto">
-                  <RangeMatrix
-                    value={villain}
-                    onChange={updateWeights}
-                    label={zh ? "对手加权范围" : "Villain weighted range"}
-                  />
-                </div>
+                <RangeMatrix
+                  value={villain}
+                  onChange={updateWeights}
+                  label={zh ? "对手加权范围" : "Villain weighted range"}
+                />
               </TabsContent>
             </Tabs>
           </CardContent>
@@ -266,12 +268,12 @@ export default function RangeLab() {
                   size="sm"
                   onClick={() => preset(name)}
                 >
-                  {name}
+                  {zh ? presetNamesZh[name] : name}
                 </Button>
               ))}
               <Button variant="outline" size="sm" onClick={invert}>
                 <Shuffle data-icon="inline-start" />
-                Invert
+                {zh ? "反选" : "Invert"}
               </Button>
               <Button
                 variant="outline"
@@ -279,15 +281,16 @@ export default function RangeLab() {
                 onClick={() => updateWeights({})}
               >
                 <RotateCcw data-icon="inline-start" />
-                Clear
+                {zh ? "清空" : "Clear"}
               </Button>
             </CardContent>
           </Card>
           <Card>
             <CardHeader>
               <CardTitle>
-                {active === "hero" ? "Hero" : "Villain"}{" "}
-                {zh ? "范围统计" : "range statistics"}
+                {zh
+                  ? `${active === "hero" ? "英雄" : "对手"}范围统计`
+                  : `${active === "hero" ? "Hero" : "Villain"} range statistics`}
               </CardTitle>
               <CardDescription>
                 {zh
@@ -299,29 +302,29 @@ export default function RangeLab() {
               {stats.data ? (
                 <>
                   <Metric
-                    label="Hand classes"
+                    label={zh ? "起手牌类别" : "Hand classes"}
                     value={String(stats.data.hand_classes)}
                   />
                   <Metric
-                    label="Physical combos"
+                    label={zh ? "物理组合" : "Physical combos"}
                     value={String(stats.data.physical_combos)}
                   />
                   <Metric
-                    label="All starts"
+                    label={zh ? "占全部起手牌" : "All starts"}
                     value={`${stats.data.range_percent.toFixed(2)}%`}
                   />
                   <Metric
-                    label="After blockers"
+                    label={zh ? "阻断后组合" : "After blockers"}
                     value={String(stats.data.blocker_adjusted_combos)}
                   />
                   <Metric
-                    label="Weighted combos"
+                    label={zh ? "加权组合" : "Weighted combos"}
                     value={stats.data.weighted_combos.toFixed(2)}
                   />
                 </>
               ) : (
                 <p className="col-span-2 text-sm text-muted-foreground">
-                  Calculating combinations…
+                  {zh ? "正在计算组合…" : "Calculating combinations…"}
                 </p>
               )}
             </CardContent>
@@ -349,7 +352,7 @@ export default function RangeLab() {
               <CardSelector
                 selected={board}
                 onSelect={chooseBoard}
-                label="Board selector"
+                label={zh ? "公共牌选择器" : "Board selector"}
               />
             </CardContent>
           </Card>
@@ -389,24 +392,27 @@ export default function RangeLab() {
           </CardHeader>
           <CardContent className="grid gap-6 sm:grid-cols-3 lg:grid-cols-6">
             <Metric
-              label="Hero equity"
+              label={zh ? "英雄权益" : "Hero equity"}
               value={percent(result.hero_equity)}
               accent="primary"
             />
             <Metric
-              label="Villain equity"
+              label={zh ? "对手权益" : "Villain equity"}
               value={percent(result.villain_equity)}
             />
-            <Metric label="Tie" value={percent(result.tie)} />
+            <Metric label={zh ? "平局" : "Tie"} value={percent(result.tie)} />
             <Metric
-              label="Valid pairs"
+              label={zh ? "合法组合对" : "Valid pairs"}
               value={result.valid_combo_pairs.toLocaleString()}
             />
             <Metric
-              label="States"
+              label={zh ? "评估状态" : "States"}
               value={result.evaluated_states.toLocaleString()}
             />
-            <Metric label="Runtime" value={ms(result.runtime_ms)} />
+            <Metric
+              label={zh ? "耗时" : "Runtime"}
+              value={ms(result.runtime_ms)}
+            />
           </CardContent>
         </Card>
       ) : null}
@@ -416,21 +422,28 @@ export default function RangeLab() {
         </CardHeader>
         <CardContent className="grid gap-4 text-sm text-muted-foreground md:grid-cols-3">
           <p>
-            <Badge variant="secondary">Hand class</Badge>
+            <Badge variant="secondary">{zh ? "手牌类别" : "Hand class"}</Badge>
             <br />
             <br />
-            AKs is one abstract category.
+            {zh ? "AKs 是一个抽象手牌类别。" : "AKs is one abstract category."}
           </p>
           <p>
-            <Badge variant="secondary">Combo</Badge>
+            <Badge variant="secondary">{zh ? "组合" : "Combo"}</Badge>
             <br />
             <br />
-            A♠K♠ is one physical realization.
+            {zh
+              ? "A♠K♠ 是一个具体的物理组合。"
+              : "A♠K♠ is one physical realization."}
           </p>
           <p>
-            <Badge variant="secondary">Weighted combo</Badge>
+            <Badge variant="secondary">
+              {zh ? "加权组合" : "Weighted combo"}
+            </Badge>
             <br />
-            <br />A 50% combo contributes 0.5 mass before blockers.
+            <br />
+            {zh
+              ? "阻断前，一个 50% 权重组合贡献 0.5 的权重质量。"
+              : "A 50% combo contributes 0.5 mass before blockers."}
           </p>
         </CardContent>
       </Card>
