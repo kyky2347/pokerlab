@@ -62,6 +62,8 @@ The range editor supports mouse painting, touch scrolling and keyboard navigatio
 
 范围编辑器支持鼠标涂选、触屏滚动与键盘导航。方向键选择手牌，Enter / 空格按 25% 档位循环，滑块精调至 1%。详见[操作与验证说明](docs/range-editor.md)。
 
+Range statistics wait for a 150 ms editing pause before requesting new inputs, cancel superseded browser requests, and show a recoverable error or offline state. Retry preserves your ranges and board; all statistics still come from the backend. / 范围统计在连续编辑暂停 150 毫秒后请求新输入，取消过时浏览器请求，并提供可恢复的错误与离线提示。重试保留当前范围和公共牌，统计始终由后端计算。
+
 ### Training and decision theory / 训练与决策理论
 
 ![Guess the Equity](output/playwright/trainer.png)

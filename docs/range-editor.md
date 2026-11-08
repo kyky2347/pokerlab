@@ -39,10 +39,43 @@ labels follow the English/Chinese language setting. This follows the
 网格含 13 行、169 个单元格，页面 Tab 顺序中只包含其中一个按钮。单元格名称包含
 当前权重，提示与无障碍名称跟随中英文语言设置；键盘操作遵循上述 WAI-ARIA 网格模式。
 
+## Statistics and recovery / 统计与恢复
+
+The first statistics read starts immediately. New range, active-player or board
+inputs wait for a 150 ms editing pause before fetching; matching recent cached
+inputs can be reused. Changing inputs cancels the obsolete browser request
+immediately, and late responses cannot replace the current statistics. During
+editing or fetching, a status message takes the place of the numbers.
+
+首次统计立即读取；范围、当前玩家或公共牌变化后，等待编辑暂停 150 毫秒再请求，
+近期相同输入的缓存可以复用。输入改变时立即取消过时浏览器请求，迟到响应不会替换
+当前统计。编辑或读取期间使用状态提示代替数值。
+
+A failed read shows a bilingual explanation, the API request ID when available,
+and **Retry statistics**. There is no automatic retry loop for statistics failures.
+Retry uses the current range and blockers without clearing them. Offline requests
+show a reconnect message and resume when the browser reports it is online again.
+An empty range is valid for statistics and displays the backend's zeros.
+
+读取失败时显示双语说明、API 提供的请求编号和**重试统计**按钮，不循环自动重试。
+重试使用当前范围与阻断牌，不清空编辑内容。离线请求显示恢复连接提示，在浏览器
+报告重新联网后继续读取。空范围可以查询统计，并显示后端返回的零值。
+
+Cancellation stops the browser's work; it does not guarantee that an already
+received server calculation stops. `/range/statistics` is read-only and creates
+no experiment. Explicit range-equity calculations retain their existing inputs,
+seed, storage and retry behavior; the new cancellation signal is only used for
+statistics reads. The shared three-minute transport timeout is preserved.
+
+取消请求会停止浏览器侧工作，但不保证服务端已接收的计算也停止。`/range/statistics`
+只读且不创建实验。显式范围胜率计算保留原有参数、种子、存储与重试行为，新增取消
+信号仅用于统计读取；共用传输层的三分钟超时保持有效。
+
 ## Verification / 验证
 
 ```bash
 pnpm --filter web test src/components/range-matrix.test.tsx
+pnpm --filter web test src/app/range/page.test.tsx src/lib/api.test.ts
 pnpm --filter web test:e2e
 ```
 
@@ -69,3 +102,32 @@ not physical-device or screen-reader certification.
 部署和真实 API 通过上述验收：原生触控事件横向滚动 291 CSS 像素，全部权重保持
 不变，滑块位置不变，随后轻触仅修改一个手牌。这是浏览器触屏模拟，不代表实体设备
 或屏幕阅读器认证。[中文移动端截图](../output/playwright/range-input-mobile-zh.png)。
+
+Statistics regressions exercise the real query client and JSON transport with
+test-only responses: initial loading, English/Chinese failures and retry,
+150 ms request coalescing, cancellation and late responses, hero/villain/blocker
+isolation, offline reconnect, empty ranges, unmount cleanup and React Strict Mode.
+Transport tests retain both caller cancellation reasons and request timeouts.
+
+统计回归使用真实查询客户端及 JSON 传输层，响应仅为测试夹具：覆盖首次读取、
+中英文失败与重试、150 毫秒请求合并、取消与迟到响应、英雄／对手／阻断牌隔离、
+断网重连、空范围、卸载清理及 React Strict Mode。传输测试同时验证调用方取消原因
+与请求超时均得到保留。
+
+On November 8, 2026, desktop Chrome against the Docker deployment sent **one
+statistics request for a continuous ten-cell mouse stroke**. Its displayed
+weighted-combo count matched the real API response. Desktop English and mobile
+Chinese flows recovered from an intentionally blocked statistics request via one
+explicit retry; the mobile flow also resumed after offline/reconnect. Ranges and
+board cards were preserved. This is a specific interaction check, not a general
+latency or server-computation benchmark.
+
+2026 年 11 月 8 日，桌面 Chrome 连接 Docker 部署实测：**连续涂选十个牌格仅产生
+一次统计请求**，显示的加权组合数与真实 API 响应一致。桌面英文及移动端中文流程
+在主动阻断统计请求后，通过一次手动重试恢复，范围与公共牌保持不变；移动端还验证
+了离线后的自动恢复。此为特定交互验证，不代表通用延迟或服务端计算性能基准。
+
+Error-state screenshots use an intentionally blocked network request, not a
+simulated successful calculation: [English desktop](../output/playwright/range-statistics-error-en.png)
+and [Chinese mobile](../output/playwright/range-statistics-error-zh.png).
+错误状态截图来自主动阻断的网络请求，不包含模拟成功计算结果。

@@ -116,6 +116,80 @@ describe("lossless export transport", () => {
   });
 });
 
+describe("cancellable POST transport", () => {
+  it.each(["fetch", "body"])(
+    "preserves caller cancellation during %s without retrying",
+    async (phase) => {
+      const controller = new AbortController();
+      const reason = new Error("Statistics superseded");
+      let bodyStarted: (() => void) | undefined;
+      const started = new Promise<void>((resolve) => {
+        bodyStarted = resolve;
+      });
+      const fetch = vi.fn((_url, init: RequestInit) => {
+        const signal = init.signal as AbortSignal;
+        const interrupted = () =>
+          new Promise<never>((_resolve, reject) => {
+            signal.addEventListener(
+              "abort",
+              () => reject(new DOMException("aborted", "AbortError")),
+              { once: true },
+            );
+          });
+        if (phase === "fetch") return interrupted();
+        return Promise.resolve({
+          ok: true,
+          headers: new Headers(),
+          json: () => {
+            bodyStarted?.();
+            return interrupted();
+          },
+        });
+      });
+      vi.stubGlobal("fetch", fetch);
+      const result = postJson(
+        "/range/statistics",
+        { range: { AA: 1 }, blocked: [] },
+        controller.signal,
+      ).catch((error) => error);
+      if (phase === "body") await started;
+      controller.abort(reason);
+      expect(await result).toBe(reason);
+      expect(fetch).toHaveBeenCalledOnce();
+      expect(fetch.mock.calls[0][1]).toMatchObject({
+        method: "POST",
+        body: '{"range":{"AA":1},"blocked":[]}',
+      });
+      expect(fetch.mock.calls[0][1].signal?.aborted).toBe(true);
+    },
+  );
+
+  it("retains the request timeout when a caller provides a signal", async () => {
+    const caller = new AbortController();
+    const timeout = new AbortController();
+    vi.spyOn(AbortSignal, "timeout").mockReturnValue(timeout.signal);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_url, init: RequestInit) =>
+          new Promise((_resolve, reject) => {
+            init.signal?.addEventListener(
+              "abort",
+              () => reject(init.signal?.reason),
+              { once: true },
+            );
+          }),
+      ),
+    );
+    const result = postJson("/range/statistics", {}, caller.signal).catch(
+      (error) => error,
+    );
+    timeout.abort(new DOMException("timed out", "TimeoutError"));
+    expect(await result).toMatchObject({ status: 408, kind: "timeout" });
+    expect(caller.signal.aborted).toBe(false);
+  });
+});
+
 describe("API response boundaries", () => {
   const jsonCalls = {
     get: () => getJson("/result"),
