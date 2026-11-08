@@ -134,7 +134,11 @@ export async function getText(
   );
 }
 
-export async function postJson<T>(path: string, body: unknown): Promise<T> {
+export async function postJson<T>(
+  path: string,
+  body: unknown,
+  signal?: AbortSignal,
+): Promise<T> {
   return request(
     path,
     {
@@ -143,6 +147,7 @@ export async function postJson<T>(path: string, body: unknown): Promise<T> {
       body: JSON.stringify(body),
     },
     parseResponse<T>,
+    signal,
   );
 }
 

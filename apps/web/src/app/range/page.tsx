@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Calculator, RotateCcw, Shuffle } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { CardSelector } from "@/components/card-selector";
 import {
@@ -141,13 +141,26 @@ export default function RangeLab() {
   const [board, setBoard] = useState(["Ah", "7d", "5s", "3c", "2h"]);
   const [resultKey, setResultKey] = useState<string | null>(null);
   const weights = active === "hero" ? hero : villain;
+  const statsKey = JSON.stringify({ active, weights, board });
+  const [settledStatsKey, setSettledStatsKey] = useState(statsKey);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSettledStatsKey(statsKey), 150);
+    return () => window.clearTimeout(timer);
+  }, [statsKey]);
+  const statsReady = statsKey === settledStatsKey;
   const stats = useQuery({
+    // Change observers immediately to cancel obsolete reads; fetch only after
+    // editing settles. Never label statistics from an older input as current.
     queryKey: ["range-stats", active, weights, board],
-    queryFn: () =>
-      postJson<RangeStatistics>("/range/statistics", {
-        range: weights,
-        blocked: board,
-      }),
+    enabled: statsReady,
+    retry: false,
+    refetchOnWindowFocus: false,
+    queryFn: ({ signal }) =>
+      postJson<RangeStatistics>(
+        "/range/statistics",
+        { range: weights, blocked: board },
+        signal,
+      ),
   });
   const calculation = useMutation({
     mutationFn: () =>
@@ -298,8 +311,32 @@ export default function RangeLab() {
                   : "Class ≠ combo ≠ weighted combo."}
               </CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-5">
-              {stats.data ? (
+            <CardContent
+              className="grid grid-cols-2 gap-5"
+              aria-busy={!statsReady || stats.isFetching}
+            >
+              {!statsReady ? (
+                <p
+                  role="status"
+                  className="col-span-2 text-sm text-muted-foreground"
+                >
+                  {zh ? "等待编辑完成…" : "Waiting for edits to finish…"}
+                </p>
+              ) : stats.isError && !stats.isFetching ? (
+                <div className="col-span-2 flex flex-col gap-3">
+                  <ErrorAlert
+                    message={`${zh ? "无法获取范围统计，请检查 API 服务后重试。" : "Could not load range statistics. Check the API service and retry."} ${stats.error.message}`}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void stats.refetch()}
+                  >
+                    <RotateCcw data-icon="inline-start" />
+                    {zh ? "重试统计" : "Retry statistics"}
+                  </Button>
+                </div>
+              ) : stats.data && !stats.isFetching ? (
                 <>
                   <Metric
                     label={zh ? "起手牌类别" : "Hand classes"}
@@ -323,8 +360,17 @@ export default function RangeLab() {
                   />
                 </>
               ) : (
-                <p className="col-span-2 text-sm text-muted-foreground">
-                  {zh ? "正在计算组合…" : "Calculating combinations…"}
+                <p
+                  role="status"
+                  className="col-span-2 text-sm text-muted-foreground"
+                >
+                  {stats.fetchStatus === "paused"
+                    ? zh
+                      ? "当前离线，恢复连接后将继续更新统计。"
+                      : "You are offline. Statistics will resume when you reconnect."
+                    : zh
+                      ? "正在计算组合…"
+                      : "Calculating combinations…"}
                 </p>
               )}
             </CardContent>

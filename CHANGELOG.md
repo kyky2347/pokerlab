@@ -4,6 +4,11 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Coalesce Range Lab statistics after a 150 ms editing pause, cancel superseded/unmounted reads through the shared POST transport, and hide statistics while the current inputs are pending. Preserve backend calculations and separate hero/villain/blocker cache keys.
+- Replace indefinite loading after failure with a traceable bilingual error and manual retry; show offline/reconnect state, retain edited ranges/board and keep equity experiment writes independent. Add transport and page regressions for delayed responses, burst edits, cache isolation, empty ranges and Strict Mode.
+- 范围统计在连续编辑暂停 150 毫秒后合并请求，通过共用 POST 传输层取消过时及卸载后的读取，当前输入等待统计时隐藏旧结果。保留后端计算与英雄／对手／阻断牌的缓存隔离。
+- 请求失败不再无限显示“计算中”，新增含请求编号的双语错误与手动重试、离线及恢复连接状态，保留已编辑范围和公共牌，胜率实验写入独立处理。补充迟到响应、连续编辑、缓存隔离、空范围和 Strict Mode 回归。
+
 - Make the range matrix keyboard operable with one tab stop, arrow/Home/End navigation, native Enter/Space activation and bilingual instructions/accessible weights. Snap custom weights to the next quarter step and round displayed percentages while retaining 1% slider precision.
 - Separate mouse painting from touch/pen taps so scrolling cannot edit ranges. Ignore non-primary/context-menu buttons, preserve rapid stroke updates and stop painting on release, cancellation, blur, hidden tabs or disabled state. Add focused component regressions and document the input contract; canonical poker calculations are unchanged.
 - 范围矩阵支持单一 Tab 停靠点、方向键及 Home/End 导航、原生 Enter/空格激活，补齐双语提示与权重无障碍名称。自定义权重点击后进入下一 25% 档位，显示百分比统一取整，保留滑块 1% 精度。
