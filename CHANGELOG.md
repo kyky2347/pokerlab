@@ -4,6 +4,11 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Add conservative pointwise 95% Hoeffding intervals, sample moments and versioned metadata to weighted-range Monte Carlo results without changing seeded draws or point estimates. Persist the new fields in experiment JSON; exact results and historical records remain unchanged.
+- Distinguish exact enumeration from sampled range results in English and Chinese; show sample count, seed, engine, Hero-equity bounds and range-assumption limits. Add boundary, independent-moment, cross-engine, storage and bilingual page regressions.
+- 加权范围蒙特卡洛新增保守的逐点 95% Hoeffding 区间、样本统计量及版本化方法元数据，保留种子抽样序列与点估计。新字段写入实验 JSON，精确结果和历史记录保持不变。
+- 中英文界面区分精确与抽样结果，显示样本数、种子、引擎、英雄权益区间及范围假设限制；补充边界、独立统计量、双引擎、存储及双语页面回归。
+
 - Coalesce Range Lab statistics after a 150 ms editing pause, cancel superseded/unmounted reads through the shared POST transport, and hide statistics while the current inputs are pending. Preserve backend calculations and separate hero/villain/blocker cache keys.
 - Replace indefinite loading after failure with a traceable bilingual error and manual retry; show offline/reconnect state, retain edited ranges/board and keep equity experiment writes independent. Add transport and page regressions for delayed responses, burst edits, cache isolation, empty ranges and Strict Mode.
 - 范围统计在连续编辑暂停 150 毫秒后合并请求，通过共用 POST 传输层取消过时及卸载后的读取，当前输入等待统计时隐藏旧结果。保留后端计算与英雄／对手／阻断牌的缓存隔离。

@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import RangeLab from "@/app/range/page";
 import { useLabStore } from "@/lib/store";
+import type { RangeResult } from "@/lib/types";
 
 // Transport fixtures only: production statistics always come from the API.
 const statistics = {
@@ -325,3 +326,144 @@ it("handles Strict Mode cancellation and fetches the edited range once", async (
   await respond(2);
   expect(weight(false)).toBe("22.50");
 });
+
+// Deliberate transport fixture; the UI must render these server bounds verbatim.
+const sampledResult: RangeResult = {
+  hero_equity: 0.54,
+  villain_equity: 0.46,
+  win: 0.44,
+  tie: 0.2,
+  lose: 0.36,
+  valid_combo_pairs: 1070190,
+  weighted_combo_pair_mass: 1070190,
+  evaluated_states: 20000,
+  samples: 20000,
+  method: "monte_carlo_weighted_pairs",
+  seed: 20250902,
+  engine: "Python reference",
+  runtime_ms: 123,
+  hero_statistics: statistics,
+  villain_statistics: statistics,
+  ci_low: 0.5304,
+  ci_high: 0.5496,
+  confidence_level: 0.95,
+  confidence_method: "hoeffding_v1",
+  confidence_scope: "pointwise_fixed_n",
+};
+
+describe.each(["en", "zh"] as const)(
+  "range result interpretation (%s)",
+  (locale) => {
+    const zh = locale === "zh";
+    beforeEach(() => useLabStore.setState({ locale }));
+
+    async function calculate(result: RangeResult) {
+      mount();
+      await respond(0);
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: zh ? "计算范围对范围" : "Calculate range vs range",
+        }),
+      );
+      await advance();
+      expect(requests[1].path).toBe("/range/equity");
+      expect(requests[1].body).toMatchObject({
+        seed: 20250902,
+        samples: 20000,
+      });
+      await act(async () => requests[1].resolve(Response.json(result)));
+      await advance();
+    }
+
+    it("shows backend bounds, sampling method, engine, seed and range-assumption limits", async () => {
+      await calculate(sampledResult);
+      expect(screen.getByText("53.04% – 54.96%")).toBeInTheDocument();
+      expect(
+        screen.getByText(zh ? /蒙特卡洛估计/ : /Monte Carlo estimate/),
+      ).toHaveTextContent(
+        `Python reference · ${zh ? "种子" : "Seed"} 20250902`,
+      );
+      expect(
+        screen.getByText(zh ? "样本数" : "Samples").nextElementSibling,
+      ).toHaveTextContent("20,000");
+      expect(
+        screen.getByText(
+          zh
+            ? /不涵盖对手范围假设的偏差/
+            : /does not cover uncertainty in your opponent-range assumptions/,
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          zh ? /不能用作提前停止的保证/ : /early-stopping guarantee/,
+        ),
+      ).toBeInTheDocument();
+      clickCell("A6s", zh);
+      expect(
+        screen.queryByRole("note", {
+          name: zh ? "蒙特卡洛不确定性" : "Monte Carlo uncertainty",
+        }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText("53.04% – 54.96%")).not.toBeInTheDocument();
+    });
+
+    it("keeps exact enumeration separate even if a response contains sampling metadata", async () => {
+      await calculate({
+        ...sampledResult,
+        method: "exact_weighted_enumeration",
+        evaluated_states: 96,
+      });
+      expect(
+        screen.getByText(zh ? /精确加权枚举/ : /Exact weighted enumeration/),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          zh
+            ? /没有蒙特卡洛抽样误差/
+            : /there is no Monte Carlo sampling error/,
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("note", {
+          name: zh ? "蒙特卡洛不确定性" : "Monte Carlo uncertainty",
+        }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(zh ? "样本数" : "Samples"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("does not manufacture a confidence interval for an older API", async () => {
+      await calculate({
+        ...sampledResult,
+        confidence_method: undefined,
+        ci_low: undefined,
+        ci_high: undefined,
+      });
+      expect(
+        screen.getByText(zh ? "区间方法未确认" : "Interval method unconfirmed"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(zh ? "未提供有效区间" : "No valid interval reported"),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("53.04% – 54.96%")).not.toBeInTheDocument();
+    });
+
+    it("does not call an unknown method exact", async () => {
+      await calculate({ ...sampledResult, method: "future_method" });
+      expect(screen.getByText(/future_method/)).toBeInTheDocument();
+      expect(
+        screen.queryByText(
+          zh
+            ? /没有蒙特卡洛抽样误差/
+            : /there is no Monte Carlo sampling error/,
+        ),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("note", {
+          name: zh ? "蒙特卡洛不确定性" : "Monte Carlo uncertainty",
+        }),
+      ).not.toBeInTheDocument();
+    });
+  },
+);

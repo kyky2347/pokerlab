@@ -10,6 +10,12 @@ from itertools import accumulate, combinations
 from .controls import validate_positive_integer, validate_seed
 from .domain import SUIT_CHARS, Card, full_deck, showdown, validate_showdown_outcome
 from .ranges import WeightedCombo, expand_weighted_range, range_statistics
+from .uncertainty import (
+    CONFIDENCE_LEVEL,
+    CONFIDENCE_METHOD,
+    CONFIDENCE_SCOPE,
+    hoeffding_interval,
+)
 
 
 def _build_pair_table(
@@ -113,7 +119,7 @@ def calculate_range_equity(
     win = win_weight / total_weight
     tie = tie_weight / total_weight
     lose = lose_weight / total_weight
-    return {
+    result = {
         "hero_equity": win + 0.5 * tie,
         "villain_equity": lose + 0.5 * tie,
         "win": win,
@@ -128,3 +134,27 @@ def calculate_range_equity(
         "hero_statistics": range_statistics(hero_weights, board),
         "villain_statistics": range_statistics(villain_weights, board),
     }
+    if method == "monte_carlo_weighted_pairs":
+        # Draws already follow the normalized pair weights. Each independent
+        # showdown contributes one bounded score, not another pair-weight factor.
+        mean = result["hero_equity"]
+        variance = (
+            (win_weight * (1 - mean) ** 2 + tie_weight * (0.5 - mean) ** 2 + lose_weight * mean**2)
+            / (samples - 1)
+            if samples > 1
+            else None
+        )
+        low, high = hoeffding_interval(mean, samples)
+        result.update(
+            {
+                "samples": samples,
+                "sample_variance": variance,
+                "standard_error": math.sqrt(variance / samples) if variance is not None else None,
+                "ci_low": low,
+                "ci_high": high,
+                "confidence_level": CONFIDENCE_LEVEL,
+                "confidence_method": CONFIDENCE_METHOD,
+                "confidence_scope": CONFIDENCE_SCOPE,
+            }
+        )
+    return result

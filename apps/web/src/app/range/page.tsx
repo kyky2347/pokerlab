@@ -14,6 +14,7 @@ import {
   percent,
 } from "@/components/lab-ui";
 import { PokerCard } from "@/components/poker-card";
+import { MonteCarloUncertainty } from "@/components/monte-carlo-uncertainty";
 import {
   RangeMatrix,
   RangeWeights,
@@ -174,6 +175,8 @@ export default function RangeLab() {
   });
   const currentKey = JSON.stringify({ hero, villain, board });
   const result = resultKey === currentKey ? calculation.data : undefined;
+  const sampled = result?.method === "monte_carlo_weighted_pairs";
+  const exact = result?.method === "exact_weighted_enumeration";
   function invalidateResult() {
     setResultKey(null);
     calculation.reset();
@@ -433,7 +436,17 @@ export default function RangeLab() {
               {zh ? "阻断牌感知结果" : "Blocker-aware result"}
             </CardTitle>
             <CardDescription>
-              {result.method} · {result.engine}
+              {sampled
+                ? zh
+                  ? "蒙特卡洛估计"
+                  : "Monte Carlo estimate"
+                : exact
+                  ? zh
+                    ? "精确加权枚举"
+                    : "Exact weighted enumeration"
+                  : result.method}{" "}
+              · {result.engine}
+              {sampled ? ` · ${zh ? "种子" : "Seed"} ${result.seed}` : ""}
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6 sm:grid-cols-3 lg:grid-cols-6">
@@ -452,7 +465,15 @@ export default function RangeLab() {
               value={result.valid_combo_pairs.toLocaleString()}
             />
             <Metric
-              label={zh ? "评估状态" : "States"}
+              label={
+                sampled
+                  ? zh
+                    ? "样本数"
+                    : "Samples"
+                  : zh
+                    ? "评估状态"
+                    : "States"
+              }
               value={result.evaluated_states.toLocaleString()}
             />
             <Metric
@@ -460,6 +481,22 @@ export default function RangeLab() {
               value={ms(result.runtime_ms)}
             />
           </CardContent>
+          {sampled ? (
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                {zh
+                  ? "下方区间描述给定范围、权重和公共牌下英雄权益的抽样误差，不涵盖对手范围假设的偏差。"
+                  : "The interval below measures sampling error in Hero equity for the supplied ranges, weights and board. It does not cover uncertainty in your opponent-range assumptions."}
+              </p>
+              <MonteCarloUncertainty result={result} zh={zh} />
+            </CardContent>
+          ) : exact ? (
+            <CardContent className="text-sm text-muted-foreground">
+              {zh
+                ? "已枚举给定范围与公共牌下的全部合法状态，没有蒙特卡洛抽样误差。"
+                : "Every legal state for these ranges and this board was enumerated; there is no Monte Carlo sampling error."}
+            </CardContent>
+          ) : null}
         </Card>
       ) : null}
       <Card className="mt-5">

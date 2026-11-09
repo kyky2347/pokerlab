@@ -1,10 +1,4 @@
-export type EquityResult = {
-  equity: number;
-  win: number;
-  tie: number;
-  lose: number;
-  method: string;
-  states?: number;
+export type MonteCarloStatistics = {
   samples?: number;
   sample_variance?: number | null;
   standard_error?: number | null;
@@ -13,6 +7,14 @@ export type EquityResult = {
   confidence_level?: number;
   confidence_method?: string;
   confidence_scope?: string;
+};
+export type EquityResult = MonteCarloStatistics & {
+  equity: number;
+  win: number;
+  tie: number;
+  lose: number;
+  method: string;
+  states?: number;
   seed?: number;
   runtime_ms: number;
   engine: string;
@@ -31,7 +33,7 @@ export type RangeStatistics = {
   blocker_adjusted_combos: number;
   weighted_combos: number;
 };
-export type RangeResult = {
+export type RangeResult = MonteCarloStatistics & {
   hero_equity: number;
   villain_equity: number;
   win: number;
