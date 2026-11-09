@@ -39,6 +39,53 @@ labels follow the English/Chinese language setting. This follows the
 网格含 13 行、169 个单元格，页面 Tab 顺序中只包含其中一个按钮。单元格名称包含
 当前权重，提示与无障碍名称跟随中英文语言设置；键盘操作遵循上述 WAI-ARIA 网格模式。
 
+## Reading equity results / 解读权益结果
+
+The editor calculates a five-card river board. The backend enumerates up to
+250,000 legal states; larger ranges use Monte Carlo even on the river. The result
+names the method and selected engine. Sampled runs show the actual sample count,
+seed and a conservative 95% Hoeffding interval for **Hero equity**. The editor
+requests 20,000 samples with seed `20250902`; the API accepts other valid settings.
+Exact results explicitly state that all legal states were enumerated.
+
+编辑器计算五张公共牌的河牌结果。后端枚举最多 250,000 个合法状态；更大的范围即使
+在河牌也使用蒙特卡洛。结果标明计算方法与实际引擎；抽样结果显示实际样本数、种子
+及**英雄权益**的保守 95% Hoeffding 区间。编辑器请求 20,000 个样本、种子
+`20250902`；API 支持其他合法设置。精确结果明确说明已枚举全部合法状态。
+
+The interval describes sampling error for the supplied ranges, weights and board,
+not uncertainty about the opponent's true range. It assumes a fixed sample count
+and is not an early-stopping rule. Editing either range or the board hides the old
+result and its interval together. Older APIs without method metadata display an
+unconfirmed-method explanation, never a fabricated interval. [Derivation and API
+contract](math/equity.md#exact-and-sampled-results--精确与抽样结果).
+
+区间描述给定范围、权重及公共牌下的抽样误差，不代表对手真实范围的不确定性；
+适用于预先固定的样本量，不是提前停止规则。修改任一范围或公共牌会同时隐藏旧结果
+与旧区间。旧版 API 缺少方法元数据时显示方法未确认说明，不编造区间。推导及接口
+契约见上述链接。
+
+### Verified sampled result / 抽样结果实测
+
+On November 9, 2026, the Docker deployment produced the result below with the
+Rust evaluator. Reproduce in Range Lab: for **each player**, select the tab, then
+**Clear → Invert** to include all 169 classes at weight 1. Keep the default board
+`Ah 7d 5s 3c 2h` and calculate. At 20,000 samples and seed `20250902`, Hero equity
+is **49.75%**, with a **48.79%–50.71%** interval. Runtime depends on machine/load.
+The desktop English and mobile Chinese flows verified these bounds against the
+real API and saved JSON, and checked that editing removes the stale interval.
+
+2026 年 11 月 9 日，Docker 部署使用 Rust 评估器得到下图真实结果。复现步骤：
+分别选择**双方**范围标签，执行**清空 → 反选**，将全部 169 个类别设为权重 1；
+保留默认公共牌 `Ah 7d 5s 3c 2h` 并计算。20,000 个样本、种子 `20250902` 下，
+英雄权益为 **49.75%**，区间为 **48.79%–50.71%**；耗时取决于机器及负载。
+桌面英文和移动端中文流程均核对了真实 API 与保存 JSON 的端点，并验证编辑后
+旧区间立即隐藏。
+
+![English range-equity sampling result](../output/playwright/range-uncertainty-en.png)
+
+[Chinese mobile result / 中文移动端结果](../output/playwright/range-uncertainty-mobile-zh.png)
+
 ## Statistics and recovery / 统计与恢复
 
 The first statistics read starts immediately. New range, active-player or board

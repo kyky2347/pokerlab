@@ -64,6 +64,8 @@ The range editor supports mouse painting, touch scrolling and keyboard navigatio
 
 Range statistics wait for a 150 ms editing pause before requesting new inputs, cancel superseded browser requests, and show a recoverable error or offline state. Retry preserves your ranges and board; all statistics still come from the backend. / 范围统计在连续编辑暂停 150 毫秒后请求新输入，取消过时浏览器请求，并提供可恢复的错误与离线提示。重试保留当前范围和公共牌，统计始终由后端计算。
 
+Range results distinguish exact enumeration from Monte Carlo, including on large river ranges. Sampled results show the seed, sample count and a conservative 95% interval for Hero equity; all bounds come from the backend and describe sampling error under the supplied ranges. [Method and limitations](docs/math/equity.md#exact-and-sampled-results--精确与抽样结果) · [Screenshots and reproduction](docs/range-editor.md#verified-sampled-result--抽样结果实测). / 范围结果区分精确枚举与蒙特卡洛，包括大范围河牌计算。抽样结果显示种子、样本数及英雄权益的保守 95% 区间；区间全部由后端计算，描述给定范围下的抽样误差。[方法与限制](docs/math/equity.md#exact-and-sampled-results--精确与抽样结果) · [截图与复现](docs/range-editor.md#verified-sampled-result--抽样结果实测)。
+
 ### Training and decision theory / 训练与决策理论
 
 ![Guess the Equity](output/playwright/trainer.png)

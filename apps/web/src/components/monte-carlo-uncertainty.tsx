@@ -2,13 +2,13 @@ import Link from "next/link";
 
 import { percent } from "@/components/lab-ui";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import type { EquityResult } from "@/lib/types";
+import type { MonteCarloStatistics } from "@/lib/types";
 
 export function MonteCarloUncertainty({
   result,
   zh,
 }: {
-  result: EquityResult;
+  result: MonteCarloStatistics;
   zh: boolean;
 }) {
   const knownMethod =

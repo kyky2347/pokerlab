@@ -87,9 +87,9 @@ At $n=1$, both fields are **null**, not zero. Identical observations at $n\ge2$ 
 
 ## Finite-sample confidence / 有限样本置信区间
 
-New fixed-hand Monte Carlo results use a two-sided **Hoeffding interval**, valid for bounded scores including ties. Inverting Hoeffding's inequality for independent scores in $[0,1]$ gives:
+New fixed-hand and weighted-range Monte Carlo results use a two-sided **Hoeffding interval**, valid for bounded scores including ties. Inverting Hoeffding's inequality for independent scores in $[0,1]$ gives:
 
-新的固定手牌蒙特卡洛结果采用双侧 **Hoeffding 区间**，适用于含平局的有界得分。对独立的 $[0,1]$ 得分，将 Hoeffding 不等式反解得：
+新的固定手牌与加权范围蒙特卡洛结果采用双侧 **Hoeffding 区间**，适用于含平局的有界得分。对独立的 $[0,1]$ 得分，将 Hoeffding 不等式反解得：
 
 $$
 P(|\widehat E_n-E|\ge r)\le2e^{-2nr^2},\qquad
@@ -129,9 +129,18 @@ The statistical interpretation of `ci_low`/`ci_high` changes from the previous n
 
 `ci_low`/`ci_high` 的统计含义由旧版正态近似改为上述方法，消费者应检查方法元数据。`sample_variance` 和 `standard_error` 在单样本时允许 null，更多样本时计算不变。点估计、胜/平/负次数、种子、检查点位置和精确结果均不变。
 
-New saved records and JSON exports retain the method fields. Existing records are **not rewritten** or relabeled; a result without metadata is not a Hoeffding result. Research convergence CSV rows include seed, engine, experiment ID, total sample count, and the three method fields. Retrieve the full experiment JSON for the original card parameters. No database migration is needed. Range-equity results and the separate synthetic-agent Student-t intervals are outside this change.
+New saved records and JSON exports retain the method fields. Existing records are **not rewritten** or relabeled; a result without metadata is not a Hoeffding result. Research convergence CSV rows include seed, engine, experiment ID, total sample count, and the three method fields. Retrieve the full experiment JSON for the original card parameters. No database migration is needed. The separate synthetic-agent Student-t intervals are unchanged.
 
-新记录和 JSON 导出保留方法字段；旧记录**不改写**、不重新标注，无元数据的结果不能解释为 Hoeffding 结果。研究收敛 CSV 每行包含种子、引擎、实验 ID、总样本数及三个方法字段；原始牌面参数可从完整实验 JSON 获取。无需数据库迁移。本次不改变范围胜率结果或合成代理基准的 Student-t 区间。
+新记录和 JSON 导出保留方法字段；旧记录**不改写**、不重新标注，无元数据的结果不能解释为 Hoeffding 结果。研究收敛 CSV 每行包含种子、引擎、实验 ID、总样本数及三个方法字段；原始牌面参数可从完整实验 JSON 获取。无需数据库迁移。合成代理基准的 Student-t 区间保持不变。
+
+`POST /range/equity` now adds the same metadata and final Hero-equity bounds
+when `method` is `monte_carlo_weighted_pairs`. Range results have no convergence
+trace. Exact weighted enumeration omits all sampling-uncertainty fields. See
+[range sampling and compatibility](equity.md#exact-and-sampled-results--精确与抽样结果).
+
+`POST /range/equity` 现在于 `method` 为 `monte_carlo_weighted_pairs` 时新增相同
+方法元数据及最终英雄权益区间，不提供收敛轨迹；精确加权枚举不包含抽样不确定性
+字段。范围抽样及兼容性约定见上述链接。
 
 ## Verified mobile result / 移动端实测结果
 

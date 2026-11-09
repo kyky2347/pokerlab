@@ -155,6 +155,51 @@ Its chance mass is proportional to $w_h w_v$. This is why a hand class, a physic
 
 每组合法手牌对的概率质量与双方权重乘积 $w_h w_v$ 成正比。因此，手牌类别、物理组合与加权组合是不同单位；不可能的阻断冲突不会进入分母。
 
+### Exact and sampled results / 精确与抽样结果
+
+At most 250,000 legal pair/runout states are enumerated exactly. Above that
+threshold, each independent trial draws a compatible pair with probability
+proportional to its weight product and a uniform legal runout. Trials may repeat
+the same pair or runout. A complete river board can still require sampling when
+both ranges are large: two full ranges have 1,070,190 compatible river pairs.
+
+合法手牌对与补牌的总状态数不超过 250,000 时精确枚举；超过上限时，每次独立试验
+按权重乘积抽取合法手牌对，再均匀抽取合法补牌。不同试验可以重复抽到同一手牌对或
+补牌。完整河牌也可能需要抽样：双方全范围共有 1,070,190 个合法河牌手牌对。
+
+New `monte_carlo_weighted_pairs` responses add `samples`, `sample_variance`,
+`standard_error`, `ci_low`, `ci_high` and the versioned confidence metadata from
+[the Monte Carlo method](monte-carlo.md#finite-sample-confidence--有限样本置信区间).
+The interval is for **Hero equity**, conditional on the supplied ranges, weights
+and board. It measures sampling error, not uncertainty in those assumptions.
+It is a conservative 95% Hoeffding bound at a fixed sample count, not an
+early-stopping guarantee or a simultaneous guarantee over repeated experiments.
+
+新的 `monte_carlo_weighted_pairs` 响应新增上述样本数、方差、标准误、区间端点及
+版本化方法字段。区间针对给定范围、权重和公共牌下的**英雄权益**，衡量抽样误差，
+不衡量这些假设本身的不确定性。使用固定样本量下保守的 95% Hoeffding 界，不能作为
+提前停止或多次实验同时覆盖的保证；推导见上述蒙特卡洛方法文档。
+
+For observed counts $W,T,L$ and $n=W+T+L$, use the existing estimate
+$m=W/n+T/(2n)$. The unbiased sample variance is
+$[W(1-m)^2+T(1/2-m)^2+Lm^2]/(n-1)$ and the estimated standard error is
+$\sqrt{s^2/n}$. Pair weights already determine the draw distribution and are
+**not applied again** to observations. At one sample both moments are null;
+even identical observations retain a nonzero interval.
+
+设胜、平、负次数为 $W,T,L$，$n=W+T+L$，沿用点估计 $m=W/n+T/(2n)$，按上式
+计算无偏样本方差与估计标准误。权重已用于抽样分布，**不能再次加权**观察值。
+单样本时方差和标准误均为 null；即使观察结果完全相同，区间仍保留非零宽度。
+
+Exact responses have no sampling-uncertainty fields. Existing output values,
+RNG draws, seeds and engine selection are unchanged. New experiment JSON exports
+preserve all added metadata; historical records are not rewritten. An old API
+response without this metadata must not be presented as a Hoeffding result.
+
+精确响应不添加抽样不确定性字段；原有输出值、随机抽样、种子和引擎选择保持不变。
+新实验的 JSON 导出保存全部新增元数据，旧记录不改写；缺少方法元数据的旧版响应
+不能标注为 Hoeffding 结果。
+
 ### Range input contract / 范围输入契约
 
 Each weight must be a finite JSON number in `[0, 1]`. Integers `0` and `1` and fractional numbers such as `0.25` are valid; `true`, `false`, `"0.5"`, null, arrays, objects, NaN and infinity are rejected. This applies to `/range/statistics`, both players in `/range/equity`, and both players in `/solver/jobs`. Invalid weights return HTTP 422 with the offending hand's field path and a request ID, before calculation, solver-slot acquisition or a durable experiment/job write. API documentation exposes the same numeric bounds.
