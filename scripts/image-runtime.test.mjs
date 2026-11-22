@@ -10,6 +10,63 @@ const webRequire = createRequire(
 );
 const nextRequire = createRequire(webRequire.resolve("next/package.json"));
 const sharp = nextRequire("sharp");
+const { imageOptimizer } = nextRequire("./dist/server/image-optimizer");
+const { defaultConfig } = nextRequire("./dist/server/config-shared");
+
+function optimize(buffer) {
+  return imageOptimizer(
+    // A deliberately misleading MIME label must never override byte detection.
+    {
+      buffer,
+      contentType: "image/png",
+      cacheControl: "max-age=60",
+      etag: "fixture",
+    },
+    { href: "/fixture.png", width: 2, quality: 75, mimeType: "image/webp" },
+    {
+      ...defaultConfig,
+      images: { ...defaultConfig.images, dangerouslyAllowSVG: false },
+    },
+    { isDev: false, silent: true },
+  );
+}
+
+for (const brand of ["avif", "heic"]) {
+  test(`image optimizer rejects SVG disguised by ${brand} brand bytes`, async () => {
+    // Inert, tiny SVG: no scripts, links, entities, large dimensions or network.
+    // Before 16.4.5 the comment matched unchecked ISO-BMFF signature offsets.
+    const svg = Buffer.from(
+      `<!--ftyp${brand}--><svg xmlns="http://www.w3.org/2000/svg" width="4" height="6">` +
+        '<rect width="4" height="6" fill="#ff0000"/></svg>',
+    );
+    await assert.rejects(optimize(svg), (error) => {
+      assert.equal(error.statusCode, 400);
+      assert.match(error.message, /image type is not allowed/);
+      return true;
+    });
+  });
+}
+
+for (const format of ["png", "avif"]) {
+  test(`image optimizer still resizes valid ${format} input`, async () => {
+    const source = await sharp({
+      create: {
+        width: 4,
+        height: 6,
+        channels: 4,
+        background: { r: 255, g: 0, b: 0, alpha: 1 },
+      },
+    })
+      .toFormat(format)
+      .toBuffer();
+    const result = await optimize(source);
+    assert.equal(result.contentType, "image/webp");
+    const metadata = await sharp(result.buffer).metadata();
+    assert.equal(metadata.format, "webp");
+    assert.equal(metadata.width, 2);
+    assert.equal(metadata.height, 3);
+  });
+}
 
 test("Next.js loads patched sharp and the actual patched native librsvg", (context) => {
   assertVersionAtLeast(sharp.versions.sharp, "0.35.5", "sharp");

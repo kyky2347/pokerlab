@@ -93,7 +93,7 @@ test("Vitest resolves its patched matching mocker on the supported 4.1 branch", 
 
 test("web and ESLint resolve the patched stable Next.js release together", () => {
   const { version } = webRequire("next/package.json");
-  assertVersionAtLeast(version, "16.4.1", "Next.js");
+  assertVersionAtLeast(version, "16.4.5", "Next.js");
   // eslint-config-next exports dist/index.js, but not its package.json subpath.
   const eslintRequire = createRequire(webRequire.resolve("eslint-config-next"));
   const configPackage = eslintRequire("../package.json");

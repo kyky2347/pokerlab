@@ -4,6 +4,11 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Pin Next.js, its lint configuration/plugin and platform compilers to 16.4.5 for seven moderate security advisories. Raise checkout/final-image version guards, retain scoped dependency overrides, and refresh the bilingual security status and rebuild instructions.
+- Reproduce the SVG rejection bypass with two inert fixtures on 16.4.1; verify patched rejection plus valid PNG/AVIF resizing in the checkout and final image. Add production HTTP app-icon/SVG checks, empty Edge manifests and internal-cookie-header checks. Poker calculations, seeds and database behavior are unchanged.
+- Next.js、配套 ESLint 配置/插件及平台编译器锁定至 16.4.5，修复七项中危安全告警；提高源码/最终镜像版本门禁，保留定向依赖覆盖，同步双语安全状态与重建说明。
+- 使用两个无害样本在 16.4.1 复现 SVG 拒绝绕过，验证补丁后的拒绝行为及正常 PNG/AVIF 缩放；新增生产 HTTP 图标/SVG、空 Edge 清单与内部 Cookie 头检查。扑克计算、种子及数据库行为保持不变。
+
 - Add conservative pointwise 95% Hoeffding intervals, sample moments and versioned metadata to weighted-range Monte Carlo results without changing seeded draws or point estimates. Persist the new fields in experiment JSON; exact results and historical records remain unchanged.
 - Distinguish exact enumeration from sampled range results in English and Chinese; show sample count, seed, engine, Hero-equity bounds and range-assumption limits. Add boundary, independent-moment, cross-engine, storage and bilingual page regressions.
 - 加权范围蒙特卡洛新增保守的逐点 95% Hoeffding 区间、样本统计量及版本化方法元数据，保留种子抽样序列与点估计。新字段写入实验 JSON，精确结果和历史记录保持不变。

@@ -20,9 +20,43 @@ Include the affected commit, reproduction steps, impact, and any suggested mitig
 
 ### Known dependency advisories / 已知依赖告警
 
-Rechecked on **2026-11-05**: full and production-only npm audits and the exported Python dependency audits report **no known advisories**. The Python checks cover production and development dependencies separately from the two excluded first-party distributions. The modern TypeScript consumer retains patched minimatch **11.0.1**. Upstream corrected GHSA-g3hv-75wg-m249's affected range on November 4, excluding legacy **3.1.5**; this status change required no dependency edits or audit suppression. Earlier patches remain. These results do not audit every runtime, host or first-party code path.
+Rechecked on **2026-11-22** after updating Next.js and eslint-config-next to **16.4.5**: full/production npm audits and exported Python production/development dependency audits report **no known advisories**. The previous Next.js 16.4.1 lock had seven moderate advisories, all covered by this patch release. Python audits exclude the two first-party distributions. Earlier dependency patches remain; no advisory is suppressed or manually dismissed. These results do not audit every runtime, host or first-party code path.
 
-**2026-11-05 复核**：完整/仅生产 npm 审计及导出的 Python 依赖审计均**没有已知告警**。Python 检查覆盖生产和开发依赖，排除两个本项目发行包。TypeScript 现代依赖保留修复版 minimatch **11.0.1**；上游于 11 月 4 日修正 GHSA-g3hv-75wg-m249 的影响范围，旧版 **3.1.5** 已被排除。此次状态变化没有修改依赖或屏蔽告警；此前补丁保留。这不等于审计了每个运行时、宿主机或本项目代码路径。
+**2026-11-22 复核**：Next.js 与 eslint-config-next 更新至 **16.4.5** 后，完整/生产 npm 审计和导出的 Python 生产/开发依赖审计均**没有已知告警**。原有 Next.js 16.4.1 锁定版本存在七项中危告警，均由此补丁版本修复。Python 审计排除两个本项目发行包；保留此前依赖补丁，不屏蔽或手动关闭告警。这不等于审计了每个运行时、宿主机或本项目代码路径。
+
+### November 22 framework patch / 11 月 22 日框架补丁
+
+The [16.4.5 release](https://github.com/vercel/next.js/releases/tag/v16.4.5)
+addresses seven advisories. The installed framework, lint configuration/plugin
+and platform compilers are updated together. Exposure depends on the application's
+configuration; an affected dependency alone does not establish exploitation.
+
+[16.4.5 发布说明](https://github.com/vercel/next.js/releases/tag/v16.4.5)涵盖七项
+告警；框架、ESLint 配置/插件及平台编译器同步更新。是否可利用取决于应用配置，
+依赖处于受影响版本本身不代表已经遭到利用。
+
+- [SVG rejection bypass](https://github.com/vercel/next.js/security/advisories/GHSA-7qx7-33qx-rqx2): byte detection could mistake an SVG comment for AVIF/HEIC signatures and reach decoding despite `dangerouslyAllowSVG: false`. Two tiny, inert regression fixtures failed against 16.4.1 and are rejected with HTTP-style 400 errors by the patched optimizer. Valid PNG and AVIF inputs still resize to WebP. These tests exercise the real installed optimizer in both the checkout and final container, without network access.
+- [Edge cookie exposure](https://github.com/vercel/next.js/security/advisories/GHSA-f3mh-rxg3-f5g2): affects sensitive cookies set with `NextResponse` on Edge routes. PokerLab has no Edge routes or middleware; final-image tests verify their empty manifests and the absence of `x-middleware-set-cookie` on product responses.
+- [Upstream response framing](https://github.com/vercel/next.js/security/advisories/GHSA-pc58-hwjq-p385): requires forwarding fetched upstream responses and a permissive HTTP/1.1 proxy. PokerLab's browser calls the separate FastAPI service; it has no Next.js handler forwarding such responses.
+- Cache isolation and poisoning: [mixed cache APIs](https://github.com/vercel/next.js/security/advisories/GHSA-mfr8-8qww-v76h), [nested stream metadata](https://github.com/vercel/next.js/security/advisories/GHSA-vc7v-qv4w-wrv8), [binary arguments](https://github.com/vercel/next.js/security/advisories/GHSA-rhh4-g77r-r9qj), and [fallback-shell params](https://github.com/vercel/next.js/security/advisories/GHSA-vvgp-ww4w-46vf). PokerLab does not enable Cache Components or use `use cache`/`unstable_cache`; the deployed configuration remains checked.
+
+- SVG 拒绝绕过：字节检测可能将 SVG 注释误识别为 AVIF/HEIC 文件头，从而绕过禁用 SVG 的配置。两个不含脚本、外链或实体的微小样本在 16.4.1 上未被拒绝；补丁后的真实优化器返回 400 类错误，正常 PNG/AVIF 仍可缩放为 WebP。源码环境和最终容器均执行这些禁网回归。
+- Edge Cookie 泄露：涉及 Edge 路由通过 `NextResponse` 设置敏感 Cookie。PokerLab 没有 Edge 路由或中间件；最终镜像验证相应清单为空，产品响应不包含内部 Cookie 响应头。
+- 上游响应分帧：需要原样转发上游响应及允许相关行为的 HTTP/1.1 代理。PokerLab 由浏览器调用独立 FastAPI，没有此类 Next.js 转发处理器。
+- 缓存隔离与污染：上述四项分别涉及混用缓存 API、嵌套流元数据、二进制参数及回退页面参数。PokerLab 未启用 Cache Components，也未使用相关缓存 API；部署配置继续由测试核对。
+
+The actual production HTTP suite also confirms that `/icon.svg` remains available
+directly while `/_next/image` rejects it, and that remote image URLs remain
+disallowed. The fixtures cover specific image behavior and current configuration,
+not every upstream exploit. There are no poker-core or database changes.
+Rebuild containers with `./pokerlab`; `--no-build` keeps the old image. Native
+checkouts need a frozen dependency install and a restart of running Next.js
+processes. [Runtime verification commands](docs/deployment.md#dependency-runtime-checks--依赖运行时检查).
+
+真实生产 HTTP 测试还确认 `/icon.svg` 可直接访问、图片优化端点拒绝该 SVG，
+远程图片仍被拒绝。回归覆盖指定图片行为及当前配置，不模拟全部上游漏洞；
+扑克核心与数据库未改动。容器用户通过 `./pokerlab` 重建，`--no-build` 会沿用旧
+镜像；本地源码运行需按锁文件安装依赖并重启 Next.js 进程。验证命令见上述部署文档。
 
 ### November 2 glob preprocessing / 11 月 2 日 glob 预处理
 

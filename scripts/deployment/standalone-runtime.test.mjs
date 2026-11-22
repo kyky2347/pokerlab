@@ -44,6 +44,7 @@ function assertSecurityHeaders(response) {
     "camera=(), microphone=(), geolocation=()",
   );
   assert.equal(response.headers.get("x-powered-by"), null);
+  assert.equal(response.headers.get("x-middleware-set-cookie"), null);
 }
 
 before(async () => {
@@ -101,7 +102,7 @@ after(async () => {
 
 test("standalone server resolves a patched stable Next.js", (context) => {
   const { version } = runtimeRequire("next/package.json");
-  assertVersionAtLeast(version, "16.4.1", "Next.js");
+  assertVersionAtLeast(version, "16.4.5", "Next.js");
   context.diagnostic(`Next.js=${version}`);
 });
 
@@ -117,6 +118,9 @@ test("deployed configuration retains the documented framework exposure boundarie
   );
   assert.deepEqual(Object.keys(actions.node), []);
   assert.deepEqual(Object.keys(actions.edge), []);
+  const edge = runtimeRequire("./.next/server/middleware-manifest.json");
+  assert.deepEqual(Object.keys(edge.functions), []);
+  assert.deepEqual(Object.keys(edge.middleware), []);
 });
 
 for (const path of [
@@ -182,6 +186,18 @@ test("image optimization rejects non-allowlisted remote URLs", async () => {
   const response = await request(`/_next/image?${query}`);
   assert.equal(response.status, 400);
   assert.match(response.body, /not allowed/i);
+});
+
+test("the SVG app icon is served directly but rejected by the image optimizer", async () => {
+  const icon = await request("/icon.svg");
+  assert.equal(icon.status, 200);
+  assert.match(icon.headers.get("content-type"), /^image\/svg\+xml\b/);
+  assert.match(icon.body, /<svg\b/);
+  const query = new URLSearchParams({ url: "/icon.svg", w: "64", q: "75" });
+  const response = await request(`/_next/image?${query}`);
+  assert.equal(response.status, 400);
+  assert.match(response.body, /image type is not allowed/);
+  assert.doesNotMatch(response.body, /<svg\b/);
 });
 
 test("development MCP endpoint is unavailable in production", async () => {
