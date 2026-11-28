@@ -4,6 +4,11 @@ All notable changes are documented here. / 所有重要变更记录于此。
 
 ## Unreleased / 尚未发布
 
+- Coalesce EV slider edits after a 150 ms pause and abort superseded browser requests. Keep metrics, decision and chart aligned with current inputs, retain loading space, and provide bilingual manual retry and offline/reconnect feedback. All EV values and curves still come from the API; formulas and numerical behavior are unchanged.
+- Add bilingual integration coverage for burst edits, cancellation and late responses, fresh-cache isolation, failure/retry, reconnection, coupled bet/call/stack bounds, zero/100% equity, focus and unmount/Strict Mode behavior. Update the README and EV reproduction guide.
+- EV 滑块连续编辑暂停 150 毫秒后合并请求，取消过时浏览器请求；指标、决策与图表始终对应当前输入，加载时保留布局空间，并提供双语手动重试及离线/重连提示。EV 与曲线仍全部由 API 提供，公式及数值行为保持不变。
+- 新增双语集成回归，覆盖连续编辑、取消与延迟响应、缓存隔离、失败重试、重连、下注/跟注/筹码联动边界、零及 100% 胜率、窗口焦点、卸载与 Strict Mode；更新 README 和 EV 复现说明。
+
 - Pin Next.js, its lint configuration/plugin and platform compilers to 16.4.5 for seven moderate security advisories. Raise checkout/final-image version guards, retain scoped dependency overrides, and refresh the bilingual security status and rebuild instructions.
 - Reproduce the SVG rejection bypass with two inert fixtures on 16.4.1; verify patched rejection plus valid PNG/AVIF resizing in the checkout and final image. Add production HTTP app-icon/SVG checks, empty Edge manifests and internal-cookie-header checks. Poker calculations, seeds and database behavior are unchanged.
 - Next.js、配套 ESLint 配置/插件及平台编译器锁定至 16.4.5，修复七项中危安全告警；提高源码/最终镜像版本门禁，保留定向依赖覆盖，同步双语安全状态与重建说明。

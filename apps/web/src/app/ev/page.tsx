@@ -1,12 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Equal, Sigma } from "lucide-react";
-import { useState } from "react";
+import { Equal, RotateCcw, Sigma } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { EVChart } from "@/components/ev-chart";
 import { ErrorAlert, Metric, PageHeader, percent } from "@/components/lab-ui";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -15,8 +16,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
+import { Skeleton } from "@/components/ui/skeleton";
 import { postJson } from "@/lib/api";
 import { useCopy } from "@/lib/store";
+import { cn } from "@/lib/utils";
 
 type EVResult = {
   final_pot_after_call: number;
@@ -75,17 +78,38 @@ export default function EVLab() {
   const [call, setCall] = useState(50);
   const [equity, setEquity] = useState(30);
   const [stack, setStack] = useState(200);
+  const inputKey = JSON.stringify([pot, bet, call, equity, stack]);
+  const [settledKey, setSettledKey] = useState(inputKey);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSettledKey(inputKey), 150);
+    return () => window.clearTimeout(timer);
+  }, [inputKey]);
+  const ready = inputKey === settledKey;
   const result = useQuery({
+    // Switch observers immediately to cancel obsolete reads. Only fetch once
+    // edits settle; chart markers and API results must describe the same inputs.
     queryKey: ["ev", pot, bet, call, equity, stack],
-    queryFn: () =>
-      postJson<EVResult>("/ev/calculate", {
-        pot,
-        opponent_bet: bet,
-        call_size: call,
-        hero_equity: equity / 100,
-        effective_stack: stack,
-      }),
+    enabled: ready,
+    retry: false,
+    refetchOnWindowFocus: false,
+    queryFn: ({ signal }) =>
+      postJson<EVResult>(
+        "/ev/calculate",
+        {
+          pot,
+          opponent_bet: bet,
+          call_size: call,
+          hero_equity: equity / 100,
+          effective_stack: stack,
+        },
+        signal,
+      ),
   });
+  const busy =
+    !ready || result.isPending || result.isFetching || result.isPaused;
+  const data = !busy && result.isSuccess ? result.data : undefined;
+  const error = !busy && result.isError ? result.error : null;
+  const animatePlaceholder = busy && !result.isPaused;
   return (
     <div>
       <PageHeader
@@ -93,7 +117,7 @@ export default function EVLab() {
         title={zh ? "EV 实验室" : "EV Lab"}
         description={
           zh
-            ? "改变底池、下注与胜率，立即看到增量跟注 EV 及盈亏平衡边界。"
+            ? "改变底池、下注与胜率，查看由 API 更新的增量跟注 EV 及盈亏平衡边界。"
             : "Change the pot, bet, and equity to see incremental call EV and the break-even boundary update from the API."
         }
         badge={zh ? "明确计算约定" : "CLEAR CONVENTIONS"}
@@ -171,16 +195,16 @@ export default function EVLab() {
               <CardDescription>
                 {zh
                   ? "跟注 EV = 胜率 × 跟注后最终底池 − 跟注额"
-                  : (result.data?.formula ??
+                  : (data?.formula ??
                     "EV(call) = equity × final pot after call − call size")}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {result.data ? (
-                <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+              {data ? (
+                <div className="grid auto-rows-[minmax(56px,auto)] gap-6 sm:grid-cols-2 xl:grid-cols-4">
                   <Metric
                     label={zh ? "盈亏平衡胜率" : "Required equity"}
-                    value={percent(result.data.required_equity)}
+                    value={percent(data.required_equity)}
                   />
                   <Metric
                     label={zh ? "英雄胜率" : "Hero equity"}
@@ -188,11 +212,11 @@ export default function EVLab() {
                   />
                   <Metric
                     label={zh ? "跟注 EV" : "EV(call)"}
-                    value={`${result.data.incremental_call_ev >= 0 ? "+" : "−"}$${Math.abs(result.data.incremental_call_ev).toFixed(2)}`}
+                    value={`${data.incremental_call_ev >= 0 ? "+" : "−"}$${Math.abs(data.incremental_call_ev).toFixed(2)}`}
                     accent={
-                      result.data.incremental_call_ev > 0
+                      data.incremental_call_ev > 0
                         ? "success"
-                        : result.data.incremental_call_ev < 0
+                        : data.incremental_call_ev < 0
                           ? "danger"
                           : "primary"
                     }
@@ -204,9 +228,9 @@ export default function EVLab() {
                     <Badge
                       className="mt-2"
                       variant={
-                        result.data.decision === "call"
+                        data.decision === "call"
                           ? "default"
-                          : result.data.decision === "fold"
+                          : data.decision === "fold"
                             ? "destructive"
                             : "outline"
                       }
@@ -216,26 +240,70 @@ export default function EVLab() {
                             call: "跟注",
                             fold: "弃牌",
                             break_even: "盈亏平衡",
-                          }[result.data.decision]
+                          }[data.decision]
                         : {
                             call: "Call",
                             fold: "Fold",
                             break_even: "Break-even",
-                          }[result.data.decision]}
+                          }[data.decision]}
                     </Badge>
                   </div>
                 </div>
               ) : (
-                <p className="text-muted-foreground">
-                  {result.error
-                    ? zh
-                      ? "计算失败，请查看下方错误信息。"
-                      : "Calculation failed. See the error below."
-                    : zh
-                      ? "计算中…"
-                      : "Calculating…"}
-                </p>
+                <div
+                  aria-hidden="true"
+                  className="grid auto-rows-[minmax(56px,auto)] gap-6 sm:grid-cols-2 xl:grid-cols-4"
+                >
+                  {[0, 1, 2, 3].map((slot) => (
+                    <div key={slot}>
+                      <Skeleton
+                        className={cn(
+                          "h-4 w-24 max-w-full",
+                          !animatePlaceholder && "animate-none",
+                        )}
+                      />
+                      <Skeleton
+                        className={cn(
+                          "mt-1 h-8 w-28 max-w-full sm:h-9",
+                          !animatePlaceholder && "animate-none",
+                        )}
+                      />
+                    </div>
+                  ))}
+                </div>
               )}
+              <div className="mt-3 min-h-5 text-sm text-muted-foreground">
+                {busy ? (
+                  <p role="status">
+                    {!ready
+                      ? zh
+                        ? "等待编辑完成…"
+                        : "Waiting for edits to finish…"
+                      : result.isPaused
+                        ? zh
+                          ? "当前离线，恢复连接后将继续计算。"
+                          : "You are offline. Calculation will resume when you reconnect."
+                        : zh
+                          ? "正在计算 EV…"
+                          : "Calculating EV…"}
+                  </p>
+                ) : null}
+              </div>
+              {error ? (
+                <div className="flex flex-col gap-3">
+                  <ErrorAlert
+                    message={`${zh ? "无法计算 EV，请检查 API 服务后重试。" : "Could not calculate EV. Check the API service and retry."} ${error.message}`}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void result.refetch()}
+                  >
+                    <RotateCcw data-icon="inline-start" />
+                    {zh ? "重试计算" : "Retry calculation"}
+                  </Button>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
           <Card>
@@ -249,15 +317,38 @@ export default function EVLab() {
                   : "EV is positive above zero and negative below it. Solid marks hero equity; dashed marks break-even. The markers overlap when equal."}
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              {result.data ? (
+            <CardContent aria-busy={busy}>
+              {data ? (
                 <EVChart
-                  curve={result.data.curve}
-                  requiredEquity={result.data.required_equity}
+                  curve={data.curve}
+                  requiredEquity={data.required_equity}
                   heroEquity={equity / 100}
                   zh={zh}
                 />
-              ) : null}
+              ) : (
+                <div aria-hidden="true">
+                  <Skeleton
+                    className={cn(
+                      "h-[380px] w-full",
+                      !animatePlaceholder && "animate-none",
+                    )}
+                  />
+                  <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+                    <Skeleton
+                      className={cn(
+                        "h-4 w-44",
+                        !animatePlaceholder && "animate-none",
+                      )}
+                    />
+                    <Skeleton
+                      className={cn(
+                        "h-4 w-48",
+                        !animatePlaceholder && "animate-none",
+                      )}
+                    />
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -294,7 +385,6 @@ export default function EVLab() {
               </p>
             </CardContent>
           </Card>
-          {result.error ? <ErrorAlert message={result.error.message} /> : null}
         </div>
       </div>
     </div>
