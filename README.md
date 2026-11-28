@@ -76,6 +76,8 @@ EV markers use continuous coordinates, including fractional break-even threshold
 
 [Chinese mobile EV chart / 中文移动端 EV 图表](output/playwright/ev-zh-mobile.png)
 
+EV Lab groups continuous slider edits after a 150 ms pause, cancels obsolete browser requests, and keeps previous results hidden until they match the current inputs. Loading preserves the chart space; failures offer an explicit retry, and offline calculations resume on reconnect. [Interaction and reproduction](docs/math/expected-value.md#editing-and-recovery--编辑与恢复). / EV 实验室在滑块连续编辑暂停 150 毫秒后合并请求，取消过时浏览器请求，在结果与当前输入一致前隐藏旧值。加载时保留图表空间；失败可直接重试，离线计算在恢复连接后继续。详见[交互与复现](docs/math/expected-value.md#editing-and-recovery--编辑与恢复)。
+
 ### Game theory and research / 博弈论与研究
 
 ![CFR Solver Lite](output/playwright/solver.png)
